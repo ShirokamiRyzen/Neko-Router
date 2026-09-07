@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/DashboardTab.tsx": {
-    "mtime": 1788788613.5589979,
-    "ast_hash": "63da4e7b059333afb0ccc7582c9f0daf",
+    "mtime": 1788794477.8278954,
+    "ast_hash": "e5dfde938f0ca354da85373fbe4551ed",
     "semantic_hash": ""
   },
   "frontend/src/components/DatabaseSettingsTab.tsx": {

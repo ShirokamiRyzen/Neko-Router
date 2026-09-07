@@ -1,100 +1,113 @@
 # Graph Report - Neko-Router  (2026-09-07)
 
 ## Corpus Check
-- 28 files · ~24,245 words
+- 49 files · ~47,102 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 336 nodes · 479 edges · 16 communities (14 shown, 2 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
+- 478 nodes · 676 edges · 22 communities (19 shown, 3 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f2e44936`
+- Built from commit: `a02cfbd3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - compilerOptions
-- package.json
+- devDependencies
 - schema.ts
 - rules/graphify.md
 - workflows/graphify.md
 - Neko-Router
 - brandkit/SKILL.md
-- router.ts
+- App.tsx
 - services/proxy.ts
-- VISUAL MODES
+- compilerOptions
+- dependencies
 - Analysis & Synthesis Instructions
+- compilerOptions
 - Design System: Taste Standard
 - Protocol: Premium Utilitarian Minimalism UI Architect
 - 5. Router Management APIs
+- plugins
+- React + TypeScript + Vite
+- frontend/tsconfig.json
 - Neko-Router API Documentation
 
 ## God Nodes (most connected - your core abstractions)
 1. `compilerOptions` - 20 edges
-2. `proxyOpenAIChatCompletions()` - 14 edges
-3. `proxyAnthropicMessages()` - 14 edges
-4. `Design System: Taste Standard` - 11 edges
-5. `DEFAULT 3 × 3 PANEL SYSTEM` - 10 edges
-6. `Analysis & Synthesis Instructions` - 10 edges
-7. `VISUAL MODES` - 9 edges
-8. `Protocol: Premium Utilitarian Minimalism UI Architect` - 9 edges
-9. `Stitch Design Taste — Semantic Design System Skill` - 9 edges
-10. `getOptimizationSettings()` - 8 edges
+2. `compilerOptions` - 18 edges
+3. `apiRequest()` - 16 edges
+4. `react` - 15 edges
+5. `compilerOptions` - 15 edges
+6. `proxyOpenAIChatCompletions()` - 14 edges
+7. `proxyAnthropicMessages()` - 14 edges
+8. `Design System: Taste Standard` - 11 edges
+9. `DEFAULT 3 × 3 PANEL SYSTEM` - 10 edges
+10. `Analysis & Synthesis Instructions` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `proxyOpenAIChatCompletions()` --calls--> `getApiKeyForUpstream()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/router.ts
-- `proxyOpenAIChatCompletions()` --calls--> `selectUpstreamKey()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/router.ts
-- `proxyAnthropicMessages()` --calls--> `getApiKeyForUpstream()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/router.ts
-- `proxyAnthropicMessages()` --calls--> `selectUpstreamKey()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/router.ts
-- `UpstreamSelectionResult` --references--> `UpstreamKey`  [EXTRACTED]
-  src/services/router.ts → src/db/schema.ts
+- `App()` --calls--> `useTheme()`  [EXTRACTED]
+  frontend/src/App.tsx → frontend/src/hooks/useTheme.ts
+- `App()` --calls--> `apiRequest()`  [EXTRACTED]
+  frontend/src/App.tsx → frontend/src/lib/api.ts
+- `ClientKeysTab()` --calls--> `apiRequest()`  [EXTRACTED]
+  frontend/src/components/ClientKeysTab.tsx → frontend/src/lib/api.ts
+- `DashboardTab()` --calls--> `apiRequest()`  [EXTRACTED]
+  frontend/src/components/DashboardTab.tsx → frontend/src/lib/api.ts
+- `DatabaseSettingsTab()` --calls--> `apiRequest()`  [EXTRACTED]
+  frontend/src/components/DatabaseSettingsTab.tsx → frontend/src/lib/api.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (16 total, 2 thin omitted)
+## Communities (22 total, 3 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
-Nodes (28): bun, client, dist, ESNext, node_modules, src/**/*, compilerOptions, allowImportingTsExtensions (+20 more)
+Nodes (28): bun, client, dist, ESNext, node_modules, compilerOptions, allowImportingTsExtensions, allowJs (+20 more)
 
-### Community 1 - "package.json"
-Cohesion: 0.07
-Nodes (28): drizzle-kit, drizzle-orm, elysia, @elysiajs/cors, @elysiajs/eden, @elysiajs/jwt, @elysiajs/swagger, dependencies (+20 more)
+### Community 1 - "devDependencies"
+Cohesion: 0.06
+Nodes (31): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/vite, @types/bun, @types/node, @types/react (+23 more)
 
 ### Community 2 - "schema.ts"
 Cohesion: 0.07
-Nodes (41): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+33 more)
+Nodes (43): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+35 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
 Nodes (13): 1. Local Development, 1. OpenAI SDK (Python), 2. Anthropic Claude SDK (TypeScript / Node), 3. cURL Stream Passthrough, API Usage Examples, Docker Deployment, Endpoints Summary, Features (+5 more)
 
 ### Community 6 - "brandkit/SKILL.md"
-Cohesion: 0.06
-Nodes (34): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT, 2. Logo Construction, 2. Product Action, 3. Digital Application, 3. Metaphor Fusion, 4. Brand Essence (+26 more)
+Cohesion: 0.05
+Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT, 2. Logo Construction, 2. Product Action, 3. Digital Application, 3. Metaphor Fusion, 4. Brand Essence (+35 more)
 
-### Community 7 - "router.ts"
-Cohesion: 0.14
-Nodes (19): db, UpstreamKey, upstreamKeys, adjectives, nouns, proxyOpenAIModels(), getActiveUpstreamKeys(), getApiKeyForUpstream() (+11 more)
+### Community 7 - "App.tsx"
+Cohesion: 0.08
+Nodes (38): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+30 more)
 
 ### Community 9 - "services/proxy.ts"
-Cohesion: 0.21
-Nodes (22): checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression(), checkHttpsRequirement(), computeCacheKey(), getCachedResponse(), getOptimizationSettings(), isHttpsRequest() (+14 more)
+Cohesion: 0.10
+Nodes (39): UpstreamKey, adjectives, nouns, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression(), checkHttpsRequirement(), computeCacheKey() (+31 more)
 
-### Community 10 - "VISUAL MODES"
-Cohesion: 0.22
-Nodes (9): Cultural / Experimental, Dark Developer / Builder, Dark Nature / Calm System, Dark Product / Operator, Dark Security / Threat Intelligence, Light Editorial / Compliance, Luxury / Beauty / Fashion, VISUAL MODES (+1 more)
+### Community 10 - "compilerOptions"
+Cohesion: 0.08
+Nodes (23): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+15 more)
+
+### Community 11 - "dependencies"
+Cohesion: 0.09
+Nodes (23): clsx, drizzle-orm, elysia, @elysiajs/cors, @elysiajs/eden, @elysiajs/jwt, @elysiajs/swagger, lucide-react (+15 more)
 
 ### Community 12 - "Analysis & Synthesis Instructions"
 Cohesion: 0.11
 Nodes (18): 1. Define the Atmosphere, 2. Map the Color Palette, 3. Establish Typography Rules, 4. Define the Hero Section, 5. Describe Component Stylings, 6. Define Layout Principles, 7. Define Responsive Rules, 8. Encode Motion Philosophy (+10 more)
+
+### Community 13 - "compilerOptions"
+Cohesion: 0.10
+Nodes (19): compilerOptions, allowImportingTsExtensions, erasableSyntaxOnly, lib, module, moduleDetection, noEmit, noFallthroughCasesInSwitch (+11 more)
 
 ### Community 14 - "Design System: Taste Standard"
 Cohesion: 0.13
@@ -108,29 +121,37 @@ Nodes (9): 1. Protocol Overview, 2. Absolute Negative Constraints (Banned Elemen
 Cohesion: 0.05
 Nodes (38): 1. Aggregated Usage, Cached Tokens & Latency Metrics, 1. Check Authentication Status, 1. Export SQLite Database, 1. Get Active Optimizer & Security Configuration, 1. List All Upstream Providers, 1. List Client Keys, 1. List Upstream Keys, 2. Add Upstream Key (+30 more)
 
+### Community 17 - "plugins"
+Cohesion: 0.22
+Nodes (8): plugins, rules, react/only-export-components, react/rules-of-hooks, $schema, oxc, typescript, warn
+
+### Community 18 - "React + TypeScript + Vite"
+Cohesion: 0.50
+Nodes (3): Expanding the Oxlint configuration, React Compiler, React + TypeScript + Vite
+
 ### Community 22 - "Neko-Router API Documentation"
 Cohesion: 0.07
 Nodes (29): 1. Installation:, 1. OpenAI Streaming:, 1. Overview & Base URLs, 2. Anthropic Non-Streaming:, 2. Authentication Mechanisms, 2. Usage with Neko-Router `App` Type:, 3. AI Proxy Endpoints, 4. SDK Integration Guides (+21 more)
 
 ## Knowledge Gaps
-- **194 isolated node(s):** `name`, `module`, `type`, `private`, `dev` (+189 more)
+- **262 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+257 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **2 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `5. Router Management APIs` connect `5. Router Management APIs` to `Neko-Router API Documentation`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Why does `Neko-Router API Documentation` connect `Neko-Router API Documentation` to `5. Router Management APIs`?**
-  _High betweenness centrality (0.025) - this node is a cross-community bridge._
-- **What connects `name`, `module`, `type` to the rest of the system?**
-  _194 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `dependencies` connect `dependencies` to `devDependencies`?**
+  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+- **What connects `$schema`, `typescript`, `oxc` to the rest of the system?**
+  _262 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
-- **Should `package.json` be split into smaller, more focused modules?**
-  _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
+- **Should `devDependencies` be split into smaller, more focused modules?**
+  _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07477288609364081 - nodes in this community are weakly interconnected._
-- **Should `Neko-Router` be split into smaller, more focused modules?**
-  _Cohesion score 0.14285714285714285 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07337662337662337 - nodes in this community are weakly interconnected._

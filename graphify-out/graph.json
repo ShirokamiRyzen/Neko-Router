@@ -6117,7 +6117,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L670",
+      "source_location": "L795",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -6129,7 +6129,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L183",
+      "source_location": "L290",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -6142,7 +6142,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L91",
+      "source_location": "L102",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -12986,5 +12986,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "f2e44936601d6cc457058f22191f375a739f8350"
+  "built_at_commit": "a02cfbd38b9e8e37212c9d4972f29d18a8ccf972"
 }

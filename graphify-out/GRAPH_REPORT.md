@@ -1,7 +1,7 @@
 # Graph Report - Neko-Router  (2026-09-07)
 
 ## Corpus Check
-- 49 files · ~46,564 words
+- 49 files · ~47,111 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -10,7 +10,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `f2e44936`
+- Built from commit: `a02cfbd3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 

@@ -79,10 +79,21 @@ export const DashboardTab: React.FC = () => {
   const [graphMetricView, setGraphMetricView] = useState<"tokens" | "cost">("tokens");
 
   // Router Graph Canvas Zoom & Pan
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(() => {
+    if (typeof window !== "undefined" && window.innerWidth < 640) {
+      return 0.8;
+    }
+    return 1;
+  });
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const pinchStartDistRef = useRef<number | null>(null);
+  const pinchStartZoomRef = useRef<number>(1);
+  const panRef = useRef(pan);
+  panRef.current = pan;
+  const zoomRef = useRef(zoom);
+  zoomRef.current = zoom;
 
   const loadAllData = async () => {
     setLoading(true);
@@ -143,17 +154,19 @@ export const DashboardTab: React.FC = () => {
   };
 
   // Zoom helpers
-  const handleZoomIn = () => setZoom((z) => Math.min(1.6, z + 0.15));
-  const handleZoomOut = () => setZoom((z) => Math.max(0.65, z - 0.15));
+  const handleZoomIn = () => setZoom((z) => Math.min(1.8, Number((z + 0.15).toFixed(2))));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.5, Number((z - 0.15).toFixed(2))));
   const handleResetView = () => {
-    setZoom(1);
+    const defaultZoom = typeof window !== "undefined" && window.innerWidth < 640 ? 0.8 : 1;
+    setZoom(defaultZoom);
     setPan({ x: 0, y: 0 });
   };
 
-  // Pan dragging
+  // Mouse pan dragging
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     setIsDragging(true);
-    dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+    dragStartRef.current = { x: e.clientX - panRef.current.x, y: e.clientY - panRef.current.y };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -165,6 +178,100 @@ export const DashboardTab: React.FC = () => {
   };
 
   const handleMouseUp = () => setIsDragging(false);
+
+  // Touch drag & multi-touch pinch-to-zoom handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      setIsDragging(true);
+      dragStartRef.current = {
+        x: touch.clientX - panRef.current.x,
+        y: touch.clientY - panRef.current.y,
+      };
+      pinchStartDistRef.current = null;
+    } else if (e.touches.length === 2) {
+      setIsDragging(false);
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      pinchStartDistRef.current = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      pinchStartZoomRef.current = zoomRef.current;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 1 && isDragging) {
+      const touch = e.touches[0];
+      setPan({
+        x: touch.clientX - dragStartRef.current.x,
+        y: touch.clientY - dragStartRef.current.y,
+      });
+    } else if (e.touches.length === 2 && pinchStartDistRef.current) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      if (pinchStartDistRef.current > 0) {
+        const factor = currentDist / pinchStartDistRef.current;
+        const nextZoom = Math.min(1.8, Math.max(0.5, pinchStartZoomRef.current * factor));
+        setZoom(Number(nextZoom.toFixed(2)));
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) {
+      setIsDragging(false);
+      pinchStartDistRef.current = null;
+    } else if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      dragStartRef.current = {
+        x: touch.clientX - panRef.current.x,
+        y: touch.clientY - panRef.current.y,
+      };
+      setIsDragging(true);
+      pinchStartDistRef.current = null;
+    }
+  };
+
+  // Global window listeners when dragging so fast movements or edge crossing don't get interrupted
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const onWindowMouseMove = (e: MouseEvent) => {
+      setPan({
+        x: e.clientX - dragStartRef.current.x,
+        y: e.clientY - dragStartRef.current.y,
+      });
+    };
+
+    const onWindowTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        setPan({
+          x: touch.clientX - dragStartRef.current.x,
+          y: touch.clientY - dragStartRef.current.y,
+        });
+      }
+    };
+
+    const onWindowRelease = () => {
+      setIsDragging(false);
+      pinchStartDistRef.current = null;
+    };
+
+    window.addEventListener("mousemove", onWindowMouseMove);
+    window.addEventListener("mouseup", onWindowRelease);
+    window.addEventListener("touchmove", onWindowTouchMove, { passive: true });
+    window.addEventListener("touchend", onWindowRelease);
+    window.addEventListener("touchcancel", onWindowRelease);
+
+    return () => {
+      window.removeEventListener("mousemove", onWindowMouseMove);
+      window.removeEventListener("mouseup", onWindowRelease);
+      window.removeEventListener("touchmove", onWindowTouchMove);
+      window.removeEventListener("touchend", onWindowRelease);
+      window.removeEventListener("touchcancel", onWindowRelease);
+    };
+  }, [isDragging]);
 
   // Active connected upstreams for the router graph
   const activeUpstreams = useMemo(() => {
@@ -442,53 +549,67 @@ export const DashboardTab: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[460px] relative">
           {/* Left / Center: Interactive Router Node Topology Canvas */}
           <div
-            className="lg:col-span-8 relative flex items-center justify-center p-6 select-none overflow-hidden cursor-grab active:cursor-grabbing"
+            className="lg:col-span-8 relative min-h-[440px] flex items-center justify-center p-6 select-none overflow-hidden cursor-grab active:cursor-grabbing touch-none"
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
             style={{
               backgroundImage:
                 "radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)",
               backgroundSize: "24px 24px",
+              touchAction: "none",
             }}
           >
             {/* Zoom Controls (Floating on bottom left, identical to 9Router screenshot) */}
-            <div className="absolute bottom-4 left-4 z-20 flex flex-col space-y-1 bg-[#16171e]/90 backdrop-blur-md border border-zinc-800 rounded-md p-1 shadow-lg">
+            <div
+              className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 z-20 flex flex-col space-y-1 bg-[#16171e]/90 backdrop-blur-md border border-zinc-800 rounded-md p-1 shadow-lg pointer-events-auto"
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+            >
               <button
+                type="button"
                 onClick={handleZoomIn}
-                className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors"
+                className="p-2 sm:p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors"
                 title="Zoom In"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
               </button>
               <button
+                type="button"
                 onClick={handleZoomOut}
-                className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors"
+                className="p-2 sm:p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors"
                 title="Zoom Out"
               >
-                <Minus className="w-3.5 h-3.5" />
+                <Minus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
               </button>
               <button
+                type="button"
                 onClick={handleResetView}
-                className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors"
+                className="p-2 sm:p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/80 rounded transition-colors"
                 title="Reset View"
               >
-                <Maximize2 className="w-3.5 h-3.5" />
+                <Maximize2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
 
-            {/* Transformable Canvas Container */}
+            {/* Transformable Canvas Stage: Origin (0,0) is anchored at exact 50% / 50% center of the canvas */}
             <div
-              className="relative w-full h-[400px] flex items-center justify-center transition-transform duration-75"
+              className={`absolute left-1/2 top-1/2 ${
+                isDragging ? "transition-none" : "transition-transform duration-150 ease-out"
+              }`}
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                transformOrigin: "center center",
+                transformOrigin: "0 0",
               }}
             >
-              {/* Dynamic SVG Curves: ONLY render connectors for nodes actively routing requests */}
+              {/* Dynamic SVG Curves: connects center node (0,0) to active upstream nodes */}
               {providerPositions.length > 0 && (
-                <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible z-0">
+                <svg className="absolute left-0 top-0 overflow-visible pointer-events-none z-0">
                   <defs>
                     <linearGradient id="curveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stopColor="#f97316" stopOpacity="0.9" />
@@ -501,10 +622,10 @@ export const DashboardTab: React.FC = () => {
                     const isNodeActive = activeUpstreamIds.includes(node.id);
                     if (!isNodeActive) return null;
 
-                    const startX = 200;
-                    const startY = 200;
-                    const targetX = 200 + node.x;
-                    const targetY = 200 + node.y;
+                    const startX = 0;
+                    const startY = 0;
+                    const targetX = node.x;
+                    const targetY = node.y;
 
                     const midY = (startY + targetY) / 2;
                     const d = `M ${startX} ${startY} C ${startX} ${midY}, ${targetX} ${midY}, ${targetX} ${targetY}`;
@@ -531,8 +652,11 @@ export const DashboardTab: React.FC = () => {
                 </svg>
               )}
 
-              {/* Center Core Node: NekoRouter (Exact 9Router Style) */}
-              <div className="absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ left: "200px", top: "200px" }}>
+              {/* Center Core Node: NekoRouter (Placed dead center at 0,0) */}
+              <div
+                className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
+                style={{ left: "0px", top: "0px" }}
+              >
                 <div
                   className={`px-4 py-2 rounded-lg bg-[#171821] border transition-all ${
                     activeUpstreamIds.length > 0
@@ -560,15 +684,15 @@ export const DashboardTab: React.FC = () => {
               {activeUpstreams.length === 0 && (
                 <div
                   className="absolute z-10 -translate-x-1/2 text-center pointer-events-none"
-                  style={{ left: "200px", top: "245px" }}
+                  style={{ left: "0px", top: "45px" }}
                 >
-                  <span className="text-[11px] text-zinc-500 font-mono">
+                  <span className="text-[11px] text-zinc-500 font-mono whitespace-nowrap">
                     No upstream providers connected yet
                   </span>
                 </div>
               )}
 
-              {/* Surrounding Connected Upstream Nodes */}
+              {/* Surrounding Connected Upstream Nodes (Symmetrically placed around 0,0) */}
               {providerPositions.map((node) => {
                 const isNodeActive = activeUpstreamIds.includes(node.id);
                 return (
@@ -576,8 +700,8 @@ export const DashboardTab: React.FC = () => {
                     key={node.id}
                     className="absolute z-10 -translate-x-1/2 -translate-y-1/2 transition-transform hover:scale-105"
                     style={{
-                      left: `${200 + node.x}px`,
-                      top: `${200 + node.y}px`,
+                      left: `${node.x}px`,
+                      top: `${node.y}px`,
                     }}
                   >
                     <div
@@ -604,6 +728,7 @@ export const DashboardTab: React.FC = () => {
               })}
             </div>
           </div>
+
 
           {/* Right: RECENT REQUESTS Panel (Exact 9Router Style) */}
           <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-zinc-800/80 bg-[#0f1015] p-4 flex flex-col">
@@ -702,8 +827,11 @@ export const DashboardTab: React.FC = () => {
             </button>
           </div>
 
-          <div className="text-[11px] text-zinc-500">
+          <div className="text-[11px] text-zinc-500 hidden sm:block">
             Real-time topology passthrough with zero buffering
+          </div>
+          <div className="text-[10px] text-zinc-500 sm:hidden">
+            Drag to pan canvas • Pinch to zoom
           </div>
         </div>
       </div>
