@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788787535.7108881,
-    "ast_hash": "64c1d42f3508ecf83202bfa0ad500a01",
+    "mtime": 1788788685.2221186,
+    "ast_hash": "eb5b626b363bf0d270683d90ac36fa84",
     "semantic_hash": ""
   },
   "tsconfig.json": {
@@ -45,8 +45,8 @@
     "semantic_hash": ""
   },
   "src/index.ts": {
-    "mtime": 1788787511.1813588,
-    "ast_hash": "93177effeae3c09d409ae8c27101c066",
+    "mtime": 1788788659.4425263,
+    "ast_hash": "0e561ddbf4075876b36e74b4bd946b57",
     "semantic_hash": ""
   },
   "src/middleware/auth.ts": {
@@ -142,6 +142,141 @@
   "src/routes/api-keys.ts": {
     "mtime": 1788783217.5908234,
     "ast_hash": "4d04aeb8e206eec89c8c0092c10f3ccc",
+    "semantic_hash": ""
+  },
+  "frontend/.oxlintrc.json": {
+    "mtime": 1788788613.550829,
+    "ast_hash": "1f0703525c59e961c2b7f20e78aa1cd4",
+    "semantic_hash": ""
+  },
+  "frontend/src/App.tsx": {
+    "mtime": 1788788613.557804,
+    "ast_hash": "601899f4f54f9bfe5479a40eedb2deda",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ClientKeysTab.tsx": {
+    "mtime": 1788788613.5589979,
+    "ast_hash": "e7e7f4491cd4fb8313a882c42f1e0342",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/CodeSnippetViewer.tsx": {
+    "mtime": 1788788613.5589979,
+    "ast_hash": "cfb282248e8a8b964718aac43f7ae0a7",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/DashboardTab.tsx": {
+    "mtime": 1788788613.5589979,
+    "ast_hash": "63da4e7b059333afb0ccc7582c9f0daf",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/DatabaseSettingsTab.tsx": {
+    "mtime": 1788788613.5589979,
+    "ast_hash": "fcfacfe4ff95ed2eb6d2b2aed64ec463",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/Header.tsx": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "518016064d1353bd0e34b9fafcfe689d",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/LoginScreen.tsx": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "845b4a5f2c673911f6f3d7e3c30c4b31",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/SetupScreen.tsx": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "6ccbbe6b0c560f7167db5d74cb612c68",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/Sidebar.tsx": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "c68194b0c690a93b34bb6fb99d686aa5",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/TelemetryTab.tsx": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "7e2c5e7cb7f75a6610ae72dbef1181e6",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/Topbar.tsx": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "f32ebf0730e228ef1b8833b4335c6c5f",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/UpstreamKeysTab.tsx": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "b8b199b834071b9759f4a3751be2960b",
+    "semantic_hash": ""
+  },
+  "frontend/src/hooks/useTheme.ts": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "e45b18a907046bb261a4c98a79ba0993",
+    "semantic_hash": ""
+  },
+  "frontend/src/lib/api.ts": {
+    "mtime": 1788788613.5638423,
+    "ast_hash": "361a74baf119efed7317e6fd5e530764",
+    "semantic_hash": ""
+  },
+  "frontend/src/main.tsx": {
+    "mtime": 1788788613.5698233,
+    "ast_hash": "df3369963799e47ef5a77cdca932abf0",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.app.json": {
+    "mtime": 1788788613.5708845,
+    "ast_hash": "e4f83bdfdf660f5e5364945e14291d70",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.json": {
+    "mtime": 1788788613.5708845,
+    "ast_hash": "852c3a5df14a4b43ac28e9554ebedf4a",
+    "semantic_hash": ""
+  },
+  "frontend/tsconfig.node.json": {
+    "mtime": 1788788613.5719194,
+    "ast_hash": "74cde0261ad0a13045ca0a05ab1542ae",
+    "semantic_hash": ""
+  },
+  "vite.config.ts": {
+    "mtime": 1788788620.9851074,
+    "ast_hash": "7ffacc125904c74378f0331693190c67",
+    "semantic_hash": ""
+  },
+  "frontend/README.md": {
+    "mtime": 1788788613.550829,
+    "ast_hash": "3a8e2f41658852c43fdce93a22bc2f90",
+    "semantic_hash": ""
+  },
+  "frontend/index.html": {
+    "mtime": 1788788613.550829,
+    "ast_hash": "79b201a8b5b4985b6eab3a76a3958a01",
+    "semantic_hash": ""
+  },
+  "frontend/public/favicon.svg": {
+    "mtime": 1788788613.555084,
+    "ast_hash": "7e840862161341271697daa99a40d76b",
+    "semantic_hash": ""
+  },
+  "frontend/public/icons.svg": {
+    "mtime": 1788788613.556701,
+    "ast_hash": "21c7473c592c67dc87223d49892c8f0a",
+    "semantic_hash": ""
+  },
+  "frontend/src/assets/hero.png": {
+    "mtime": 1788788613.5589979,
+    "ast_hash": "aead493361b27e7510691c5d7072dfc1",
+    "semantic_hash": ""
+  },
+  "frontend/src/assets/react.svg": {
+    "mtime": 1788788613.5589979,
+    "ast_hash": "f0402b67b6ce880f65666bb49e841696",
+    "semantic_hash": ""
+  },
+  "frontend/src/assets/vite.svg": {
+    "mtime": 1788788613.5589979,
+    "ast_hash": "6d5180a782d64c8cf51ba01c2a2184d8",
     "semantic_hash": ""
   }
 }

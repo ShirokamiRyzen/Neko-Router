@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  .dark,
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: var(--color-zinc-200);
+  }
+
+  .dark *,
+  [data-theme="dark"] * {
+    border-color: #27272a;
+  }
+
+  body {
+    background-color: #f4f4f6;
+    color: #18181b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .dark body,
+  body.dark,
+  [data-theme="dark"] body {
+    background-color: #0c0d10;
+    color: #f4f4f5;
+  }
+}
+
+/* Skeuomorphic tactile design tokens */
+.skeuo-card {
+  border-radius: 0.5rem; /* rounded-lg (8px) */
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #d4d4d8;
+  border-top-color: #e4e4e7;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.9), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+.dark .skeuo-card {
+  border-radius: 0.5rem;
+  background: linear-gradient(180deg, #18181b 0%, #111113 100%);
+  border: 1px solid #27272a;
+  border-top-color: #3f3f46;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.skeuo-card-subtle {
+  border-radius: 0.375rem; /* rounded-md (6px) */
+  background: linear-gradient(180deg, #fafafa 0%, #f4f4f5 100%);
+  border: 1px solid #e4e4e7;
+  border-top-color: #f4f4f5;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.dark .skeuo-card-subtle {
+  border-radius: 0.375rem;
+  background: linear-gradient(180deg, #1f1f23 0%, #161619 100%);
+  border: 1px solid #2d2d32;
+  border-top-color: #38383e;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 2px 5px rgba(0, 0, 0, 0.35);
+}
+
+.skeuo-btn {
+  border-radius: 0.375rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f2f4 100%);
+  border: 1px solid #cbd5e1;
+  border-top-color: #e2e8f0;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: all 0.12s ease;
+}
+.skeuo-btn:hover {
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+.skeuo-btn:active {
+  background: #e2e8f0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(1px);
+}
+.dark .skeuo-btn {
+  border-radius: 0.375rem;
+  background: linear-gradient(180deg, #27272a 0%, #1a1a1d 100%);
+  border: 1px solid #3f3f46;
+  border-top-color: #52525b;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 2px 4px rgba(0, 0, 0, 0.4);
+  transition: all 0.12s ease;
+}
+.dark .skeuo-btn:hover {
+  background: linear-gradient(180deg, #303035 0%, #202024 100%);
+  border-color: #52525b;
+}
+.dark .skeuo-btn:active {
+  background: #141416;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  transform: translateY(1px);
+}
+
+.skeuo-btn-primary {
+  border-radius: 0.375rem;
+  background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+  border: 1px solid #047857;
+  border-top-color: #34d399;
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.35), 0 2px 4px rgba(5, 150, 105, 0.3);
+  transition: all 0.12s ease;
+}
+.skeuo-btn-primary:hover {
+  background: linear-gradient(180deg, #13ca8f 0%, #06a473 100%);
+}
+.skeuo-btn-primary:active {
+  background: #047857;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  transform: translateY(1px);
+}
+
+.skeuo-inset {
+  border-radius: 0.375rem;
+  background: #f1f2f4;
+  border: 1px solid #d4d4d8;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.dark .skeuo-inset {
+  border-radius: 0.375rem;
+  background: #090a0d;
+  border: 1px solid #1f2025;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.25);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.4);
+}
+
+@keyframes routerFlow {
+  from {
+    stroke-dashoffset: 32;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.router-flow-active {
+  stroke-dasharray: 5 5;
+  animation: routerFlow 1.4s linear infinite;
+}

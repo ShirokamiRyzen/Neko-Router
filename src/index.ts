@@ -9,6 +9,8 @@ import { upstreamRoutes } from "./routes/upstreams";
 import { telemetryRoutes } from "./routes/telemetry";
 import { adminRoutes } from "./routes/admin";
 import { proxyRoutes } from "./routes/proxy";
+import { existsSync, statSync } from "fs";
+import { join } from "path";
 
 // Initialize database schema and default PIN
 await initDatabase();
@@ -46,15 +48,6 @@ const app = new Elysia()
       },
     })
   )
-  // Root Information Endpoint
-  .get("/", () => ({
-    name: "Neko-Router",
-    version: "1.0.0",
-    status: "running",
-    description: "Ultra-low latency AI Gateway & Router for OpenAI and Anthropic compatible endpoints.",
-    docs: "/swagger",
-    health: "/health",
-  }))
   // Health & Info Endpoint
   .get("/health", () => ({ status: "ok", timestamp: Date.now() }))
   // Register Route Modules
@@ -65,6 +58,40 @@ const app = new Elysia()
   .use(telemetryRoutes)
   .use(adminRoutes)
   .use(proxyRoutes);
+
+// Serve frontend static assets if built
+const staticDir = existsSync(join(import.meta.dir, "../dist/public"))
+  ? join(import.meta.dir, "../dist/public")
+  : null;
+
+if (staticDir) {
+  // Static files with correct MIME types & SPA fallback
+  app.get("*", ({ request }) => {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+
+    // Check if directly requested static file exists in staticDir
+    if (pathname !== "/") {
+      const filePath = join(staticDir, pathname);
+      if (existsSync(filePath)) {
+        try {
+          if (!statSync(filePath).isDirectory()) {
+            return Bun.file(filePath);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
+    // SPA fallback for client-side routing
+    const indexPath = join(staticDir, "index.html");
+    if (existsSync(indexPath)) {
+      return Bun.file(indexPath);
+    }
+    return "Neko-Router backend is running.";
+  });
+}
 
 app.listen({ port, hostname: host }, () => {
   console.log(`🐱 Neko-Router AI Gateway is running at http://${host}:${port}`);
