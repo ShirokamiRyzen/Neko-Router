@@ -1,6 +1,6 @@
 # Neko-Router
 
-High-performance, ultra-low overhead AI Gateway & Router designed for OpenAI and Anthropic compatible endpoints, built with **Bun**, **ElysiaJS**, native `bun:sqlite` with **Drizzle ORM** (WAL mode), and a clean **Vite + React + Tailwind CSS** dashboard.
+High-performance, ultra-low overhead headless AI Gateway & Router designed for OpenAI and Anthropic compatible endpoints, built with **Bun**, **ElysiaJS**, native `bun:sqlite` with **Drizzle ORM** (WAL mode), with native **Elysia Eden** type-safe RPC client support.
 
 ---
 
@@ -14,13 +14,13 @@ High-performance, ultra-low overhead AI Gateway & Router designed for OpenAI and
   - **Caveman Mode**: Injects ultra-dense conciseness directives to strip conversational fluff, preambles, greetings, and apologies, slashing completion tokens.
   - **Whitespace & Prompt Minifier**: Normalizes excessive line breaks and trailing whitespace before tokenizer processing.
 - **Client Key Management & Token Quota Limiting**: Generate client access keys with standard `sk-neko-...` prefix, protected by both a requests-per-minute rate limiter and a total cumulative **Token Quota Limiter** (HTTP 429 `insufficient_quota` on exhaustion).
-- **Upstream Providers, Multi-Key Pools & Model Routing**: Configure OpenAI and Anthropic providers with multi-key pools for automatic key rotation and load balancing, custom base URLs (e.g. Ollama, vLLM, OpenRouter), edit upstream configurations, priority weights, and live connection testing. Includes model auto-discovery with strict default-OFF routing policies so only explicitly allowed models are exposed to clients.
-- **6-Digit Master PIN Security**: Factory default PIN `123456` strictly forces a new 6-digit PIN creation screen on first launch, secured with `Bun.password` (bcrypt) hashing and signed HTTP-only cookie sessions.
-- **SQLite Database Management**: Export checkpointed `.sqlite` backups with a single click; import databases with automatic SQLite magic header and schema integrity checks.
+- **Upstream Providers, Multi-Key Pools & Model Routing**: Configure OpenAI and Anthropic providers with multi-key pools for automatic key rotation and load balancing, custom base URLs (e.g. Ollama, vLLM, OpenRouter), priority weights, request timeouts, and live connection testing.
+- **Elysia Eden Ready**: Directly export `App` type (`export type App = typeof app`) for 100% end-to-end type-safe consumption in any frontend or service using `@elysiajs/eden`.
+- **6-Digit Master PIN Security**: Default PIN `123456` secures admin and configuration endpoints, secured with `Bun.password` (bcrypt) hashing and signed HTTP-only cookie sessions.
+- **SQLite Database Management**: Export checkpointed `.sqlite` backups; import databases with automatic SQLite magic header and schema integrity checks.
 - **HTTPS-Only API Enforcement**: Optional global switch in Settings to reject unencrypted HTTP requests to AI proxy endpoints, enforcing TLS encryption and inspecting `X-Forwarded-Proto` reverse proxy headers.
 - **Interactive API Documentation**: Built-in Swagger/OpenAPI UI available at `/swagger` and complete integration docs in `API_Docs.md`.
-- **Modern Minimalist UI**: Clean sidebar navigation layout with persistent Dark/Light mode support.
-- **Zero-Build Docker Deployment**: Instant deployment using `oven/bun:alpine` and `network_mode: "host"` with volume bind mounts.
+- **Pure Zero-Build Docker Deployment**: Instant deployment using lightweight `oven/bun:alpine` with volume bind mounts.
 
 ---
 
@@ -28,26 +28,7 @@ High-performance, ultra-low overhead AI Gateway & Router designed for OpenAI and
 
 ```text
 Neko-Router/
-├── client/                     # Frontend (Vite + React + TS + Tailwind + Lucide)
-│   ├── src/
-│   │   ├── components/         # Sidebar, Topbar, Tabs, Modals
-│   │   │   ├── Sidebar.tsx
-│   │   │   ├── Topbar.tsx
-│   │   │   ├── SetupScreen.tsx
-│   │   │   ├── LoginScreen.tsx
-│   │   │   ├── DashboardTab.tsx
-│   │   │   ├── ClientKeysTab.tsx
-│   │   │   ├── UpstreamKeysTab.tsx
-│   │   │   ├── TelemetryTab.tsx
-│   │   │   └── DatabaseSettingsTab.tsx
-│   │   ├── hooks/useTheme.ts   # Dark / light mode state & persistence
-│   │   ├── lib/api.ts          # Type-safe API client & interfaces
-│   │   ├── App.tsx             # Root app & auth state routing
-│   │   ├── index.css           # Tailwind design tokens & base styling
-│   │   └── main.tsx
-│   ├── vite.config.ts          # Tailwind v4 plugin & dev proxies
-│   └── package.json
-├── src/                        # Backend (Bun + ElysiaJS)
+├── src/                        # Headless Backend (Bun + ElysiaJS)
 │   ├── config/env.ts           # Environment configuration
 │   ├── db/
 │   │   ├── index.ts            # SQLite connection, WAL pragma, table init
@@ -56,10 +37,11 @@ Neko-Router/
 │   │   └── auth.ts             # Cookie, Bearer JWT, and client key auth guard
 │   ├── routes/
 │   │   ├── auth.ts             # Status, login, change-pin, logout
-│   │   ├── keys.ts             # Client API keys CRUD
+│   │   ├── keys.ts             # Client API keys CRUD (sk-neko-...)
+│   │   ├── api-keys.ts         # Router integration API keys
 │   │   ├── upstreams.ts        # Upstream keys CRUD, alias generator & test
 │   │   ├── telemetry.ts        # Aggregated stats & request logs
-│   │   ├── admin.ts            # SQLite export/import, system metrics & optimizer settings
+│   │   ├── admin.ts            # SQLite export/import, metrics, timeout & optimizer settings
 │   │   └── proxy.ts            # /v1/chat/completions, /v1/models, /v1/messages
 │   ├── services/
 │   │   ├── auth.ts             # 6-digit PIN bcrypt verification & client key validation
@@ -67,7 +49,7 @@ Neko-Router/
 │   │   ├── telemetry.ts        # Asynchronous telemetry logger & cached token counters
 │   │   ├── optimizer.ts        # RTK compression, Caveman mode, response cache engine
 │   │   └── proxy.ts            # Zero-latency WebStream passthrough engine
-│   └── index.ts                # Elysia server, Swagger, & SPA static serving
+│   └── index.ts                # Elysia server, Swagger, & Eden type App export
 ├── data/                       # Local SQLite storage folder
 │   └── router.db               # Persisted SQLite database (WAL mode)
 ├── API_Docs.md                 # Complete API integration manual
@@ -94,12 +76,6 @@ cd Neko-Router
 # Install backend dependencies
 bun install
 
-# Install client dependencies and build frontend
-cd client
-bun install
-bun run build
-cd ..
-
 # Copy environment file
 cp .env.example .env
 
@@ -107,36 +83,55 @@ cp .env.example .env
 bun run dev
 ```
 
-Open your browser at:
-- **Dashboard UI**: [http://localhost:3000](http://localhost:3000)
-- **Swagger OpenAPI Docs**: [http://localhost:3000/swagger](http://localhost:3000/swagger)
-
-### 2. First-Time Setup Flow
-1. Upon first launch, you will be prompted to set a new 6-digit Master PIN because the router is initialized with factory default PIN `123456`.
-2. Enter default PIN `123456`, enter your new 6-digit PIN twice, and click **Save PIN & Launch Gateway**.
-3. Create your first Upstream Provider Key (OpenAI or Anthropic) in the **Upstream Providers** tab.
-4. Generate a Client Key (`sk-neko-...`) in the **Client Keys** tab with optional token and rate limits.
-5. Connect your applications or SDKs using the new key!
+Server endpoints:
+- **API Root**: [http://localhost:3000](http://localhost:3000)
+- **Interactive Swagger OpenAPI Docs**: [http://localhost:3000/swagger](http://localhost:3000/swagger)
+- **Health Check**: [http://localhost:3000/health](http://localhost:3000/health)
 
 ---
 
 ## Docker Deployment
 
-The Docker setup uses a clean `oven/bun:alpine` runtime without in-container builds. Dependencies and frontend builds are done on host or via CI/CD, and the repository is bind-mounted directly into the container:
+The Docker setup uses a clean `oven/bun:alpine` runtime without in-container builds:
 
 ```bash
-# 1. Install dependencies & build frontend (or via GitHub Actions CI/CD)
-bun install
-cd client && bun install && bun run build && cd ..
-
-# 2. Prepare environment
+# 1. Prepare environment
 cp .env.example .env
 
-# 3. Start container with volume mapping
+# 2. Start container with volume mapping
 docker compose up -d --build
 ```
 
 The entire repository (including `node_modules` and `./data`) is bind-mounted directly to `/app`, giving near-instant container startup and minimal disk footprint.
+
+---
+
+## Frontend Integration with Elysia Eden
+
+Any frontend framework (React, Next.js, Vue, Svelte, Astro, etc.) or Node/Bun client can connect to Neko-Router with 100% end-to-end type safety using `@elysiajs/eden`:
+
+```bash
+bun add @elysiajs/eden
+```
+
+```ts
+import { treaty } from "@elysiajs/eden";
+import type { App } from "./src/index"; // or shared App type
+
+// Initialize type-safe client
+export const client = treaty<App>("localhost:3000");
+
+// Check health
+const { data: health } = await client.health.get();
+console.log(health); // { status: "ok", timestamp: ... }
+
+// Fetch client keys with full autocomplete & TypeScript validation
+const { data: keys, error } = await client.api.keys.get({
+  headers: {
+    authorization: "Bearer your-session-or-api-key",
+  },
+});
+```
 
 ---
 

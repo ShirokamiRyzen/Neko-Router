@@ -2,6 +2,8 @@ FROM oven/bun:alpine
 
 WORKDIR /app
 
+ENV NODE_ENV=production
+
 EXPOSE 3000
 
-CMD ["bun", "src/index.ts"]
+CMD ["bun", "start"]

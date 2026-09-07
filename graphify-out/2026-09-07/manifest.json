@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788775428.2113323,
-    "ast_hash": "d3a7596c0c3521947d0dd80a1221cd95",
+    "mtime": 1788787339.5423973,
+    "ast_hash": "09591653cc4bb525b55739defab1dc56",
     "semantic_hash": ""
   },
   "tsconfig.json": {
@@ -25,8 +25,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1788779595.8757522,
-    "ast_hash": "4c575c1c49120ff5fd27c984e5eb54cf",
+    "mtime": 1788786931.0491874,
+    "ast_hash": "66ab905cbc64027a27982e2215611c69",
     "semantic_hash": ""
   },
   "client/.oxlintrc.json": {
@@ -35,8 +35,8 @@
     "semantic_hash": ""
   },
   "client/package.json": {
-    "mtime": 1788775382.9415512,
-    "ast_hash": "cccc2fdcce847519659e14473f57a9b9",
+    "mtime": 1788787232.069701,
+    "ast_hash": "6fe97ffb80286a269038bc1e50e12c49",
     "semantic_hash": ""
   },
   "client/src/App.tsx": {
@@ -125,8 +125,8 @@
     "semantic_hash": ""
   },
   "src/db/index.ts": {
-    "mtime": 1788784711.2590017,
-    "ast_hash": "8d8256798f26c68ca535e4d971d3f93a",
+    "mtime": 1788787000.1008348,
+    "ast_hash": "d1e627777fa58acd65860c4dd4ada6ca",
     "semantic_hash": ""
   },
   "src/db/schema.ts": {
@@ -175,8 +175,8 @@
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
-    "mtime": 1788783130.4801807,
-    "ast_hash": "22d01039b3ae35f5dee47fb6378a3351",
+    "mtime": 1788786899.9209332,
+    "ast_hash": "2e9a44135f92b23091cd61b8acdc6120",
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "docker-compose.yml": {
-    "mtime": 1788780075.155302,
-    "ast_hash": "1a09281a52bd7eb7e3b8a3460aafc32d",
+    "mtime": 1788786917.0603964,
+    "ast_hash": "97698ca16f61bcf23e5003e3db14dba6",
     "semantic_hash": ""
   },
   "client/public/favicon.svg": {
@@ -277,11 +277,6 @@
   "client/src/components/CodeSnippetViewer.tsx": {
     "mtime": 1788779660.9877157,
     "ast_hash": "a85a675f5d0da5169b9876c20b4f4a10",
-    "semantic_hash": ""
-  },
-  "docker-entrypoint.sh": {
-    "mtime": 1788779903.7553318,
-    "ast_hash": "c31603fac0bafe9998b42d447312d1ff",
     "semantic_hash": ""
   },
   "src/routes/api-keys.ts": {

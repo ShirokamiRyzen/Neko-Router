@@ -1,13 +1,18 @@
 # Graph Report - Neko-Router  (2026-09-07)
 
 ## Corpus Check
-- 51 files · ~46,639 words
+- 50 files · ~46,569 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 492 nodes · 687 edges · 24 communities (20 shown, 4 thin omitted)
+- 492 nodes · 690 edges · 23 communities (20 shown, 3 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `4ce8f6d2`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - compilerOptions
@@ -22,7 +27,6 @@
 - client/package.json
 - compilerOptions
 - Analysis & Synthesis Instructions
-- docker-entrypoint.sh
 - Design System: Taste Standard
 - Protocol: Premium Utilitarian Minimalism UI Architect
 - 5. Router Management APIs
@@ -60,7 +64,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (24 total, 4 thin omitted)
+## Communities (23 total, 3 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -72,7 +76,7 @@ Nodes (30): drizzle-kit, drizzle-orm, elysia, @elysiajs/cors, @elysiajs/jwt, @el
 
 ### Community 2 - "schema.ts"
 Cohesion: 0.08
-Nodes (40): checkpointWal(), db, initDatabase(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+32 more)
+Nodes (42): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+34 more)
 
 ### Community 5 - "🐱 Neko-Router"
 Cohesion: 0.14
@@ -91,8 +95,8 @@ Cohesion: 0.08
 Nodes (23): compilerOptions, allowArbitraryExtensions, allowImportingTsExtensions, erasableSyntaxOnly, jsx, lib, module, moduleDetection (+15 more)
 
 ### Community 10 - "client/package.json"
-Cohesion: 0.10
-Nodes (20): dependencies, clsx, lucide-react, react, react-dom, tailwind-merge, name, private (+12 more)
+Cohesion: 0.09
+Nodes (21): dependencies, clsx, lucide-react, react, react-dom, tailwind-merge, name, private (+13 more)
 
 ### Community 11 - "compilerOptions"
 Cohesion: 0.10
@@ -124,7 +128,7 @@ Nodes (3): Expanding the Oxlint configuration, React Compiler, React + TypeScrip
 
 ### Community 21 - "services/proxy.ts"
 Cohesion: 0.10
-Nodes (41): UpstreamKey, upstreamKeys, adjectives, nouns, upstreamRoutes, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression() (+33 more)
+Nodes (40): UpstreamKey, upstreamKeys, adjectives, nouns, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression(), checkHttpsRequirement() (+32 more)
 
 ### Community 22 - "Neko-Router API Documentation"
 Cohesion: 0.07
@@ -137,7 +141,7 @@ Nodes (19): devDependencies, oxlint, tailwindcss, @tailwindcss/vite, @types/node
 ## Knowledge Gaps
 - **271 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+266 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -155,4 +159,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.06451612903225806 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.0783744557329463 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07542087542087542 - nodes in this community are weakly interconnected._

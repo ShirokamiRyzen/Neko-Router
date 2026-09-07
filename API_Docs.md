@@ -18,6 +18,7 @@ Comprehensive API integration documentation for **Neko-Router**, a high-performa
    - [Anthropic Claude TypeScript SDK](#c-anthropic-claude-typescript-sdk)
    - [Anthropic Claude Python SDK](#d-anthropic-claude-python-sdk)
    - [cURL Streaming & Non-Streaming](#e-curl-examples)
+   - [Elysia Eden Treaty (TypeScript End-to-End Type Safety)](#f-elysia-eden-treaty-typescript)
 5. [Router Management APIs](#5-router-management-apis)
    - [Authentication & PIN Endpoints](#a-authentication--pin-endpoints)
    - [Client Access Keys Management](#b-client-keys-endpoints)
@@ -284,6 +285,67 @@ curl http://localhost:3000/v1/messages \
       { "role": "user", "content": "List the laws of thermodynamics." }
     ]
   }'
+```
+
+---
+
+### F. Elysia Eden Treaty (TypeScript)
+
+If you are building a custom Web Dashboard, mobile app, microservice, or CLI tool with TypeScript/JavaScript, you can consume Neko-Router with **100% end-to-end type safety and autocomplete** using `@elysiajs/eden`:
+
+#### 1. Installation:
+```bash
+bun add @elysiajs/eden
+# or
+npm install @elysiajs/eden
+```
+
+#### 2. Usage with Neko-Router `App` Type:
+```typescript
+import { treaty } from "@elysiajs/eden";
+import type { App } from "./src/index"; // or export type from your build
+
+// Initialize the Eden Treaty client
+export const api = treaty<App>("http://localhost:3000");
+
+// 1. Health check (fully typed response)
+const { data: health } = await api.health.get();
+console.log(health?.status); // "ok"
+
+// 2. Query available AI models (no auth required)
+const { data: models } = await api.v1.models.get();
+console.log(models?.data); // Array of Model objects
+
+// 3. Authenticate with Master PIN
+const { data: authResult } = await api.api.auth.login.post({
+  pin: "123456",
+});
+
+const token = authResult?.token;
+
+// 4. Fetch Client Keys with Bearer token
+const { data: keys, error } = await api.api.keys.get({
+  headers: {
+    authorization: `Bearer ${token}`,
+  },
+});
+
+// 5. Create a new Client Key
+const { data: newKey } = await api.api.keys.post(
+  {
+    name: "Production Worker",
+    rateLimit: 60,
+    tokenLimit: 500000,
+    allowedProviders: ["openai", "anthropic"],
+    roundRobinProviders: 1,
+  },
+  {
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  }
+);
+console.log("Generated Key:", newKey?.key); // "sk-neko-..."
 ```
 
 ---
