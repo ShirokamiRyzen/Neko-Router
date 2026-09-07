@@ -1,0 +1,52 @@
+# .github/workflows/deploy.yml
+
+name: Deploy Proxy to Docker
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: docker-proxy-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Docker App
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.PRIVATE_SSH_KEY }}
+          script: |
+            set -e
+
+            # Ensure Bun path is loaded in non-interactive SSH
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$PATH"
+
+            cd /root/Neko-Router
+
+            echo "Pulling latest changes..."
+            git pull origin main
+
+            echo "Installing dependencies & building frontend..."
+            bun install
+            bun run build
+
+            echo "Rebuilding and restarting containers..."
+            docker compose up -d --build --remove-orphans
+
+            echo "Removing unused Docker images..."
+            docker image prune -f
+
+            echo "Removing unused Docker build cache..."
+            docker builder prune -f
+
+            echo "Deployment finished successfully."

@@ -278,5 +278,10 @@
     "mtime": 1788788613.5589979,
     "ast_hash": "6d5180a782d64c8cf51ba01c2a2184d8",
     "semantic_hash": ""
+  },
+  ".github/workflows/deploy.yml": {
+    "mtime": 1788789949.0762844,
+    "ast_hash": "964cf30e08bf572f16ca51c94a7cface",
+    "semantic_hash": ""
   }
 }
