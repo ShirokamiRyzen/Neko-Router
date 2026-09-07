@@ -7,6 +7,4 @@ services:
     env_file:
       - .env
     volumes:
-      - ./data:/app/data
-      - ./.env:/app/.env:ro
-      - ./.git:/app/.git:ro
+      - ./:/app

@@ -1,12 +1,12 @@
 # Graph Report - Neko-Router  (2026-09-07)
 
 ## Corpus Check
-- 51 files · ~46,253 words
+- 51 files · ~46,639 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 489 nodes · 682 edges · 24 communities (20 shown, 4 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
+- 492 nodes · 687 edges · 24 communities (20 shown, 4 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -72,7 +72,7 @@ Nodes (30): drizzle-kit, drizzle-orm, elysia, @elysiajs/cors, @elysiajs/jwt, @el
 
 ### Community 2 - "schema.ts"
 Cohesion: 0.08
-Nodes (39): checkpointWal(), db, initDatabase(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+31 more)
+Nodes (40): checkpointWal(), db, initDatabase(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+32 more)
 
 ### Community 5 - "🐱 Neko-Router"
 Cohesion: 0.14
@@ -84,7 +84,7 @@ Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT,
 
 ### Community 7 - "App.tsx"
 Cohesion: 0.08
-Nodes (35): App(), ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo(), getProviderTag(), DatabaseSettingsTab(), HeaderProps (+27 more)
+Nodes (38): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+30 more)
 
 ### Community 9 - "compilerOptions"
 Cohesion: 0.08
@@ -124,7 +124,7 @@ Nodes (3): Expanding the Oxlint configuration, React Compiler, React + TypeScrip
 
 ### Community 21 - "services/proxy.ts"
 Cohesion: 0.10
-Nodes (42): UpstreamKey, upstreamKeys, proxyRoutes, adjectives, nouns, checkClientRateLimit(), incrementClientKeyTokens(), validateClientKey() (+34 more)
+Nodes (41): UpstreamKey, upstreamKeys, adjectives, nouns, upstreamRoutes, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression() (+33 more)
 
 ### Community 22 - "Neko-Router API Documentation"
 Cohesion: 0.07
@@ -135,7 +135,7 @@ Cohesion: 0.11
 Nodes (19): devDependencies, oxlint, tailwindcss, @tailwindcss/vite, @types/node, @types/react, @types/react-dom, typescript (+11 more)
 
 ## Knowledge Gaps
-- **270 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+265 more)
+- **271 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+266 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -149,10 +149,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `react` connect `App.tsx` to `plugins`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `$schema`, `typescript`, `oxc` to the rest of the system?**
-  _270 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _271 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.06451612903225806 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.08069381598793364 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0783744557329463 - nodes in this community are weakly interconnected._

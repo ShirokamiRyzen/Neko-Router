@@ -1,13 +1,18 @@
 # Graph Report - Neko-Router  (2026-09-07)
 
 ## Corpus Check
-- 51 files · ~46,639 words
+- 50 files · ~46,565 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 492 nodes · 687 edges · 24 communities (20 shown, 4 thin omitted)
+- 491 nodes · 689 edges · 23 communities (20 shown, 3 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
+
+## Graph Freshness
+- Built from commit: `c48e8554`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - compilerOptions
@@ -22,7 +27,6 @@
 - client/package.json
 - compilerOptions
 - Analysis & Synthesis Instructions
-- docker-entrypoint.sh
 - Design System: Taste Standard
 - Protocol: Premium Utilitarian Minimalism UI Architect
 - 5. Router Management APIs
@@ -60,7 +64,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (24 total, 4 thin omitted)
+## Communities (23 total, 3 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -72,7 +76,7 @@ Nodes (30): drizzle-kit, drizzle-orm, elysia, @elysiajs/cors, @elysiajs/jwt, @el
 
 ### Community 2 - "schema.ts"
 Cohesion: 0.08
-Nodes (40): checkpointWal(), db, initDatabase(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+32 more)
+Nodes (41): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+33 more)
 
 ### Community 5 - "🐱 Neko-Router"
 Cohesion: 0.14
@@ -135,9 +139,9 @@ Cohesion: 0.11
 Nodes (19): devDependencies, oxlint, tailwindcss, @tailwindcss/vite, @types/node, @types/react, @types/react-dom, typescript (+11 more)
 
 ## Knowledge Gaps
-- **271 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+266 more)
+- **270 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+265 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -149,10 +153,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `react` connect `App.tsx` to `plugins`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `$schema`, `typescript`, `oxc` to the rest of the system?**
-  _271 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _270 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
 - **Should `package.json` be split into smaller, more focused modules?**
   _Cohesion score 0.06451612903225806 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.0783744557329463 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07756813417190776 - nodes in this community are weakly interconnected._

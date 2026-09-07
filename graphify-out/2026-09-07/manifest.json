@@ -40,18 +40,18 @@
     "semantic_hash": ""
   },
   "client/src/App.tsx": {
-    "mtime": 1788782600.226027,
-    "ast_hash": "18f3fb01dace5ab1dd117d031ea7855b",
+    "mtime": 1788786170.4096408,
+    "ast_hash": "eb5fcc611123148d4d75ea90dcd20c69",
     "semantic_hash": ""
   },
   "client/src/components/ClientKeysTab.tsx": {
-    "mtime": 1788785368.9014885,
-    "ast_hash": "1d70671000a97c4bf30de165b2a1a960",
+    "mtime": 1788786203.2182198,
+    "ast_hash": "8e1f535078b74e10ee506ffbd1c36aeb",
     "semantic_hash": ""
   },
   "client/src/components/DashboardTab.tsx": {
-    "mtime": 1788785145.888831,
-    "ast_hash": "990dc830ec3239b79a9087ae5470fdef",
+    "mtime": 1788786212.736382,
+    "ast_hash": "cfbda8d0ff494ec30258a01a547001fa",
     "semantic_hash": ""
   },
   "client/src/components/DatabaseSettingsTab.tsx": {
@@ -260,8 +260,8 @@
     "semantic_hash": ""
   },
   "client/src/components/Sidebar.tsx": {
-    "mtime": 1788783297.366364,
-    "ast_hash": "ab4912fd6cc69a5ed1a6aa5ebbc95720",
+    "mtime": 1788786193.2132428,
+    "ast_hash": "5500bb0f0d024183cd8c2ca48814874c",
     "semantic_hash": ""
   },
   "client/src/components/Topbar.tsx": {

@@ -122,17 +122,21 @@ Open your browser at:
 
 ## Docker Deployment
 
-To run with Docker Compose (using `oven/bun:alpine` in `network_mode: "host"`):
+The Docker setup uses a clean `oven/bun:alpine` runtime without in-container builds. Dependencies and frontend builds are done on host or via CI/CD, and the repository is bind-mounted directly into the container:
 
 ```bash
-# 1. Prepare environment
+# 1. Install dependencies & build frontend (or via GitHub Actions CI/CD)
+bun install
+cd client && bun install && bun run build && cd ..
+
+# 2. Prepare environment
 cp .env.example .env
 
-# 2. Start container with volume mapping
-docker compose up -d
+# 3. Start container with volume mapping
+docker compose up -d --build
 ```
 
-All source code and SQLite data in `./data` are bind-mounted directly.
+The entire repository (including `node_modules` and `./data`) is bind-mounted directly to `/app`, giving near-instant container startup and minimal disk footprint.
 
 ---
 

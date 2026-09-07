@@ -3,25 +3,33 @@ import { clientKeys, apiKeys, type ClientKey, type ApiKey } from "../db/schema";
 import { eq } from "drizzle-orm";
 
 export function getJwtSecret(): string {
-  const row = sqlite
-    .query("SELECT value FROM settings WHERE key = 'jwt_secret'")
-    .get() as { value: string } | null;
-  return row?.value || process.env.JWT_SECRET || "neko-router-default-secret-key-32";
+  try {
+    const row = sqlite
+      .query("SELECT value FROM settings WHERE key = 'jwt_secret'")
+      .get() as { value: string } | null;
+    return row?.value || process.env.JWT_SECRET || "neko-router-default-secret-key-32";
+  } catch (e) {
+    return process.env.JWT_SECRET || "neko-router-default-secret-key-32";
+  }
 }
 
 export function isDefaultPin(): boolean {
-  const row = sqlite
-    .query("SELECT value FROM settings WHERE key = 'is_default_pin'")
-    .get() as { value: string } | null;
-  return row?.value === "1";
+  try {
+    const row = sqlite
+      .query("SELECT value FROM settings WHERE key = 'is_default_pin'")
+      .get() as { value: string } | null;
+    return row?.value === "1";
+  } catch (e) {
+    return true;
+  }
 }
 
 export async function verifyPin(pin: string): Promise<boolean> {
-  const row = sqlite
-    .query("SELECT value FROM settings WHERE key = 'auth_pin_hash'")
-    .get() as { value: string } | null;
-  if (!row?.value) return false;
   try {
+    const row = sqlite
+      .query("SELECT value FROM settings WHERE key = 'auth_pin_hash'")
+      .get() as { value: string } | null;
+    if (!row?.value) return false;
     return await Bun.password.verify(pin, row.value);
   } catch (e) {
     console.error("Error verifying PIN:", e);

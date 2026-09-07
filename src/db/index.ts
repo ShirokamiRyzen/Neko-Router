@@ -10,15 +10,13 @@ export const DB_PATH = process.env.DB_PATH || "data/router.db";
 mkdirSync(dirname(DB_PATH), { recursive: true });
 
 export let sqlite = new Database(DB_PATH);
-sqlite.exec("PRAGMA journal_mode = WAL;");
-sqlite.exec("PRAGMA synchronous = NORMAL;");
-sqlite.exec("PRAGMA foreign_keys = ON;");
+sqlite.run("PRAGMA journal_mode = WAL;");
+sqlite.run("PRAGMA synchronous = NORMAL;");
+sqlite.run("PRAGMA foreign_keys = ON;");
 
-export let db = drizzle(sqlite, { schema });
-
-export async function initDatabase(): Promise<void> {
+export function initTablesSync(): void {
   // Ensure tables exist
-  sqlite.exec(`
+  sqlite.run(`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
@@ -132,7 +130,7 @@ export async function initDatabase(): Promise<void> {
 
   // Safe index creations
   try {
-    sqlite.exec(`
+    sqlite.run(`
       CREATE INDEX IF NOT EXISTS idx_telemetry_created_at ON telemetry_logs (created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_telemetry_client_key ON telemetry_logs (client_key_id);
       CREATE INDEX IF NOT EXISTS idx_telemetry_provider ON telemetry_logs (provider);
@@ -143,6 +141,15 @@ export async function initDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_response_cache_expires ON response_cache (expires_at);
     `);
   } catch (e) {}
+}
+
+// Run table bootstrap synchronously immediately
+initTablesSync();
+
+export let db = drizzle(sqlite, { schema });
+
+export async function initDatabase(): Promise<void> {
+  initTablesSync();
 
   // Check default PIN setup
   const pinRow = sqlite
@@ -191,12 +198,13 @@ export function reloadDatabase(): void {
     // ignore
   }
   sqlite = new Database(DB_PATH);
-  sqlite.exec("PRAGMA journal_mode = WAL;");
-  sqlite.exec("PRAGMA synchronous = NORMAL;");
-  sqlite.exec("PRAGMA foreign_keys = ON;");
+  sqlite.run("PRAGMA journal_mode = WAL;");
+  sqlite.run("PRAGMA synchronous = NORMAL;");
+  sqlite.run("PRAGMA foreign_keys = ON;");
+  initTablesSync();
   db = drizzle(sqlite, { schema });
 }
 
 export function checkpointWal(): void {
-  sqlite.exec("PRAGMA wal_checkpoint(TRUNCATE);");
+  sqlite.run("PRAGMA wal_checkpoint(TRUNCATE);");
 }

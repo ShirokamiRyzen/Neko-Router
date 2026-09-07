@@ -39,3 +39,4 @@ data/*.db-shm
 data/*.db-wal
 data/*.sqlite
 data/temp_*
+bun.lock
