@@ -1,0 +1,12 @@
+services:
+  neko-router:
+    build: .
+    container_name: neko-router
+    restart: unless-stopped
+    network_mode: "host"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
+      - ./.git:/app/.git:ro
