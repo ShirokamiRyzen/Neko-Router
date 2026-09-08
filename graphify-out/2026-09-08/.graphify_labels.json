@@ -8,7 +8,7 @@
   "6": "brandkit/SKILL.md",
   "7": "App.tsx",
   "8": "index.ts",
-  "9": "services/proxy.ts",
+  "9": "upstreams.ts",
   "10": "compilerOptions",
   "11": "dependencies",
   "12": "Analysis & Synthesis Instructions",
@@ -26,5 +26,6 @@
   "24": "B. Client Keys Endpoints",
   "25": "B.2 Router Integration API Keys (`/api/router-keys`)",
   "26": "A. Authentication & PIN Endpoints",
-  "27": "F. Database & System Endpoints"
+  "27": "F. Database & System Endpoints",
+  "28": "dev.ts"
 }

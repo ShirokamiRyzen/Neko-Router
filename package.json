@@ -4,9 +4,11 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
+    "dev": "bun scripts/dev.ts",
+    "dev:server": "bun --watch src/index.ts",
+    "dev:client": "vite",
     "build": "vite build",
+    "start": "bun src/index.ts",
     "preview": "vite preview"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ import {
   getApiKeyForUpstream,
   getActiveUpstreamKeys,
   parseUpstreamModels,
+  parseUpstreamKeyEntries,
 } from "./router";
 import { recordTelemetry, registerActiveRequest } from "./telemetry";
 import { incrementClientKeyTokens, checkClientRateLimit } from "./auth";
@@ -15,6 +16,21 @@ import {
   getCachedResponse,
   setCachedResponse,
 } from "./optimizer";
+import {
+  getCopilotInternalToken,
+  getCopilotHeaders,
+  transformCopilotRequestBody,
+} from "./copilot";
+import {
+  ensureAntigravityAccessToken,
+  forceRefreshAntigravityToken,
+} from "./antigravity";
+import {
+  CODEX_CONFIG,
+  ensureCodexAccessToken,
+  refreshCodexToken,
+  transformChatToCodexResponses,
+} from "./codex";
 
 type CancellableTransformer<I, O> = Transformer<I, O> & {
   cancel?(reason?: any): void | Promise<void>;
@@ -204,7 +220,13 @@ export async function proxyOpenAIChatCompletions(
     };
   }
 
-  const upstreamUrl = `${getBaseUrl(upstream)}/chat/completions`;
+  const isCodex =
+    upstream.baseUrl?.includes("chatgpt.com/backend-api/codex") ||
+    upstream.name.toLowerCase().includes("codex");
+
+  const upstreamUrl = isCodex
+    ? (upstream.baseUrl?.trim() || CODEX_CONFIG.BASE_URL)
+    : `${getBaseUrl(upstream)}/chat/completions`;
 
   const timeoutSeconds = Number(opt.requestTimeoutSeconds) || 0;
   const controller = new AbortController();
@@ -235,15 +257,113 @@ export async function proxyOpenAIChatCompletions(
 
   let upstreamResponse: Response;
   try {
+    const currentUpstreamKey = getApiKeyForUpstream(upstream);
+    let upstreamHeaders: Record<string, string>;
+
+    const isCopilot =
+      upstream.baseUrl?.includes("githubcopilot.com") ||
+      currentUpstreamKey.startsWith("ghu_") ||
+      currentUpstreamKey.startsWith("gho_");
+
+    const isAntigravity =
+      upstream.baseUrl?.includes("cloudcode-pa.googleapis.com") ||
+      upstream.baseUrl?.includes("daily-cloudcode-pa.googleapis.com") ||
+      currentUpstreamKey.startsWith("ya29.") ||
+      upstream.name.toLowerCase().includes("antigravity");
+
+    let requestPayload = optimizedBody;
+    let effectiveAntigravityKey = currentUpstreamKey;
+    let antigravityEntry: any = null;
+    let effectiveCodexKey = currentUpstreamKey;
+    let codexEntry: any = null;
+
+    if (isCopilot) {
+      const isStream = Boolean(optimizedBody?.stream);
+      const internalToken = await getCopilotInternalToken(currentUpstreamKey);
+      upstreamHeaders = getCopilotHeaders(internalToken, isStream);
+      requestPayload = transformCopilotRequestBody(optimizedBody, model);
+    } else if (isAntigravity) {
+      const entries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+      antigravityEntry = entries.find((e) => e.key === currentUpstreamKey) || entries.find((e) => e.isActive);
+      if (antigravityEntry) {
+        effectiveAntigravityKey = await ensureAntigravityAccessToken(upstream.id, antigravityEntry);
+      }
+
+      const isStream = Boolean(optimizedBody?.stream);
+      upstreamHeaders = {
+        Authorization: `Bearer ${effectiveAntigravityKey}`,
+        "Content-Type": "application/json",
+        "User-Agent": "antigravity/ide/2.11.0 darwin/arm64",
+        "x-request-source": "local",
+        Accept: isStream ? "text/event-stream" : "application/json",
+      };
+    } else if (isCodex) {
+      const entries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+      codexEntry = entries.find((e) => e.key === currentUpstreamKey) || entries.find((e) => e.isActive);
+      if (codexEntry) {
+        effectiveCodexKey = await ensureCodexAccessToken(upstream.id, codexEntry);
+      }
+
+      const isStream = Boolean(optimizedBody?.stream);
+      upstreamHeaders = {
+        Authorization: `Bearer ${effectiveCodexKey}`,
+        "Content-Type": "application/json",
+        originator: CODEX_CONFIG.ORIGINATOR,
+        "User-Agent": CODEX_CONFIG.USER_AGENT,
+        Accept: isStream ? "text/event-stream" : "application/json",
+      };
+      if (codexEntry?.chatgptAccountId) {
+        (upstreamHeaders as any)["chatgpt-account-id"] = codexEntry.chatgptAccountId;
+      }
+      requestPayload = transformChatToCodexResponses(optimizedBody, model);
+    } else {
+      upstreamHeaders = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${currentUpstreamKey}`,
+      };
+    }
+
     upstreamResponse = await fetch(upstreamUrl, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${getApiKeyForUpstream(upstream)}`,
-      },
-      body: JSON.stringify(optimizedBody),
+      headers: upstreamHeaders,
+      body: JSON.stringify(requestPayload),
       signal: controller.signal,
     });
+
+    // If Antigravity returns 401 Unauthorized, force-refresh token and retry once
+    if (isAntigravity && upstreamResponse.status === 401 && antigravityEntry?.refreshToken) {
+      try {
+        const refreshedToken = await forceRefreshAntigravityToken(upstream.id, antigravityEntry);
+        upstreamHeaders.Authorization = `Bearer ${refreshedToken}`;
+        upstreamResponse = await fetch(upstreamUrl, {
+          method: "POST",
+          headers: upstreamHeaders,
+          body: JSON.stringify(requestPayload),
+          signal: controller.signal,
+        });
+      } catch (refreshErr) {
+        // Continue with original response
+      }
+    }
+
+    // If Codex returns 401 Unauthorized, refresh token and retry once
+    if (isCodex && upstreamResponse.status === 401 && codexEntry?.refreshToken) {
+      try {
+        const refreshed = await refreshCodexToken(codexEntry.refreshToken);
+        codexEntry.key = refreshed.accessToken;
+        if (refreshed.refreshToken) codexEntry.refreshToken = refreshed.refreshToken;
+        if (refreshed.expiresAt) codexEntry.expiresAt = refreshed.expiresAt;
+        upstreamHeaders.Authorization = `Bearer ${refreshed.accessToken}`;
+        upstreamResponse = await fetch(upstreamUrl, {
+          method: "POST",
+          headers: upstreamHeaders,
+          body: JSON.stringify(requestPayload),
+          signal: controller.signal,
+        });
+      } catch (refreshErr) {
+        // Continue with original response
+      }
+    }
   } catch (err: any) {
     if (timeoutTimer) clearTimeout(timeoutTimer);
     finishActive();
@@ -319,7 +439,35 @@ export async function proxyOpenAIChatCompletions(
   if (!isStream || !upstreamResponse.body) {
     if (timeoutTimer) clearTimeout(timeoutTimer);
     finishActive();
-    const responseData = (await upstreamResponse.json()) as any;
+    let responseData = (await upstreamResponse.json()) as any;
+    if (isCodex && Array.isArray(responseData?.output)) {
+      let textContent = "";
+      for (const item of responseData.output) {
+        if (item.content && Array.isArray(item.content)) {
+          for (const c of item.content) {
+            if (c.type === "output_text" && c.text) textContent += c.text;
+          }
+        }
+      }
+      responseData = {
+        id: responseData.id ? `chatcmpl-${responseData.id}` : `chatcmpl-${Date.now()}`,
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model,
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: textContent },
+            finish_reason: "stop",
+          },
+        ],
+        usage: {
+          prompt_tokens: responseData.usage?.input_tokens || 0,
+          completion_tokens: responseData.usage?.output_tokens || 0,
+          total_tokens: (responseData.usage?.input_tokens || 0) + (responseData.usage?.output_tokens || 0),
+        },
+      };
+    }
     const durationMs = Math.round(performance.now() - startTime);
     const usage = responseData?.usage || {};
     const promptTokens = usage.prompt_tokens || 0;
@@ -371,6 +519,7 @@ export async function proxyOpenAIChatCompletions(
 
   // Handle Streaming Passthrough with Zero Latency & SSE Usage Parser
   const decoder = new TextDecoder("utf-8");
+  const encoder = new TextEncoder();
   let lineBuffer = "";
   let promptTokens = 0;
   let completionTokens = 0;
@@ -381,10 +530,12 @@ export async function proxyOpenAIChatCompletions(
   const transformStream = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
       finishActive.touch();
-      // 1. Instantly passthrough the raw chunk to client (zero buffering for ultra-low TTFT)
-      controller.enqueue(chunk);
+      if (!isCodex) {
+        // Instantly passthrough the raw chunk to client for standard providers
+        controller.enqueue(chunk);
+      }
 
-      // 2. Asynchronously parse SSE chunk for usage telemetry
+      // Parse SSE chunk
       try {
         lineBuffer += decoder.decode(chunk, { stream: true });
         const lines = lineBuffer.split("\n");
@@ -392,28 +543,69 @@ export async function proxyOpenAIChatCompletions(
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (trimmed.startsWith("data:")) {
-            const dataStr = trimmed.slice(5).trim();
-            if (dataStr === "[DONE]") continue;
-            try {
-              const parsed = JSON.parse(dataStr);
-              if (parsed?.usage) {
-                promptTokens = parsed.usage.prompt_tokens || promptTokens;
-                completionTokens =
-                  parsed.usage.completion_tokens || completionTokens;
-                totalTokens = parsed.usage.total_tokens || totalTokens;
-                const cTokens =
-                  parsed.usage.prompt_tokens_details?.cached_tokens ||
-                  parsed.usage.cached_tokens;
-                if (typeof cTokens === "number") {
-                  cachedTokens = cTokens;
+          if (isCodex) {
+            if (trimmed.startsWith("data:")) {
+              const dataStr = trimmed.slice(5).trim();
+              if (dataStr === "[DONE]") {
+                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+                continue;
+              }
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.type === "response.output_text.delta" && typeof parsed.delta === "string") {
+                  const openaiChunk = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model,
+                    choices: [{ index: 0, delta: { content: parsed.delta }, finish_reason: null }],
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(openaiChunk)}\n\n`));
+                  estimatedTokens += 1;
+                } else if (parsed.type === "response.completed" || parsed.type === "response.done") {
+                  const finalChunk = {
+                    id: `chatcmpl-${Date.now()}`,
+                    object: "chat.completion.chunk",
+                    created: Math.floor(Date.now() / 1000),
+                    model,
+                    choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+                  };
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify(finalChunk)}\n\ndata: [DONE]\n\n`));
+                  if (parsed.response?.usage) {
+                    promptTokens = parsed.response.usage.input_tokens || promptTokens;
+                    completionTokens = parsed.response.usage.output_tokens || completionTokens;
+                    totalTokens = promptTokens + completionTokens;
+                  }
                 }
+              } catch {
+                // Ignore partial JSON
               }
-              if (parsed?.choices?.[0]?.delta?.content) {
-                estimatedTokens += 1;
+            }
+          } else {
+            // Standard OpenAI chunk telemetry parsing
+            if (trimmed.startsWith("data:")) {
+              const dataStr = trimmed.slice(5).trim();
+              if (dataStr === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed?.usage) {
+                  promptTokens = parsed.usage.prompt_tokens || promptTokens;
+                  completionTokens =
+                    parsed.usage.completion_tokens || completionTokens;
+                  totalTokens = parsed.usage.total_tokens || totalTokens;
+                  const cTokens =
+                    parsed.usage.prompt_tokens_details?.cached_tokens ||
+                    parsed.usage.cached_tokens;
+                  if (typeof cTokens === "number") {
+                    cachedTokens = cTokens;
+                  }
+                }
+                if (parsed?.choices?.[0]?.delta?.content) {
+                  estimatedTokens += 1;
+                }
+              } catch (e) {
+                // Ignore partial or unparseable JSON in data line
               }
-            } catch (e) {
-              // Ignore partial or unparseable JSON in data line
             }
           }
         }

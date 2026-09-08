@@ -59,18 +59,37 @@ const app = new Elysia()
   .use(adminRoutes)
   .use(proxyRoutes);
 
-// Serve frontend static assets if built
+// Serve frontend: Vite Dev Server proxy in development, static dist/public in production
+const isDev = process.env.NODE_ENV !== "production";
 const staticDir = existsSync(join(import.meta.dir, "../dist/public"))
   ? join(import.meta.dir, "../dist/public")
   : null;
 
-if (staticDir) {
-  // Static files with correct MIME types & SPA fallback
-  app.get("*", ({ request }) => {
-    const url = new URL(request.url);
-    const pathname = url.pathname;
+app.get("*", async ({ request }) => {
+  const url = new URL(request.url);
+  const pathname = url.pathname;
 
-    // Check if directly requested static file exists in staticDir
+  // In development, attempt to proxy non-API requests to Vite Dev Server (port 5173) for instant HMR
+  if (isDev) {
+    try {
+      const viteUrl = `http://localhost:5173${pathname}${url.search}`;
+      const viteRes = await fetch(viteUrl, {
+        method: request.method,
+        headers: request.headers,
+      });
+      if (viteRes.status < 500) {
+        return new Response(viteRes.body, {
+          status: viteRes.status,
+          headers: viteRes.headers,
+        });
+      }
+    } catch (e) {
+      // Vite dev server not currently reachable, fallback to static files below
+    }
+  }
+
+  // Static files with correct MIME types & SPA fallback
+  if (staticDir) {
     if (pathname !== "/") {
       const filePath = join(staticDir, pathname);
       if (existsSync(filePath)) {
@@ -84,14 +103,14 @@ if (staticDir) {
       }
     }
 
-    // SPA fallback for client-side routing
     const indexPath = join(staticDir, "index.html");
     if (existsSync(indexPath)) {
       return Bun.file(indexPath);
     }
-    return "Neko-Router backend is running.";
-  });
-}
+  }
+
+  return "Neko-Router backend is running. Run `bun run dev` or `bun run build` to view frontend.";
+});
 
 app.listen({ port, hostname: host }, () => {
   console.log(`🐱 Neko-Router AI Gateway is running at http://${host}:${port}`);

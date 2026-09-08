@@ -11,6 +11,32 @@ import {
   parseUpstreamModels,
   type UpstreamKeyEntry,
 } from "../services/router";
+import {
+  requestGitHubDeviceCode,
+  pollGitHubDeviceToken,
+  getCopilotInternalToken,
+  fetchCopilotLiveModels,
+  GITHUB_COPILOT_CONFIG,
+  COPILOT_DEFAULT_MODELS,
+} from "../services/copilot";
+import {
+  buildAntigravityAuthUrl,
+  exchangeAntigravityCode,
+  fetchAntigravityModels,
+  ANTIGRAVITY_CONFIG,
+  ANTIGRAVITY_DEFAULT_MODELS,
+} from "../services/antigravity";
+import {
+  buildCodexAuthUrl,
+  exchangeCodexCode,
+  generatePkce,
+  startCodexCallbackServer,
+  getCodexSession,
+  removeCodexSession,
+  extractCodexJwtClaims,
+  CODEX_CONFIG,
+  CODEX_DEFAULT_MODELS,
+} from "../services/codex";
 
 const adjectives = [
   "hyper", "quantum", "stellar", "apex", "swift", "cyber", "turbo",
@@ -106,11 +132,92 @@ async function testSingleKey(
       ? "https://api.openai.com/v1"
       : "https://api.anthropic.com";
 
+  // Check if token is a GitHub Copilot token (starts with ghu_ or gho_)
+  const isCopilot = key.startsWith("ghu_") || key.startsWith("gho_") || effectiveBaseUrl.includes("githubcopilot.com");
+  if (isCopilot) {
+    if (key.startsWith("ghu_") || key.startsWith("gho_")) {
+      try {
+        const res = await fetch(GITHUB_COPILOT_CONFIG.COPILOT_TOKEN_URL, {
+          headers: {
+            Authorization: `token ${key}`,
+            "User-Agent": GITHUB_COPILOT_CONFIG.USER_AGENT,
+            "Editor-Version": `vscode/${GITHUB_COPILOT_CONFIG.VSCODE_VERSION}`,
+            "Editor-Plugin-Version": `copilot-chat/${GITHUB_COPILOT_CONFIG.COPILOT_CHAT_VERSION}`,
+            "x-github-api-version": GITHUB_COPILOT_CONFIG.API_VERSION,
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(10000),
+        });
+        const latencyMs = Math.round(performance.now() - startTime);
+        if (res.ok) {
+          const data = (await res.json()) as any;
+          const expDate = data?.expires_at ? new Date(data.expires_at * 1000).toLocaleTimeString() : "";
+          return {
+            success: true,
+            latencyMs,
+            message: `GitHub Copilot token is active and valid!${expDate ? ` (Session refreshed: ${expDate})` : ""}`,
+          };
+        } else {
+          return {
+            success: false,
+            latencyMs,
+            error:
+              res.status === 401 || res.status === 403
+                ? "This GitHub account does not have an active GitHub Copilot subscription."
+                : `HTTP ${res.status}: Failed to verify GitHub Copilot token`,
+          };
+        }
+      } catch (e: any) {
+        const latencyMs = Math.round(performance.now() - startTime);
+        return { success: false, latencyMs, error: e?.message || "Connection to GitHub timed out" };
+      }
+    }
+  }
+
+  // Check if token is Antigravity (Google OAuth)
+  const isAntigravity =
+    key.startsWith("ya29.") ||
+    effectiveBaseUrl.includes("cloudcode-pa.googleapis.com") ||
+    effectiveBaseUrl.includes("daily-cloudcode-pa.googleapis.com");
+  if (isAntigravity) {
+    try {
+      const res = await fetch(`${ANTIGRAVITY_CONFIG.USER_INFO_URL}?alt=json`, {
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "x-request-source": "local",
+        },
+        signal: AbortSignal.timeout(10000),
+      });
+      const latencyMs = Math.round(performance.now() - startTime);
+      if (res.ok) {
+        const userInfo = (await res.json()) as any;
+        return {
+          success: true,
+          latencyMs,
+          message: `Antigravity Google account active! (${userInfo.email || userInfo.name || "Authenticated"})`,
+        };
+      } else {
+        return {
+          success: false,
+          latencyMs,
+          error: `HTTP ${res.status}: Failed to verify Google OAuth token (expired or invalid)`,
+        };
+      }
+    } catch (e: any) {
+      const latencyMs = Math.round(performance.now() - startTime);
+      return { success: false, latencyMs, error: e?.message || "Connection to Google OAuth timed out" };
+    }
+  }
+
   try {
     if (provider === "openai") {
       const url = `${effectiveBaseUrl}/models`;
+      const headers: Record<string, string> = {
+        Authorization: `Bearer ${key}`,
+      };
+
       const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${key}` },
+        headers,
         signal: AbortSignal.timeout(10000),
       });
       const latencyMs = Math.round(performance.now() - startTime);
@@ -169,6 +276,206 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
   .get("/generate-alias", () => {
     return { alias: generateRandomAlias() };
   })
+  .post("/copilot/device-code", async ({ set }) => {
+    try {
+      const data = await requestGitHubDeviceCode();
+      return { success: true, ...data };
+    } catch (err: any) {
+      set.status = 500;
+      return { success: false, error: err?.message || "Failed to initiate GitHub device code" };
+    }
+  })
+  .post(
+    "/copilot/poll-token",
+    async ({ body, set }) => {
+      const { deviceCode } = body;
+      if (!deviceCode) {
+        set.status = 400;
+        return { status: "error", error: "deviceCode is required" };
+      }
+      const res = await pollGitHubDeviceToken(deviceCode);
+      return res;
+    },
+    {
+      body: t.Object({
+        deviceCode: t.String(),
+      }),
+    }
+  )
+  .post(
+    "/antigravity/auth-url",
+    async ({ body, set }) => {
+      try {
+        const redirectUri = body?.redirectUri || ANTIGRAVITY_CONFIG.REDIRECT_URI || "http://localhost:51121/oauth-callback";
+        const state = `ag_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const authUrl = buildAntigravityAuthUrl(redirectUri, state);
+        return { success: true, authUrl, state, redirectUri };
+      } catch (err: any) {
+        set.status = 500;
+        return { success: false, error: err?.message || "Failed to generate Antigravity authorization URL" };
+      }
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          redirectUri: t.Optional(t.String()),
+        })
+      ),
+    }
+  )
+  .post(
+    "/antigravity/exchange",
+    async ({ body, set }) => {
+      try {
+        const { code, redirectUri } = body;
+        if (!code) {
+          set.status = 400;
+          return { success: false, error: "Authorization code is required" };
+        }
+        const data = await exchangeAntigravityCode(code.trim(), redirectUri || ANTIGRAVITY_CONFIG.REDIRECT_URI || "http://localhost:51121/oauth-callback");
+        return { success: true, ...data };
+      } catch (err: any) {
+        set.status = 500;
+        return { success: false, error: err?.message || "Failed to exchange Antigravity authorization code" };
+      }
+    },
+    {
+      body: t.Object({
+        code: t.String(),
+        redirectUri: t.Optional(t.String()),
+      }),
+    }
+  )
+  .post(
+    "/codex/auth-url",
+    async ({ set }) => {
+      try {
+        const { codeVerifier, codeChallenge } = generatePkce();
+        const state = `cx_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const authUrl = buildCodexAuthUrl(state, codeChallenge);
+
+        // Start local callback listener on port 1455
+        const serverResult = startCodexCallbackServer({
+          state,
+          codeVerifier,
+          redirectUri: CODEX_CONFIG.REDIRECT_URI,
+          status: "pending",
+          createdAt: Date.now(),
+        });
+
+        return {
+          success: true,
+          authUrl,
+          state,
+          codeVerifier,
+          localPort: serverResult.port,
+          serverRunning: serverResult.success,
+        };
+      } catch (err: any) {
+        set.status = 500;
+        return { success: false, error: err?.message || "Failed to generate OpenAI Codex authorization URL" };
+      }
+    }
+  )
+  .get(
+    "/codex/status",
+    ({ query: { state }, set }) => {
+      if (!state) {
+        set.status = 400;
+        return { success: false, error: "State parameter is required" };
+      }
+      const session = getCodexSession(state);
+      if (!session) {
+        return { success: false, status: "expired", error: "Session expired" };
+      }
+      if (session.status === "done") {
+        removeCodexSession(state);
+        return { success: true, status: "done", result: session.result };
+      }
+      if (session.status === "error") {
+        removeCodexSession(state);
+        return { success: false, status: "error", error: session.error };
+      }
+      return { success: true, status: "pending" };
+    },
+    {
+      query: t.Object({
+        state: t.String(),
+      }),
+    }
+  )
+  .post(
+    "/codex/exchange",
+    async ({ body, set }) => {
+      try {
+        const { code, codeVerifier, redirectUri } = body;
+        if (!code) {
+          set.status = 400;
+          return { success: false, error: "Authorization code or callback URL is required" };
+        }
+
+        // Clean code: if user pasted full redirect URL like http://localhost:1455/auth/callback?code=...
+        let cleanCode = code.trim();
+        if (cleanCode.includes("code=")) {
+          try {
+            const parsed = new URL(cleanCode, "http://localhost");
+            cleanCode = parsed.searchParams.get("code") || cleanCode;
+          } catch {
+            const match = cleanCode.match(/[?&]code=([^&]+)/);
+            if (match && match[1]) cleanCode = decodeURIComponent(match[1]);
+          }
+        }
+
+        const data = await exchangeCodexCode(
+          cleanCode,
+          codeVerifier.trim(),
+          redirectUri || CODEX_CONFIG.REDIRECT_URI
+        );
+        return { success: true, ...data };
+      } catch (err: any) {
+        set.status = 500;
+        return { success: false, error: err?.message || "Failed to exchange OpenAI Codex authorization code" };
+      }
+    },
+    {
+      body: t.Object({
+        code: t.String(),
+        codeVerifier: t.String(),
+        redirectUri: t.Optional(t.String()),
+      }),
+    }
+  )
+  .post(
+    "/codex/import-token",
+    async ({ body, set }) => {
+      try {
+        const { accessToken } = body;
+        if (!accessToken || !accessToken.trim()) {
+          set.status = 400;
+          return { success: false, error: "Access token is required" };
+        }
+        const token = accessToken.trim();
+        const claims = extractCodexJwtClaims(token);
+        return {
+          success: true,
+          accessToken: token,
+          email: claims.email,
+          name: claims.name,
+          chatgptAccountId: claims.chatgptAccountId,
+          chatgptPlanType: claims.chatgptPlanType,
+          expiresAt: claims.exp,
+        };
+      } catch (err: any) {
+        set.status = 500;
+        return { success: false, error: err?.message || "Failed to import ChatGPT token" };
+      }
+    },
+    {
+      body: t.Object({
+        accessToken: t.String(),
+      }),
+    }
+  )
   .get("/", () => {
     const list = db
       .select()
@@ -267,6 +574,8 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
             key: k.key.trim(),
             isActive: k.isActive !== false,
             createdAt: Date.now(),
+            refreshToken: typeof k.refreshToken === "string" ? k.refreshToken : undefined,
+            expiresAt: typeof k.expiresAt === "number" ? k.expiresAt : undefined,
           }));
       } else if (rawKeys && rawKeys.trim().length > 0) {
         const parsed = parseRawKeysInput(rawKeys, "API Key", 1);
@@ -428,6 +737,8 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
             key: actualKey,
             isActive: item.isActive !== undefined ? item.isActive : (existingEntry ? existingEntry.isActive : true),
             createdAt: (item as any).createdAt || existingEntry?.createdAt || Date.now(),
+            refreshToken: (item as any).refreshToken || existingEntry?.refreshToken || undefined,
+            expiresAt: (item as any).expiresAt || existingEntry?.expiresAt || undefined,
           });
         }
         if (normalized.length > 0) {
@@ -570,21 +881,55 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
 
     try {
       if (upstream.provider === "openai") {
-        const url = `${getBaseUrl(upstream)}/models`;
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${key}` },
-          signal: AbortSignal.timeout(12000),
-        });
-        if (!res.ok) {
-          const errText = await res.text();
-          return {
-            success: false,
-            error: `Upstream error HTTP ${res.status}: ${errText.slice(0, 150)}`,
-          };
-        }
-        const data = (await res.json()) as any;
-        if (Array.isArray(data?.data)) {
-          fetchedModelIds = data.data.map((m: any) => m.id).filter(Boolean);
+        const isCopilot =
+          upstream.baseUrl?.includes("githubcopilot.com") ||
+          key.startsWith("ghu_") ||
+          key.startsWith("gho_") ||
+          upstream.name.toLowerCase().includes("copilot");
+
+        const isAntigravity =
+          upstream.baseUrl?.includes("cloudcode-pa.googleapis.com") ||
+          key.startsWith("ya29.") ||
+          upstream.name.toLowerCase().includes("antigravity");
+
+        const isCodex =
+          upstream.baseUrl?.includes("chatgpt.com/backend-api/codex") ||
+          upstream.name.toLowerCase().includes("codex");
+
+        if (isCopilot) {
+          try {
+            const liveModels = await fetchCopilotLiveModels(key);
+            fetchedModelIds = liveModels.map((m) => m.id);
+          } catch (e) {
+            fetchedModelIds = [...COPILOT_DEFAULT_MODELS];
+          }
+        } else if (isAntigravity) {
+          try {
+            const models = await fetchAntigravityModels(key);
+            fetchedModelIds = models.map((m) => m.id);
+          } catch (e) {
+            fetchedModelIds = [...ANTIGRAVITY_DEFAULT_MODELS];
+          }
+        } else if (isCodex) {
+          fetchedModelIds = [...CODEX_DEFAULT_MODELS];
+        } else {
+          const url = `${getBaseUrl(upstream)}/models`;
+          const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${key}` },
+            signal: AbortSignal.timeout(12000),
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            return {
+              success: false,
+              error: `Upstream error HTTP ${res.status}: ${errText.slice(0, 150)}`,
+            };
+          } else {
+            const data = (await res.json()) as any;
+            if (Array.isArray(data?.data)) {
+              fetchedModelIds = data.data.map((m: any) => m.id).filter(Boolean);
+            }
+          }
         }
       } else {
         // Anthropic provider

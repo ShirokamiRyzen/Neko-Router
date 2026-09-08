@@ -30,6 +30,8 @@ export interface UpstreamKeyEntry {
   key: string;
   isActive: boolean;
   createdAt?: number;
+  refreshToken?: string;
+  expiresAt?: number;
 }
 
 export function parseUpstreamKeyEntries(
@@ -61,6 +63,8 @@ export function parseUpstreamKeyEntries(
                 key: keyVal,
                 isActive: item.isActive !== false,
                 createdAt: item.createdAt,
+                refreshToken: typeof item.refreshToken === "string" ? item.refreshToken : undefined,
+                expiresAt: typeof item.expiresAt === "number" ? item.expiresAt : undefined,
               });
             }
           }

@@ -77,6 +77,8 @@ export interface UpstreamKeyEntryItem {
   maskedKey?: string;
   isActive: boolean;
   createdAt?: number;
+  refreshToken?: string;
+  expiresAt?: number;
 }
 
 export interface UpstreamKeyItem {

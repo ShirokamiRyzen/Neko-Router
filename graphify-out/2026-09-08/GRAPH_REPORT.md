@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-08)
 
 ## Corpus Check
-- 49 files · ~55,405 words
+- 53 files · ~66,392 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 496 nodes · 699 edges · 28 communities (25 shown, 3 thin omitted)
-- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.5)
+- 547 nodes · 823 edges · 29 communities (25 shown, 4 thin omitted)
+- Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `25325a03`
+- Built from commit: `a49e4729`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -23,7 +23,7 @@
 - Neko-Router
 - brandkit/SKILL.md
 - App.tsx
-- services/proxy.ts
+- upstreams.ts
 - compilerOptions
 - dependencies
 - Analysis & Synthesis Instructions
@@ -41,35 +41,36 @@
 - B.2 Router Integration API Keys (`/api/router-keys`)
 - A. Authentication & PIN Endpoints
 - F. Database & System Endpoints
+- dev.ts
 
 ## God Nodes (most connected - your core abstractions)
-1. `compilerOptions` - 20 edges
-2. `compilerOptions` - 18 edges
-3. `apiRequest()` - 16 edges
-4. `react` - 15 edges
-5. `compilerOptions` - 15 edges
-6. `proxyOpenAIChatCompletions()` - 14 edges
+1. `proxyOpenAIChatCompletions()` - 23 edges
+2. `compilerOptions` - 20 edges
+3. `compilerOptions` - 18 edges
+4. `apiRequest()` - 16 edges
+5. `react` - 15 edges
+6. `compilerOptions` - 15 edges
 7. `proxyAnthropicMessages()` - 14 edges
-8. `Design System: Taste Standard` - 11 edges
-9. `C. Upstream Router Keys Endpoints` - 11 edges
-10. `DEFAULT 3 × 3 PANEL SYSTEM` - 10 edges
+8. `parseUpstreamKeyEntries()` - 11 edges
+9. `Design System: Taste Standard` - 11 edges
+10. `C. Upstream Router Keys Endpoints` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `proxyAnthropicMessages()` --calls--> `getOptimizationSettings()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/optimizer.ts
+- `proxyOpenAIChatCompletions()` --calls--> `getOptimizationSettings()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/optimizer.ts
+- `proxyAnthropicMessages()` --calls--> `optimizeRequestBody()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/optimizer.ts
+- `proxyOpenAIChatCompletions()` --calls--> `optimizeRequestBody()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/optimizer.ts
 - `App()` --calls--> `useTheme()`  [EXTRACTED]
   frontend/src/App.tsx → frontend/src/hooks/useTheme.ts
-- `App()` --calls--> `apiRequest()`  [EXTRACTED]
-  frontend/src/App.tsx → frontend/src/lib/api.ts
-- `ClientKeysTab()` --calls--> `apiRequest()`  [EXTRACTED]
-  frontend/src/components/ClientKeysTab.tsx → frontend/src/lib/api.ts
-- `DashboardTab()` --calls--> `apiRequest()`  [EXTRACTED]
-  frontend/src/components/DashboardTab.tsx → frontend/src/lib/api.ts
-- `DashboardTab()` --calls--> `calculateTokenCost()`  [EXTRACTED]
-  frontend/src/components/DashboardTab.tsx → frontend/src/lib/api.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (28 total, 3 thin omitted)
+## Communities (29 total, 4 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -77,11 +78,11 @@ Nodes (28): bun, client, dist, ESNext, node_modules, compilerOptions, allowImpor
 
 ### Community 1 - "devDependencies"
 Cohesion: 0.06
-Nodes (31): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/vite, @types/bun, @types/node, @types/react (+23 more)
+Nodes (33): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/vite, @types/bun, @types/node, @types/react (+25 more)
 
 ### Community 2 - "schema.ts"
-Cohesion: 0.07
-Nodes (43): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+35 more)
+Cohesion: 0.06
+Nodes (50): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+42 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -92,12 +93,12 @@ Cohesion: 0.05
 Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT, 2. Logo Construction, 2. Product Action, 3. Digital Application, 3. Metaphor Fusion, 4. Brand Essence (+35 more)
 
 ### Community 7 - "App.tsx"
-Cohesion: 0.08
-Nodes (40): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+32 more)
+Cohesion: 0.07
+Nodes (41): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+33 more)
 
-### Community 9 - "services/proxy.ts"
-Cohesion: 0.10
-Nodes (41): UpstreamKey, upstreamKeys, adjectives, nouns, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression(), checkHttpsRequirement() (+33 more)
+### Community 9 - "upstreams.ts"
+Cohesion: 0.06
+Nodes (72): db, UpstreamKey, upstreamKeys, adjectives, nouns, ANTIGRAVITY_CONFIG, ANTIGRAVITY_DEFAULT_MODELS, buildAntigravityAuthUrl() (+64 more)
 
 ### Community 10 - "compilerOptions"
 Cohesion: 0.08
@@ -164,24 +165,24 @@ Cohesion: 0.40
 Nodes (5): 1. Export SQLite Database, 2. Import SQLite Database, 3. Runtime Engine Diagnostics, 4. Health Check, F. Database & System Endpoints
 
 ## Knowledge Gaps
-- **275 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+270 more)
+- **283 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+278 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `5. Router Management APIs` connect `5. Router Management APIs` to `C. Upstream Router Keys Endpoints`, `Neko-Router API Documentation`, `E. Upstream Router Providers & Multi-Key Pool`, `B. Client Keys Endpoints`, `B.2 Router Integration API Keys (`/api/router-keys`)`, `A. Authentication & PIN Endpoints`, `F. Database & System Endpoints`?**
-  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Why does `Neko-Router API Documentation` connect `Neko-Router API Documentation` to `5. Router Management APIs`?**
-  _High betweenness centrality (0.015) - this node is a cross-community bridge._
-- **Why does `dependencies` connect `dependencies` to `devDependencies`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
+- **Why does `react` connect `App.tsx` to `plugins`?**
+  _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `$schema`, `typescript`, `oxc` to the rest of the system?**
-  _275 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _283 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07402597402597402 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06398809523809523 - nodes in this community are weakly interconnected._
