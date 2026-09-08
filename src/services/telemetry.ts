@@ -297,6 +297,15 @@ export function getTelemetryStats(timeRangeMs = 24 * 60 * 60 * 1000) {
     };
   });
 
+  if (totalCost === 0 && ((totalReq?.promptTokens || 0) > 0 || (totalReq?.completionTokens || 0) > 0)) {
+    totalCost = calculateTokenCost(
+      "default",
+      totalReq?.promptTokens || 0,
+      totalReq?.completionTokens || 0,
+      totalReq?.cachedTokens || 0
+    );
+  }
+
   return {
     totalRequests: totalReq?.count || 0,
     successRequests: successCount,

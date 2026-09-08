@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "src/services/telemetry.ts": {
-    "mtime": 1788826939.5886579,
-    "ast_hash": "123b6039f16fcda4963d7e70f3f8a930",
+    "mtime": 1788830567.7525172,
+    "ast_hash": "4dad00015f616a3cfb4a49d1221e4b9e",
     "semantic_hash": ""
   },
   ".agents/skills/brandkit/SKILL.md": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/DashboardTab.tsx": {
-    "mtime": 1788827069.1635506,
-    "ast_hash": "c93652b158bbd5095e06ca24285fafea",
+    "mtime": 1788830911.9242435,
+    "ast_hash": "9760d82c89643fb784124e728e1a2347",
     "semantic_hash": ""
   },
   "frontend/src/components/DatabaseSettingsTab.tsx": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/api.ts": {
-    "mtime": 1788788613.5638423,
-    "ast_hash": "361a74baf119efed7317e6fd5e530764",
+    "mtime": 1788830597.5644507,
+    "ast_hash": "088fbaa67ab8465eaced1a48286029e3",
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {

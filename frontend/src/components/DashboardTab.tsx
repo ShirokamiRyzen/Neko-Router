@@ -75,7 +75,7 @@ export const DashboardTab: React.FC = () => {
     setActiveSubtabState(tab);
     try {
       localStorage.setItem("neko_dashboard_subtab", tab);
-    } catch {}
+    } catch { }
   };
   const [timeFilter, setTimeFilter] = useState<"Today" | "24h" | "7D" | "30D">("Today");
   const [graphMetricView, setGraphMetricView] = useState<"tokens" | "cost">("tokens");
@@ -97,11 +97,23 @@ export const DashboardTab: React.FC = () => {
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
 
+  const getTimeHours = (filter: "Today" | "24h" | "7D" | "30D") => {
+    if (filter === "Today") {
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      return Math.max(1, Math.ceil((Date.now() - startOfDay) / (1000 * 60 * 60)));
+    }
+    if (filter === "7D") return 24 * 7;
+    if (filter === "30D") return 24 * 30;
+    return 24;
+  };
+
   const loadAllData = async () => {
     setLoading(true);
     try {
+      const hours = getTimeHours(timeFilter);
       const [statsData, upstreamsData, logsData, activeData] = await Promise.all([
-        apiRequest<TelemetryStats>("/api/telemetry/stats").catch(() => null),
+        apiRequest<TelemetryStats>(`/api/telemetry/stats?hours=${hours}`).catch(() => null),
         apiRequest<{ upstreams: UpstreamKeyItem[] }>("/api/upstreams").catch(() => ({ upstreams: [] })),
         apiRequest<{ logs: TelemetryLogItem[] }>("/api/telemetry/logs?limit=12").catch(() => ({ logs: [] })),
         apiRequest<{ activeUpstreamIds: string[] }>("/api/telemetry/active").catch(() => null),
@@ -126,9 +138,37 @@ export const DashboardTab: React.FC = () => {
 
   useEffect(() => {
     loadAllData();
+  }, [timeFilter]);
+
+  useEffect(() => {
     const interval = setInterval(loadAllData, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [timeFilter]);
+
+  // Computed total cost: prefers backend estimatedCost, fallbacks gracefully to calculating from modelStats or overall tokens
+  const totalCost = useMemo(() => {
+    if (stats?.estimatedCost !== undefined && stats.estimatedCost > 0) {
+      return stats.estimatedCost;
+    }
+    if (stats?.modelStats && stats.modelStats.length > 0) {
+      const sum = stats.modelStats.reduce((acc, m) => {
+        if (m.estimatedCost !== undefined && m.estimatedCost > 0) return acc + m.estimatedCost;
+        const prompt = m.promptTokens ?? Math.round((m.tokens || 0) * 0.7);
+        const comp = m.completionTokens ?? Math.round((m.tokens || 0) * 0.3);
+        return acc + calculateTokenCost(m.model, prompt, comp, m.cachedTokens || 0);
+      }, 0);
+      if (sum > 0) return sum;
+    }
+    if (stats && ((stats.totalPromptTokens || 0) > 0 || (stats.totalCompletionTokens || 0) > 0)) {
+      return calculateTokenCost(
+        "default",
+        stats.totalPromptTokens || 0,
+        stats.totalCompletionTokens || 0,
+        stats.totalCachedTokens || 0
+      );
+    }
+    return 0;
+  }, [stats]);
 
   // Fast real-time polling for active request routing animations (every 1.2s)
   useEffect(() => {
@@ -413,11 +453,10 @@ export const DashboardTab: React.FC = () => {
                 <button
                   key={t}
                   onClick={() => setTimeFilter(t)}
-                  className={`px-2.5 py-1 rounded transition-all font-medium ${
-                    timeFilter === t
+                  className={`px-2.5 py-1 rounded transition-all font-medium ${timeFilter === t
                       ? "skeuo-btn text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs"
                       : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-                  }`}
+                    }`}
                 >
                   {t}
                 </button>
@@ -497,7 +536,7 @@ export const DashboardTab: React.FC = () => {
               Est. Cost
             </div>
             <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
-              {formatCost(stats?.estimatedCost)}
+              {formatCost(totalCost)}
             </div>
             <div className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
               Estimated, not actual billing
@@ -514,21 +553,19 @@ export const DashboardTab: React.FC = () => {
           <div className="flex items-center p-0.5 rounded-lg bg-[#1a1b22] border border-zinc-800 text-xs">
             <button
               onClick={() => setActiveSubtab("overview")}
-              className={`px-3 py-1 rounded-md transition-all font-medium ${
-                activeSubtab === "overview"
+              className={`px-3 py-1 rounded-md transition-all font-medium ${activeSubtab === "overview"
                   ? "bg-[#272832] text-zinc-100 font-semibold shadow-xs"
                   : "text-zinc-400 hover:text-zinc-200"
-              }`}
+                }`}
             >
               Overview
             </button>
             <button
               onClick={() => setActiveSubtab("details")}
-              className={`px-3 py-1 rounded-md transition-all font-medium ${
-                activeSubtab === "details"
+              className={`px-3 py-1 rounded-md transition-all font-medium ${activeSubtab === "details"
                   ? "bg-[#272832] text-zinc-100 font-semibold shadow-xs"
                   : "text-zinc-400 hover:text-zinc-200"
-              }`}
+                }`}
             >
               Details
             </button>
@@ -537,9 +574,8 @@ export const DashboardTab: React.FC = () => {
           <div className="flex items-center space-x-3 text-xs text-zinc-400">
             <div className="flex items-center space-x-1.5">
               <span
-                className={`w-2 h-2 rounded-full inline-block ${
-                  activeUpstreamIds.length > 0 ? "bg-emerald-500 animate-pulse" : "bg-zinc-600"
-                }`}
+                className={`w-2 h-2 rounded-full inline-block ${activeUpstreamIds.length > 0 ? "bg-emerald-500 animate-pulse" : "bg-zinc-600"
+                  }`}
               />
               <span className="text-[11px] font-mono text-zinc-300">
                 {activeUpstreamIds.length > 0
@@ -604,9 +640,8 @@ export const DashboardTab: React.FC = () => {
 
             {/* Transformable Canvas Stage: Origin (0,0) is anchored at exact 50% / 50% center of the canvas */}
             <div
-              className={`absolute left-1/2 top-1/2 ${
-                isDragging ? "transition-none" : "transition-transform duration-150 ease-out"
-              }`}
+              className={`absolute left-1/2 top-1/2 ${isDragging ? "transition-none" : "transition-transform duration-150 ease-out"
+                }`}
               style={{
                 transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                 transformOrigin: "0 0",
@@ -663,11 +698,10 @@ export const DashboardTab: React.FC = () => {
                 style={{ left: "0px", top: "0px" }}
               >
                 <div
-                  className={`px-4 py-2 rounded-lg bg-[#171821] border transition-all ${
-                    activeUpstreamIds.length > 0
+                  className={`px-4 py-2 rounded-lg bg-[#171821] border transition-all ${activeUpstreamIds.length > 0
                       ? "border-orange-500/80 shadow-[0_0_24px_rgba(249,115,22,0.4)]"
                       : "border-zinc-800 shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
-                  } flex items-center space-x-2.5 hover:scale-105`}
+                    } flex items-center space-x-2.5 hover:scale-105`}
                 >
                   <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
                     <Cat className="w-3.5 h-3.5 fill-current" />
@@ -677,9 +711,8 @@ export const DashboardTab: React.FC = () => {
                       NekoRouter
                     </span>
                     <span
-                      className={`w-2 h-2 rounded-full inline-block transition-colors ${
-                        activeUpstreamIds.length > 0 ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
-                      }`}
+                      className={`w-2 h-2 rounded-full inline-block transition-colors ${activeUpstreamIds.length > 0 ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
+                        }`}
                     />
                   </div>
                 </div>
@@ -710,11 +743,10 @@ export const DashboardTab: React.FC = () => {
                     }}
                   >
                     <div
-                      className={`px-3.5 py-2 rounded-lg bg-[#14151c] transition-all flex items-center space-x-2.5 ${
-                        isNodeActive
+                      className={`px-3.5 py-2 rounded-lg bg-[#14151c] transition-all flex items-center space-x-2.5 ${isNodeActive
                           ? "border border-orange-500/80 shadow-[0_0_18px_rgba(249,115,22,0.4)] ring-1 ring-orange-500/30"
                           : "border border-zinc-800 hover:border-zinc-700 shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
-                      }`}
+                        }`}
                     >
                       <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-300 border border-zinc-700/60">
                         {node.tag}
@@ -723,9 +755,8 @@ export const DashboardTab: React.FC = () => {
                         {node.name}
                       </span>
                       <span
-                        className={`w-1.5 h-1.5 rounded-full inline-block transition-colors ${
-                          isNodeActive ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
-                        }`}
+                        className={`w-1.5 h-1.5 rounded-full inline-block transition-colors ${isNodeActive ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
+                          }`}
                       />
                     </div>
                   </div>
@@ -783,9 +814,8 @@ export const DashboardTab: React.FC = () => {
                       {/* Model with status dot */}
                       <div className="col-span-5 flex items-center space-x-1.5 truncate">
                         <span
-                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                            isOk ? "bg-emerald-400" : "bg-rose-500"
-                          }`}
+                          className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOk ? "bg-emerald-400" : "bg-rose-500"
+                            }`}
                         />
                         <span className="font-mono text-[11px] text-zinc-300 truncate" title={log.model}>
                           {log.model}
@@ -829,21 +859,19 @@ export const DashboardTab: React.FC = () => {
           <div className="flex items-center space-x-1 p-0.5 rounded-md bg-[#1a1b22] border border-zinc-800 text-xs">
             <button
               onClick={() => setGraphMetricView("tokens")}
-              className={`px-3 py-1 rounded transition-all font-medium ${
-                graphMetricView === "tokens"
+              className={`px-3 py-1 rounded transition-all font-medium ${graphMetricView === "tokens"
                   ? "bg-orange-500 text-white font-semibold shadow-xs"
                   : "text-zinc-400 hover:text-zinc-200"
-              }`}
+                }`}
             >
               Tokens
             </button>
             <button
               onClick={() => setGraphMetricView("cost")}
-              className={`px-3 py-1 rounded transition-all font-medium ${
-                graphMetricView === "cost"
+              className={`px-3 py-1 rounded transition-all font-medium ${graphMetricView === "cost"
                   ? "bg-orange-500 text-white font-semibold shadow-xs"
                   : "text-zinc-400 hover:text-zinc-200"
-              }`}
+                }`}
             >
               Cost
             </button>
@@ -883,11 +911,16 @@ export const DashboardTab: React.FC = () => {
                     <span className="font-medium text-zinc-900 dark:text-zinc-200">
                       {m.tokens.toLocaleString()} tok
                     </span>
-                    {m.estimatedCost !== undefined && m.estimatedCost > 0 && (
-                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 ml-1.5 font-semibold">
-                        ({formatCost(m.estimatedCost)})
-                      </span>
-                    )}
+                    {(() => {
+                      const cost = m.estimatedCost !== undefined && m.estimatedCost > 0
+                        ? m.estimatedCost
+                        : calculateTokenCost(m.model, m.promptTokens ?? Math.round((m.tokens || 0) * 0.7), m.completionTokens ?? Math.round((m.tokens || 0) * 0.3), m.cachedTokens || 0);
+                      return cost > 0 ? (
+                        <span className="text-[11px] text-emerald-600 dark:text-emerald-400 ml-1.5 font-semibold">
+                          ({formatCost(cost)})
+                        </span>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               </div>
