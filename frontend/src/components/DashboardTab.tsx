@@ -18,6 +18,8 @@ import {
   type TelemetryStats,
   type UpstreamKeyItem,
   type TelemetryLogItem,
+  calculateTokenCost,
+  formatCost,
 } from "../lib/api";
 
 function formatTimeAgo(timestamp: number): string {
@@ -495,7 +497,7 @@ export const DashboardTab: React.FC = () => {
               Est. Cost
             </div>
             <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
-              ~$0.00
+              {formatCost(stats?.estimatedCost)}
             </div>
             <div className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
               Estimated, not actual billing
@@ -747,7 +749,9 @@ export const DashboardTab: React.FC = () => {
             {/* Table Header: Model | In / Out | When */}
             <div className="grid grid-cols-12 text-[11px] text-zinc-500 font-medium px-2 py-1.5 border-b border-zinc-800/80">
               <span className="col-span-5">Model</span>
-              <span className="col-span-4 text-right">In / Out</span>
+              <span className="col-span-4 text-right">
+                {graphMetricView === "cost" ? "Est. Cost" : "In / Out"}
+              </span>
               <span className="col-span-3 text-right">When</span>
             </div>
 
@@ -764,6 +768,13 @@ export const DashboardTab: React.FC = () => {
               ) : (
                 recentLogs.map((log) => {
                   const isOk = log.statusCode >= 200 && log.statusCode < 300;
+                  const logCost = calculateTokenCost(
+                    log.model,
+                    log.promptTokens,
+                    log.completionTokens,
+                    log.cachedTokens
+                  );
+
                   return (
                     <div
                       key={log.id}
@@ -781,16 +792,24 @@ export const DashboardTab: React.FC = () => {
                         </span>
                       </div>
 
-                      {/* Tokens: In / Out */}
+                      {/* Tokens or Cost */}
                       <div className="col-span-4 text-right font-mono text-[11px]">
-                        <span className="text-zinc-300">
-                          {log.promptTokens.toLocaleString()}
-                        </span>
-                        <span className="text-emerald-500 mx-0.5">↑</span>
-                        <span className="text-zinc-400">
-                          {log.completionTokens.toLocaleString()}
-                        </span>
-                        <span className="text-blue-400 ml-0.5">↓</span>
+                        {graphMetricView === "cost" ? (
+                          <span className="text-emerald-400 font-semibold">
+                            {formatCost(logCost)}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-zinc-300">
+                              {log.promptTokens.toLocaleString()}
+                            </span>
+                            <span className="text-emerald-500 mx-0.5">↑</span>
+                            <span className="text-zinc-400">
+                              {log.completionTokens.toLocaleString()}
+                            </span>
+                            <span className="text-blue-400 ml-0.5">↓</span>
+                          </>
+                        )}
                       </div>
 
                       {/* When */}
@@ -860,9 +879,16 @@ export const DashboardTab: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between mt-2.5 text-xs text-zinc-500 dark:text-zinc-400">
                   <span>{m.requests} requests</span>
-                  <span className="font-medium text-zinc-900 dark:text-zinc-200 font-mono">
-                    {m.tokens.toLocaleString()} tokens
-                  </span>
+                  <div className="text-right font-mono">
+                    <span className="font-medium text-zinc-900 dark:text-zinc-200">
+                      {m.tokens.toLocaleString()} tok
+                    </span>
+                    {m.estimatedCost !== undefined && m.estimatedCost > 0 && (
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 ml-1.5 font-semibold">
+                        ({formatCost(m.estimatedCost)})
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}

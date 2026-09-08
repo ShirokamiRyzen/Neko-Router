@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-08)
 
 ## Corpus Check
-- 49 files · ~54,216 words
+- 49 files · ~55,200 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 493 nodes · 691 edges · 28 communities (25 shown, 3 thin omitted)
+- 496 nodes · 699 edges · 28 communities (25 shown, 3 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `1ea21463`
+- Built from commit: `14ca6192`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -63,8 +63,8 @@
   frontend/src/components/ClientKeysTab.tsx → frontend/src/lib/api.ts
 - `DashboardTab()` --calls--> `apiRequest()`  [EXTRACTED]
   frontend/src/components/DashboardTab.tsx → frontend/src/lib/api.ts
-- `DatabaseSettingsTab()` --calls--> `apiRequest()`  [EXTRACTED]
-  frontend/src/components/DatabaseSettingsTab.tsx → frontend/src/lib/api.ts
+- `DashboardTab()` --calls--> `calculateTokenCost()`  [EXTRACTED]
+  frontend/src/components/DashboardTab.tsx → frontend/src/lib/api.ts
 
 ## Import Cycles
 - None detected.
@@ -80,8 +80,8 @@ Cohesion: 0.06
 Nodes (31): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/vite, @types/bun, @types/node, @types/react (+23 more)
 
 ### Community 2 - "schema.ts"
-Cohesion: 0.06
-Nodes (43): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), ApiKey, apiKeys, ClientKey (+35 more)
+Cohesion: 0.07
+Nodes (43): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+35 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -93,11 +93,11 @@ Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT,
 
 ### Community 7 - "App.tsx"
 Cohesion: 0.08
-Nodes (38): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+30 more)
+Nodes (40): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+32 more)
 
 ### Community 9 - "services/proxy.ts"
-Cohesion: 0.11
-Nodes (40): sqlite, UpstreamKey, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression(), checkHttpsRequirement(), clearResponseCache(), computeCacheKey() (+32 more)
+Cohesion: 0.10
+Nodes (41): UpstreamKey, upstreamKeys, adjectives, nouns, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression(), checkHttpsRequirement() (+33 more)
 
 ### Community 10 - "compilerOptions"
 Cohesion: 0.08
@@ -184,4 +184,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06497175141242938 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07402597402597402 - nodes in this community are weakly interconnected._
