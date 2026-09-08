@@ -58,7 +58,7 @@ export const proxyRoutes = new Elysia()
       };
     }
 
-    return proxyOpenAIChatCompletions(request.headers, body, clientKey);
+    return proxyOpenAIChatCompletions(request.headers, body, clientKey, request.signal);
   })
 
   // OpenAI Models list (tidak perlu SK, publik)
@@ -128,5 +128,5 @@ export const proxyRoutes = new Elysia()
       };
     }
 
-    return proxyAnthropicMessages(request.headers, body, clientKey);
+    return proxyAnthropicMessages(request.headers, body, clientKey, request.signal);
   });

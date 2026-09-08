@@ -21,6 +21,7 @@ import {
   Bot,
   Table,
   LayoutGrid,
+  UploadCloud,
 } from "lucide-react";
 import {
   apiRequest,
@@ -265,6 +266,20 @@ export const UpstreamKeysTab: React.FC = () => {
   const [newConnKey, setNewConnKey] = useState("");
   const [newConnActive, setNewConnActive] = useState(true);
   const [addingConnError, setAddingConnError] = useState("");
+
+  // Dedicated Mass Import in Connections Modal
+  const [isMassImportOpen, setIsMassImportOpen] = useState(false);
+  const [massImportText, setMassImportText] = useState("");
+  const [massImportPrefix, setMassImportPrefix] = useState("API Key");
+  const [massImportActive, setMassImportActive] = useState(true);
+  const [massImportSkipDuplicates, setMassImportSkipDuplicates] = useState(true);
+  const [massImportLoading, setMassImportLoading] = useState(false);
+  const [massImportError, setMassImportError] = useState("");
+  const [massImportSuccess, setMassImportSuccess] = useState("");
+
+  // Quick Bulk Paste in Create/Edit Provider Modal
+  const [isBulkPasteOpen, setIsBulkPasteOpen] = useState(false);
+  const [bulkPasteText, setBulkPasteText] = useState("");
 
   const loadUpstreams = async () => {
     setLoading(true);
@@ -577,6 +592,10 @@ export const UpstreamKeysTab: React.FC = () => {
     setConnectionsList(item.keyEntries || []);
     setKeyTestStatus({});
     setIsAddingConnection(false);
+    setIsMassImportOpen(false);
+    setMassImportText("");
+    setMassImportError("");
+    setMassImportSuccess("");
     setNewConnName("");
     setNewConnKey("");
     setNewConnActive(true);
@@ -710,21 +729,25 @@ export const UpstreamKeysTab: React.FC = () => {
       return;
     }
 
-    const newEntry: UpstreamKeyEntryItem = {
-      id: `key_${Date.now()}`,
-      name: newConnName.trim() || `API Key #${connectionsList.length + 1}`,
-      key: trimmedKey,
-      isActive: newConnActive,
-    };
-
-    const updatedList = [...connectionsList, newEntry];
-
     try {
-      await apiRequest(`/api/upstreams/${activeConnectionsUpstream.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ keyEntries: updatedList }),
+      const res = await apiRequest<{
+        success: boolean;
+        addedCount: number;
+        totalKeysCount: number;
+        activeKeysCount: number;
+        keyEntries: UpstreamKeyEntryItem[];
+      }>(`/api/upstreams/${activeConnectionsUpstream.id}/keys`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: newConnName.trim() || undefined,
+          key: trimmedKey,
+          isActive: newConnActive,
+        }),
       });
-      setConnectionsList(updatedList);
+
+      if (res.keyEntries) {
+        setConnectionsList(res.keyEntries);
+      }
       setIsAddingConnection(false);
       setNewConnName("");
       setNewConnKey("");
@@ -744,18 +767,131 @@ export const UpstreamKeysTab: React.FC = () => {
 
     if (!confirm("Are you sure you want to remove this connection key?")) return;
 
-    const updatedList = connectionsList.filter((k) => k.id !== keyId);
-    setConnectionsList(updatedList);
-
     try {
-      await apiRequest(`/api/upstreams/${activeConnectionsUpstream.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ keyEntries: updatedList }),
+      const res = await apiRequest<{
+        success: boolean;
+        keyEntries: UpstreamKeyEntryItem[];
+      }>(`/api/upstreams/${activeConnectionsUpstream.id}/keys/${keyId}`, {
+        method: "DELETE",
       });
+
+      if (res.keyEntries) {
+        setConnectionsList(res.keyEntries);
+      }
       await loadUpstreams();
-    } catch (e) {
-      console.error(e);
-      setConnectionsList(connectionsList);
+    } catch (e: any) {
+      alert(e.message || "Failed to delete connection key");
+      await loadUpstreams();
+    }
+  };
+
+  const detectedKeysCount = useMemo(() => {
+    if (!massImportText || !massImportText.trim()) return 0;
+    const lines = massImportText.split(/\r?\n/);
+    let count = 0;
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.includes(",") && !trimmed.includes(":")) {
+        const parts = trimmed.split(",").map((p) => p.trim()).filter(Boolean);
+        count += parts.length;
+      } else {
+        count += 1;
+      }
+    }
+    return count;
+  }, [massImportText]);
+
+  const handleMassImportKeys = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeConnectionsUpstream) return;
+    setMassImportError("");
+    setMassImportSuccess("");
+
+    if (detectedKeysCount === 0) {
+      setMassImportError("Please paste at least one valid API key");
+      return;
+    }
+
+    setMassImportLoading(true);
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        importedCount: number;
+        duplicatesSkipped: number;
+        message: string;
+        keyEntries: UpstreamKeyEntryItem[];
+      }>(`/api/upstreams/${activeConnectionsUpstream.id}/keys/import`, {
+        method: "POST",
+        body: JSON.stringify({
+          rawKeys: massImportText,
+          namePrefix: massImportPrefix.trim() || "API Key",
+          defaultActive: massImportActive,
+          skipDuplicates: massImportSkipDuplicates,
+        }),
+      });
+
+      if (res.keyEntries) {
+        setConnectionsList(res.keyEntries);
+      }
+      setMassImportSuccess(res.message || `Successfully imported ${res.importedCount} keys`);
+      setMassImportText("");
+      await loadUpstreams();
+    } catch (err: any) {
+      setMassImportError(err.message || "Failed to import keys");
+    } finally {
+      setMassImportLoading(false);
+    }
+  };
+
+  const handleBulkPasteIntoForm = () => {
+    if (!bulkPasteText.trim()) return;
+    const lines = bulkPasteText.split(/\r?\n/);
+    const newItems: FormKeyEntry[] = [];
+    let count = formKeys.length;
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (trimmed.includes(",") && !trimmed.includes(":")) {
+        const parts = trimmed.split(",").map((p) => p.trim()).filter(Boolean);
+        for (const p of parts) {
+          count++;
+          newItems.push({
+            id: `k_${Date.now()}_${count}`,
+            name: `API Key #${count}`,
+            key: p.replace(/^["']|["']$/g, "").trim(),
+            isActive: true,
+            showSecret: false,
+          });
+        }
+      } else {
+        const match = trimmed.match(/^([^:=]+)[:=]\s*(.+)$/);
+        if (match) {
+          newItems.push({
+            id: `k_${Date.now()}_${++count}`,
+            name: match[1]!.trim(),
+            key: match[2]!.trim().replace(/^[,"';]+|[,"';]+$/g, ""),
+            isActive: true,
+            showSecret: false,
+          });
+        } else {
+          newItems.push({
+            id: `k_${Date.now()}_${++count}`,
+            name: `API Key #${count}`,
+            key: trimmed.replace(/^[,"';]+|[,"';]+$/g, ""),
+            isActive: true,
+            showSecret: false,
+          });
+        }
+      }
+    }
+
+    if (newItems.length > 0) {
+      const existing = formKeys.filter((k) => k.key.trim().length > 0);
+      setFormKeys([...existing, ...newItems]);
+      setBulkPasteText("");
+      setIsBulkPasteOpen(false);
     }
   };
 
@@ -1636,19 +1772,63 @@ export const UpstreamKeysTab: React.FC = () => {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between mt-2">
-                  <button
-                    type="button"
-                    onClick={handleAddKey}
-                    className="inline-flex items-center space-x-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>Add Another Key to Pool</span>
-                  </button>
+                <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
+                  <div className="flex items-center space-x-3">
+                    <button
+                      type="button"
+                      onClick={handleAddKey}
+                      className="inline-flex items-center space-x-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Key Row</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsBulkPasteOpen(!isBulkPasteOpen)}
+                      className="inline-flex items-center space-x-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                    >
+                      <UploadCloud className="w-3 h-3" />
+                      <span>Bulk Paste Keys</span>
+                    </button>
+                  </div>
                   <span className="text-[10px] text-zinc-400 italic">
                     Paste multiple keys to auto-split
                   </span>
                 </div>
+
+                {isBulkPasteOpen && (
+                  <div className="mt-2.5 p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                      <span className="flex items-center space-x-1">
+                        <UploadCloud className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>Paste Multiple Keys</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsBulkPasteOpen(false)}
+                        className="text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={bulkPasteText}
+                      onChange={(e) => setBulkPasteText(e.target.value)}
+                      placeholder="Paste keys here (one per line, comma separated, or Label: Key)..."
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleBulkPasteIntoForm}
+                        className="skeuo-btn-primary px-3 py-1 rounded text-xs font-medium cursor-pointer"
+                      >
+                        Append to Form
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Check button & result (matching 9Router screenshot 3) */}
@@ -1788,15 +1968,145 @@ export const UpstreamKeysTab: React.FC = () => {
                 </button>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setIsAddingConnection(!isAddingConnection)}
-                className="skeuo-btn-primary px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add API Key</span>
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMassImportOpen(!isMassImportOpen);
+                    setIsAddingConnection(false);
+                    setMassImportError("");
+                    setMassImportSuccess("");
+                  }}
+                  className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer text-indigo-600 dark:text-indigo-400 hover:border-indigo-500/50"
+                  title="Import hundreds of API keys in bulk"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Mass Import Keys</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddingConnection(!isAddingConnection);
+                    setIsMassImportOpen(false);
+                  }}
+                  className="skeuo-btn-primary px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add API Key</span>
+                </button>
+              </div>
             </div>
+
+            {/* Mass Import Keys Box */}
+            {isMassImportOpen && (
+              <form
+                onSubmit={handleMassImportKeys}
+                className="mb-3 p-3.5 rounded-lg border border-indigo-500/40 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <UploadCloud className="w-4 h-4 text-indigo-500" />
+                    <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Mass Import API Keys</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-600 dark:text-indigo-400">
+                      ⚡ {detectedKeysCount} keys detected
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsMassImportOpen(false)}
+                    className="text-zinc-400 hover:text-zinc-600 text-xs cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {massImportError && (
+                  <div className="text-[11px] text-red-500 bg-red-500/10 border border-red-500/20 p-2 rounded">
+                    {massImportError}
+                  </div>
+                )}
+
+                {massImportSuccess && (
+                  <div className="text-[11px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-2 rounded flex items-center space-x-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>{massImportSuccess}</span>
+                  </div>
+                )}
+
+                <div>
+                  <textarea
+                    rows={5}
+                    required
+                    value={massImportText}
+                    onChange={(e) => {
+                      setMassImportText(e.target.value);
+                      setMassImportError("");
+                      setMassImportSuccess("");
+                    }}
+                    placeholder="Paste hundreds of keys here (one key per line, or comma-separated, or Label: Key)&#10;sk-proj-abc123456789...&#10;sk-proj-def987654321...&#10;Backup Key 3: sk-proj-111..."
+                    className="w-full px-3 py-2 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-1 focus:ring-indigo-500"
+                  />
+                  <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1">
+                    Supports raw keys (<code>sk-...</code>), comma-separated tokens, or custom labels (<code>Label: Key</code>).
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
+                  <div>
+                    <label className="text-[10px] text-zinc-500 block mb-1">Prefix / Default Label</label>
+                    <input
+                      type="text"
+                      value={massImportPrefix}
+                      onChange={(e) => setMassImportPrefix(e.target.value)}
+                      placeholder="e.g. API Key or Node"
+                      className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-zinc-100"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-3 pt-2 sm:pt-4">
+                    <label className="flex items-center space-x-1.5 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={massImportActive}
+                        onChange={(e) => setMassImportActive(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Active immediately</span>
+                    </label>
+                    <label className="flex items-center space-x-1.5 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={massImportSkipDuplicates}
+                        onChange={(e) => setMassImportSkipDuplicates(e.target.checked)}
+                        className="rounded"
+                      />
+                      <span>Skip duplicates</span>
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="submit"
+                      disabled={massImportLoading || detectedKeysCount === 0}
+                      className="skeuo-btn-primary px-4 py-1.5 rounded-md text-xs font-medium cursor-pointer flex items-center space-x-1.5 disabled:opacity-50"
+                    >
+                      {massImportLoading ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Importing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud className="w-3.5 h-3.5" />
+                          <span>Import {detectedKeysCount} Keys</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
 
             {/* Inline Add Key Box */}
             {isAddingConnection && (

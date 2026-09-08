@@ -1,7 +1,7 @@
 # Graph Report - Neko-Router  (2026-09-08)
 
 ## Corpus Check
-- 49 files · ~50,003 words
+- 49 files · ~50,006 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

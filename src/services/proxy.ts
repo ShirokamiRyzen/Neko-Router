@@ -16,10 +16,15 @@ import {
   setCachedResponse,
 } from "./optimizer";
 
+type CancellableTransformer<I, O> = Transformer<I, O> & {
+  cancel?(reason?: any): void | Promise<void>;
+};
+
 export async function proxyOpenAIChatCompletions(
   reqHeaders: Headers,
   body: any,
-  clientKey: ClientKey | null
+  clientKey: ClientKey | null,
+  clientSignal?: AbortSignal
 ): Promise<Response> {
   const startTime = performance.now();
   const requestedModel = (body && typeof body === "object" ? body.model : "") || "unknown";
@@ -53,7 +58,7 @@ export async function proxyOpenAIChatCompletions(
             error: {
               message: `Token quota exceeded. Your key has consumed ${(clientKey.usedTokens || 0).toLocaleString()} of ${clientKey.tokenLimit.toLocaleString()} allocated tokens.`,
               type: "insufficient_quota",
-              code: "token_quota_exceeded",
+              code: "insufficient_quota",
             },
           }),
           { status: 429, headers: { "Content-Type": "application/json" } }
@@ -70,11 +75,17 @@ export async function proxyOpenAIChatCompletions(
             code: "rate_limit_exceeded",
           },
         }),
-        { status: 429, headers: { "Content-Type": "application/json" } }
+        {
+          status: 429,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
       );
     }
   }
 
+  // Load optimization settings
   const opt = getOptimizationSettings();
   const optimizedBody = optimizeRequestBody(body, "openai");
 
@@ -103,6 +114,17 @@ export async function proxyOpenAIChatCompletions(
     model,
     startedAt: startTime,
   });
+
+  // Client abort handling: if the caller drops or cancels, immediately terminate active routing
+  if (clientSignal) {
+    if (clientSignal.aborted) {
+      finishActive();
+      return new Response(JSON.stringify({ error: { message: "Client aborted request" } }), { status: 499 });
+    }
+    clientSignal.addEventListener("abort", () => {
+      finishActive();
+    }, { once: true });
+  }
 
   // Check Exact Response Cache
   let cacheKey = "";
@@ -191,6 +213,24 @@ export async function proxyOpenAIChatCompletions(
     timeoutTimer = setTimeout(() => {
       controller.abort(new Error(`Request timed out after ${timeoutSeconds}s`));
     }, timeoutSeconds * 1000);
+  }
+
+  if (clientSignal) {
+    if (clientSignal.aborted) {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      controller.abort();
+      finishActive();
+    } else {
+      clientSignal.addEventListener(
+        "abort",
+        () => {
+          if (timeoutTimer) clearTimeout(timeoutTimer);
+          controller.abort();
+          finishActive();
+        },
+        { once: true }
+      );
+    }
   }
 
   let upstreamResponse: Response;
@@ -340,6 +380,7 @@ export async function proxyOpenAIChatCompletions(
 
   const transformStream = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
+      finishActive.touch();
       // 1. Instantly passthrough the raw chunk to client (zero buffering for ultra-low TTFT)
       controller.enqueue(chunk);
 
@@ -410,7 +451,11 @@ export async function proxyOpenAIChatCompletions(
         incrementClientKeyTokens(clientKey.id, finalTokens);
       }
     },
-  });
+    cancel(reason?: any) {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      finishActive();
+    },
+  } as CancellableTransformer<Uint8Array, Uint8Array>);
 
   const responseHeaders = new Headers();
   responseHeaders.set(
@@ -431,7 +476,8 @@ export async function proxyOpenAIChatCompletions(
 export async function proxyAnthropicMessages(
   reqHeaders: Headers,
   body: any,
-  clientKey: ClientKey | null
+  clientKey: ClientKey | null,
+  clientSignal?: AbortSignal
 ): Promise<Response> {
   const startTime = performance.now();
   const requestedModel = (body && typeof body === "object" ? body.model : "") || "unknown";
@@ -634,6 +680,24 @@ export async function proxyAnthropicMessages(
     }, timeoutSeconds * 1000);
   }
 
+  if (clientSignal) {
+    if (clientSignal.aborted) {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      controller.abort();
+      finishActive();
+    } else {
+      clientSignal.addEventListener(
+        "abort",
+        () => {
+          if (timeoutTimer) clearTimeout(timeoutTimer);
+          controller.abort();
+          finishActive();
+        },
+        { once: true }
+      );
+    }
+  }
+
   let upstreamResponse: Response;
   try {
     upstreamResponse = await fetch(upstreamUrl, {
@@ -776,6 +840,7 @@ export async function proxyAnthropicMessages(
 
   const transformStream = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
+      finishActive.touch();
       // 1. Passthrough directly with no latency
       controller.enqueue(chunk);
 
@@ -838,7 +903,11 @@ export async function proxyAnthropicMessages(
         incrementClientKeyTokens(clientKey.id, promptTokens + completionTokens);
       }
     },
-  });
+    cancel(reason?: any) {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
+      finishActive();
+    },
+  } as CancellableTransformer<Uint8Array, Uint8Array>);
 
   const responseHeaders = new Headers();
   responseHeaders.set(

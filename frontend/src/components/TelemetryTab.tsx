@@ -4,6 +4,8 @@ import {
   RefreshCw,
   Radio,
   Sparkles,
+  Copy,
+  Check,
 } from "lucide-react";
 import { apiRequest, type TelemetryLogItem } from "../lib/api";
 
@@ -11,6 +13,7 @@ export const TelemetryTab: React.FC = () => {
   const [logs, setLogs] = useState<TelemetryLogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLog, setSelectedLog] = useState<TelemetryLogItem | null>(null);
+  const [copiedId, setCopiedId] = useState(false);
 
   const loadLogs = async () => {
     setLoading(true);
@@ -29,6 +32,12 @@ export const TelemetryTab: React.FC = () => {
     const interval = setInterval(loadLogs, 8000);
     return () => clearInterval(interval);
   }, []);
+
+  const handleCopyLogId = (id: string) => {
+    navigator.clipboard.writeText(id);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
 
   return (
     <div className="space-y-6">
@@ -73,7 +82,7 @@ export const TelemetryTab: React.FC = () => {
             <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50 text-zinc-700 dark:text-zinc-300">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-zinc-500 dark:text-zinc-400">
+                  <td colSpan={10} className="px-4 py-12 text-center text-zinc-500 dark:text-zinc-400">
                     <Activity className="w-8 h-8 mx-auto mb-2 opacity-40" />
                     <p className="font-medium">No request telemetry recorded yet</p>
                     <p className="text-[11px] mt-1">
@@ -176,7 +185,7 @@ export const TelemetryTab: React.FC = () => {
           onClick={() => setSelectedLog(null)}
         >
           <div
-            className="w-full max-w-lg skeuo-card p-6 text-xs"
+            className="w-full max-w-lg skeuo-card p-5 sm:p-6 text-xs max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center space-x-3 mb-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
@@ -196,64 +205,89 @@ export const TelemetryTab: React.FC = () => {
             </div>
 
             <div className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-md skeuo-card-subtle">
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Log ID</span>
-                  <span className="font-mono text-zinc-900 dark:text-zinc-100">{selectedLog.id}</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 rounded-md skeuo-card-subtle">
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Log ID</span>
+                  <div className="flex items-center space-x-1.5 mt-0.5">
+                    <span className="font-mono text-zinc-900 dark:text-zinc-100 break-all select-all text-xs font-semibold">
+                      {selectedLog.id}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyLogId(selectedLog.id)}
+                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 shrink-0 p-1 rounded hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      title="Copy Log ID"
+                    >
+                      {copiedId ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Timestamp</span>
-                  <span className="text-zinc-900 dark:text-zinc-100">{new Date(selectedLog.createdAt).toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-md skeuo-card-subtle">
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Endpoint</span>
-                  <span className="font-mono text-zinc-900 dark:text-zinc-100">{selectedLog.endpoint}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Model & Provider</span>
-                  <span className="text-zinc-900 dark:text-zinc-100">{selectedLog.provider} / {selectedLog.model}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-4 gap-2 p-3 rounded-md skeuo-card-subtle text-center">
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Prompt</span>
-                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">{selectedLog.promptTokens}</span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Cached</span>
-                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    {selectedLog.cachedTokens || 0}
+                <div className="min-w-0 sm:text-right">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Timestamp</span>
+                  <span className="text-zinc-900 dark:text-zinc-100 text-xs font-mono block mt-0.5">
+                    {new Date(selectedLog.createdAt).toLocaleString()}
                   </span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Completion</span>
-                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">{selectedLog.completionTokens}</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 rounded-md skeuo-card-subtle">
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Endpoint</span>
+                  <span className="font-mono text-zinc-900 dark:text-zinc-100 break-all block mt-0.5 font-medium">{selectedLog.endpoint}</span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Total</span>
-                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">{selectedLog.totalTokens}</span>
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Model & Provider</span>
+                  <div className="flex items-center space-x-1.5 mt-0.5 flex-wrap">
+                    <span
+                      className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                        selectedLog.provider === "openai"
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {selectedLog.provider}
+                    </span>
+                    <span className="font-mono text-zinc-900 dark:text-zinc-100 break-all">{selectedLog.model}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-md skeuo-card-subtle">
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Client Key</span>
-                  <span className="text-zinc-900 dark:text-zinc-100">{selectedLog.clientKeyName || "N/A"}</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-3 rounded-md skeuo-card-subtle text-center">
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Prompt</span>
+                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 text-xs">{selectedLog.promptTokens.toLocaleString()}</span>
                 </div>
-                <div>
-                  <span className="text-zinc-400 block text-[10px]">Latency Duration</span>
-                  <span className="font-mono text-zinc-900 dark:text-zinc-100">{selectedLog.durationMs} ms</span>
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Cached</span>
+                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-xs">
+                    {(selectedLog.cachedTokens || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Completion</span>
+                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 text-xs">{selectedLog.completionTokens.toLocaleString()}</span>
+                </div>
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Total</span>
+                  <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 text-xs">{selectedLog.totalTokens.toLocaleString()}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 rounded-md skeuo-card-subtle">
+                <div className="min-w-0">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Client Key</span>
+                  <span className="text-zinc-900 dark:text-zinc-100 font-medium break-all block mt-0.5">{selectedLog.clientKeyName || "Anonymous"}</span>
+                </div>
+                <div className="min-w-0 sm:text-right">
+                  <span className="text-zinc-400 block text-[10px] uppercase font-semibold tracking-wider">Latency Duration</span>
+                  <span className="font-mono text-zinc-900 dark:text-zinc-100 block mt-0.5">{selectedLog.durationMs} ms</span>
                 </div>
               </div>
 
               {selectedLog.errorMessage && (
                 <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400">
                   <span className="font-semibold block mb-1">Upstream Error:</span>
-                  <pre className="text-[11px] whitespace-pre-wrap font-mono">{selectedLog.errorMessage}</pre>
+                  <pre className="text-[11px] whitespace-pre-wrap break-all font-mono max-h-48 overflow-y-auto">{selectedLog.errorMessage}</pre>
                 </div>
               )}
             </div>

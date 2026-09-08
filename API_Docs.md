@@ -498,8 +498,71 @@ All `/api/*` management endpoints can be authenticated via an **Admin Session Co
 - **`PATCH /api/upstreams/:id`**
 - **Body:** `{ "isActive": true, "weight": 3 }`
 
-#### 6. Delete Upstream Key
+#### 6. Delete Upstream Provider
 - **`DELETE /api/upstreams/:id`**
+
+#### 7. Add Key to Provider Pool
+- **`POST /api/upstreams/:id/keys`**
+- **Body:**
+  ```json
+  {
+    "name": "Backup Key 2",
+    "key": "sk-proj-...",
+    "isActive": true
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "addedCount": 1,
+    "totalKeysCount": 8,
+    "activeKeysCount": 8,
+    "keyEntries": [...]
+  }
+  ```
+
+#### 8. Mass Import Keys to Provider Pool
+Import hundreds of API keys in a single atomic request from multiline raw text or structured arrays.
+- **`POST /api/upstreams/:id/keys/import`**
+- **Body:**
+  ```json
+  {
+    "rawKeys": "sk-proj-key1...\nsk-proj-key2...\nCustom Label: sk-proj-key3...",
+    "namePrefix": "Node Key",
+    "defaultActive": true,
+    "skipDuplicates": true
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "importedCount": 150,
+    "duplicatesSkipped": 2,
+    "message": "Successfully imported 150 keys (2 duplicates skipped)",
+    "totalKeysCount": 158,
+    "activeKeysCount": 158,
+    "keyEntries": [...]
+  }
+  ```
+
+#### 9. Delete Single Key from Pool
+- **`DELETE /api/upstreams/:id/keys/:keyId`**
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Key deleted successfully",
+    "totalKeysCount": 157,
+    "activeKeysCount": 157,
+    "keyEntries": [...]
+  }
+  ```
+
+#### 10. Toggle All Keys in Pool
+- **`POST /api/upstreams/:id/keys/toggle-all`**
+- **Body:** `{ "enableAll": true }` or `{ "disableAll": true }`
 
 ---
 

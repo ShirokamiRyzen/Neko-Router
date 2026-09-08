@@ -56,19 +56,29 @@ export interface ActiveRequest {
   provider: string;
   model: string;
   startedAt: number;
+  lastActivityAt?: number;
 }
 
 const activeRequestsMap = new Map<string, ActiveRequest>();
 const recentActivityMap = new Map<string, number>();
 
-export function registerActiveRequest(req: ActiveRequest): () => void {
-  activeRequestsMap.set(req.id, req);
+// Inactivity threshold: if no activity received for 20s, evict stale request
+const MAX_INACTIVITY_MS = 20 * 1000;
+// Absolute maximum request lifetime: 180s (3 minutes)
+const MAX_TOTAL_LIFETIME_MS = 180 * 1000;
+
+export function registerActiveRequest(req: ActiveRequest): (() => void) & { touch: () => void; finish: () => void } {
+  const item: ActiveRequest = {
+    ...req,
+    lastActivityAt: Date.now(),
+  };
+  activeRequestsMap.set(req.id, item);
   if (req.upstreamKeyId) {
     recentActivityMap.set(req.upstreamKeyId, Date.now());
   }
 
   let finished = false;
-  return () => {
+  const finish = () => {
     if (finished) return;
     finished = true;
     activeRequestsMap.delete(req.id);
@@ -76,15 +86,37 @@ export function registerActiveRequest(req: ActiveRequest): () => void {
       recentActivityMap.set(req.upstreamKeyId, Date.now());
     }
   };
+
+  const touch = () => {
+    if (finished) return;
+    item.lastActivityAt = Date.now();
+    if (item.upstreamKeyId) {
+      recentActivityMap.set(item.upstreamKeyId, Date.now());
+    }
+  };
+
+  const fn = finish as any;
+  fn.finish = finish;
+  fn.touch = touch;
+  return fn;
 }
 
 export function getActiveUpstreamIds(): string[] {
   const now = Date.now();
   const activeIds = new Set<string>();
 
-  // In-flight active requests
-  for (const req of activeRequestsMap.values()) {
-    if (req.upstreamKeyId) activeIds.add(req.upstreamKeyId);
+  // In-flight active requests with auto-pruning of stale/abandoned requests
+  for (const [id, req] of activeRequestsMap.entries()) {
+    const lastActive = req.lastActivityAt || req.startedAt;
+    const isInactive = now - lastActive > MAX_INACTIVITY_MS;
+    const isExceededMaxTime = now - req.startedAt > MAX_TOTAL_LIFETIME_MS;
+
+    if (isInactive || isExceededMaxTime) {
+      // Auto-evict orphaned or dead in-flight request
+      activeRequestsMap.delete(id);
+    } else if (req.upstreamKeyId) {
+      activeIds.add(req.upstreamKeyId);
+    }
   }
 
   // Requests active in the last 1500ms (for fluid visual persistence on short requests)

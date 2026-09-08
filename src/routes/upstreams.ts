@@ -36,6 +36,63 @@ function maskKey(key: string): string {
   return `${trimmed.slice(0, 6)}...${trimmed.slice(-4)}`;
 }
 
+export function parseRawKeysInput(
+  rawKeys: string,
+  defaultPrefix = "API Key",
+  startIndex = 1
+): Array<{ name: string; key: string }> {
+  if (!rawKeys || !rawKeys.trim()) return [];
+
+  const lines = rawKeys.split(/\r?\n/);
+  const results: Array<{ name: string; key: string }> = [];
+  let counter = startIndex;
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) continue;
+
+    // Check if comma-separated on a single line (unless the line has label: key format)
+    if (trimmedLine.includes(",") && !trimmedLine.includes(":")) {
+      const parts = trimmedLine.split(",").map((p) => p.trim()).filter(Boolean);
+      for (const part of parts) {
+        const cleanKey = part.replace(/^["']|["']$/g, "").trim();
+        if (cleanKey.length > 0) {
+          results.push({
+            name: `${defaultPrefix} #${counter++}`,
+            key: cleanKey,
+          });
+        }
+      }
+      continue;
+    }
+
+    // Check if line has label: key or label = key
+    const match = trimmedLine.match(/^([^:=]+)[:=]\s*(.+)$/);
+    if (match) {
+      const label = match[1]!.trim();
+      const rawKey = match[2]!.trim().replace(/^[,"';]+|[,"';]+$/g, "");
+      if (rawKey.length > 0) {
+        results.push({
+          name: label || `${defaultPrefix} #${counter++}`,
+          key: rawKey,
+        });
+        continue;
+      }
+    }
+
+    // Single key on line
+    const cleanKey = trimmedLine.replace(/^[,"';]+|[,"';]+$/g, "");
+    if (cleanKey.length > 0) {
+      results.push({
+        name: `${defaultPrefix} #${counter++}`,
+        key: cleanKey,
+      });
+    }
+  }
+
+  return results;
+}
+
 async function testSingleKey(
   provider: "openai" | "anthropic",
   baseUrl: string | null,
@@ -197,7 +254,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
   .post(
     "/",
     ({ body, set }) => {
-      const { provider, name, prefix, apiKey, apiKeys, keyEntries, baseUrl, weight, roundRobin, models } = body;
+      const { provider, name, prefix, apiKey, apiKeys, keyEntries, rawKeys, baseUrl, weight, roundRobin, models } = body;
 
       // Extract and normalize keys list
       let normalizedEntries: UpstreamKeyEntry[] = [];
@@ -211,6 +268,15 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
             isActive: k.isActive !== false,
             createdAt: Date.now(),
           }));
+      } else if (rawKeys && rawKeys.trim().length > 0) {
+        const parsed = parseRawKeysInput(rawKeys, "API Key", 1);
+        normalizedEntries = parsed.map((p, idx) => ({
+          id: `key_${Date.now()}_${idx}`,
+          name: p.name,
+          key: p.key,
+          isActive: true,
+          createdAt: Date.now(),
+        }));
       } else if (Array.isArray(apiKeys) && apiKeys.length > 0) {
         normalizedEntries = apiKeys
           .map((k: any) => String(k).trim())
@@ -287,6 +353,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         prefix: t.Optional(t.Nullable(t.String())),
         apiKey: t.Optional(t.String()),
         apiKeys: t.Optional(t.Array(t.String())),
+        rawKeys: t.Optional(t.String()),
         keyEntries: t.Optional(
           t.Array(
             t.Object({
@@ -338,21 +405,48 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       if (body.roundRobin !== undefined) updateData.roundRobin = body.roundRobin ? 1 : 0;
       if (body.weight !== undefined) updateData.weight = Math.max(1, body.weight);
 
-      // Multiple keys update
+      // Multiple keys update - gracefully merge if key is omitted
       if (body.keyEntries !== undefined) {
-        const normalized = body.keyEntries
-          .filter((k: any) => k && typeof k.key === "string" && k.key.trim().length > 0)
-          .map((k: any, idx: number) => ({
-            id: k.id || `key_${Date.now()}_${idx}`,
-            name: k.name?.trim() || `API Key #${idx + 1}`,
-            key: k.key.trim(),
-            isActive: k.isActive !== false,
-            createdAt: k.createdAt || Date.now(),
-          }));
+        const existingEntries = parseUpstreamKeyEntries(existing.apiKeys, existing.apiKey);
+        const existingMap = new Map(existingEntries.map((e) => [e.id, e]));
+
+        const normalized: UpstreamKeyEntry[] = [];
+        for (let idx = 0; idx < body.keyEntries.length; idx++) {
+          const item = body.keyEntries[idx];
+          if (!item) continue;
+          const existingEntry = item.id ? existingMap.get(item.id) : undefined;
+          const actualKey =
+            item.key && typeof item.key === "string" && item.key.trim().length > 0
+              ? item.key.trim()
+              : existingEntry?.key;
+
+          if (!actualKey) continue;
+
+          normalized.push({
+            id: item.id || `key_${Date.now()}_${idx}`,
+            name: item.name?.trim() || existingEntry?.name || `API Key #${idx + 1}`,
+            key: actualKey,
+            isActive: item.isActive !== undefined ? item.isActive : (existingEntry ? existingEntry.isActive : true),
+            createdAt: (item as any).createdAt || existingEntry?.createdAt || Date.now(),
+          });
+        }
         if (normalized.length > 0) {
           updateData.apiKeys = JSON.stringify(normalized);
           const firstActive = normalized.find((k) => k.isActive);
           updateData.apiKey = firstActive ? firstActive.key : normalized[0]!.key;
+        }
+      } else if (body.rawKeys !== undefined && body.rawKeys.trim().length > 0) {
+        const parsed = parseRawKeysInput(body.rawKeys, "API Key", 1);
+        if (parsed.length > 0) {
+          const normalized = parsed.map((p, idx) => ({
+            id: `key_${Date.now()}_${idx}`,
+            name: p.name,
+            key: p.key,
+            isActive: true,
+            createdAt: Date.now(),
+          }));
+          updateData.apiKeys = JSON.stringify(normalized);
+          updateData.apiKey = normalized[0]!.key;
         }
       } else if (body.apiKeys !== undefined) {
         const cleaned = body.apiKeys
@@ -406,12 +500,13 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         prefix: t.Optional(t.Nullable(t.String())),
         apiKey: t.Optional(t.String()),
         apiKeys: t.Optional(t.Array(t.String())),
+        rawKeys: t.Optional(t.String()),
         keyEntries: t.Optional(
           t.Array(
             t.Object({
               id: t.Optional(t.String()),
               name: t.Optional(t.String()),
-              key: t.String(),
+              key: t.Optional(t.String()),
               isActive: t.Optional(t.Boolean()),
             })
           )
@@ -640,6 +735,386 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
     );
     return result;
   })
+  .post(
+    "/:id/keys",
+    ({ params: { id }, body, set }) => {
+      const upstream = db
+        .select()
+        .from(upstreamKeys)
+        .where(eq(upstreamKeys.id, id))
+        .get();
+
+      if (!upstream) {
+        set.status = 404;
+        return { success: false, error: "Upstream not found" };
+      }
+
+      const existingEntries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+      const newEntries: UpstreamKeyEntry[] = [];
+      const now = Date.now();
+
+      // Support single key
+      if (body.key && body.key.trim().length > 0) {
+        newEntries.push({
+          id: `key_${now}_${Math.floor(Math.random() * 1000)}`,
+          name: body.name?.trim() || `API Key #${existingEntries.length + 1}`,
+          key: body.key.trim(),
+          isActive: body.isActive !== false,
+          createdAt: now,
+        });
+      }
+
+      // Support multiple keys array
+      if (Array.isArray(body.keys) && body.keys.length > 0) {
+        body.keys.forEach((k: string, idx: number) => {
+          const trimmed = String(k).trim();
+          if (trimmed.length > 0) {
+            newEntries.push({
+              id: `key_${now}_${idx}_${Math.floor(Math.random() * 1000)}`,
+              name: body.name ? `${body.name.trim()} #${idx + 1}` : `API Key #${existingEntries.length + newEntries.length + 1}`,
+              key: trimmed,
+              isActive: body.isActive !== false,
+              createdAt: now,
+            });
+          }
+        });
+      }
+
+      // Support raw text keys
+      if (body.rawKeys && body.rawKeys.trim().length > 0) {
+        const parsed = parseRawKeysInput(body.rawKeys, body.name?.trim() || "API Key", existingEntries.length + 1);
+        parsed.forEach((p, idx) => {
+          newEntries.push({
+            id: `key_${now}_${idx}_${Math.floor(Math.random() * 1000)}`,
+            name: p.name,
+            key: p.key,
+            isActive: body.isActive !== false,
+            createdAt: now,
+          });
+        });
+      }
+
+      // Support keyEntries array
+      if (Array.isArray(body.keyEntries) && body.keyEntries.length > 0) {
+        body.keyEntries.forEach((entry: any, idx: number) => {
+          if (entry && typeof entry.key === "string" && entry.key.trim().length > 0) {
+            newEntries.push({
+              id: entry.id || `key_${now}_${idx}_${Math.floor(Math.random() * 1000)}`,
+              name: entry.name?.trim() || `API Key #${existingEntries.length + newEntries.length + 1}`,
+              key: entry.key.trim(),
+              isActive: entry.isActive !== false,
+              createdAt: now,
+            });
+          }
+        });
+      }
+
+      if (newEntries.length === 0) {
+        set.status = 400;
+        return { success: false, error: "No valid keys provided to add" };
+      }
+
+      const merged = [...existingEntries, ...newEntries];
+      const firstActive = merged.find((k) => k.isActive);
+
+      db.update(upstreamKeys)
+        .set({
+          apiKey: firstActive ? firstActive.key : merged[0]!.key,
+          apiKeys: JSON.stringify(merged),
+          updatedAt: now,
+        })
+        .where(eq(upstreamKeys.id, id))
+        .run();
+
+      return {
+        success: true,
+        addedCount: newEntries.length,
+        totalKeysCount: merged.length,
+        activeKeysCount: merged.filter((k) => k.isActive).length,
+        keyEntries: merged.map((e) => ({
+          id: e.id,
+          name: e.name,
+          maskedKey: maskKey(e.key),
+          isActive: e.isActive,
+          createdAt: e.createdAt,
+        })),
+      };
+    },
+    {
+      body: t.Object({
+        key: t.Optional(t.String()),
+        name: t.Optional(t.String()),
+        isActive: t.Optional(t.Boolean()),
+        keys: t.Optional(t.Array(t.String())),
+        rawKeys: t.Optional(t.String()),
+        keyEntries: t.Optional(
+          t.Array(
+            t.Object({
+              id: t.Optional(t.String()),
+              name: t.Optional(t.String()),
+              key: t.String(),
+              isActive: t.Optional(t.Boolean()),
+            })
+          )
+        ),
+      }),
+    }
+  )
+  .post(
+    "/:id/keys/import",
+    ({ params: { id }, body, set }) => {
+      const upstream = db
+        .select()
+        .from(upstreamKeys)
+        .where(eq(upstreamKeys.id, id))
+        .get();
+
+      if (!upstream) {
+        set.status = 404;
+        return { success: false, error: "Upstream not found" };
+      }
+
+      const existingEntries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+      const existingKeySet = new Set(existingEntries.map((e) => e.key));
+      const seenBatchKeySet = new Set<string>();
+
+      const defaultActive = body.defaultActive !== false;
+      const skipDuplicates = body.skipDuplicates !== false;
+      const namePrefix = body.namePrefix?.trim() || "API Key";
+      const now = Date.now();
+
+      const candidateEntries: Array<{ name: string; key: string; isActive?: boolean }> = [];
+
+      // 1. From rawKeys text
+      if (body.rawKeys && body.rawKeys.trim().length > 0) {
+        const parsed = parseRawKeysInput(body.rawKeys, namePrefix, existingEntries.length + 1);
+        candidateEntries.push(...parsed.map((p) => ({ ...p, isActive: defaultActive })));
+      }
+
+      // 2. From keys array
+      if (Array.isArray(body.keys) && body.keys.length > 0) {
+        body.keys.forEach((k: string) => {
+          const trimmed = String(k).trim();
+          if (trimmed.length > 0) {
+            candidateEntries.push({
+              name: `${namePrefix} #${existingEntries.length + candidateEntries.length + 1}`,
+              key: trimmed,
+              isActive: defaultActive,
+            });
+          }
+        });
+      }
+
+      // 3. From keyEntries array
+      if (Array.isArray(body.keyEntries) && body.keyEntries.length > 0) {
+        body.keyEntries.forEach((item: any) => {
+          if (item && typeof item.key === "string" && item.key.trim().length > 0) {
+            candidateEntries.push({
+              name: item.name?.trim() || `${namePrefix} #${existingEntries.length + candidateEntries.length + 1}`,
+              key: item.key.trim(),
+              isActive: item.isActive !== undefined ? item.isActive : defaultActive,
+            });
+          }
+        });
+      }
+
+      if (candidateEntries.length === 0) {
+        set.status = 400;
+        return { success: false, error: "No valid API keys detected in import payload" };
+      }
+
+      const toAdd: UpstreamKeyEntry[] = [];
+      let duplicatesSkipped = 0;
+
+      for (let i = 0; i < candidateEntries.length; i++) {
+        const candidate = candidateEntries[i]!;
+        if (skipDuplicates) {
+          if (existingKeySet.has(candidate.key) || seenBatchKeySet.has(candidate.key)) {
+            duplicatesSkipped++;
+            continue;
+          }
+        }
+        seenBatchKeySet.add(candidate.key);
+        toAdd.push({
+          id: `key_${now}_${i}_${Math.floor(100 + Math.random() * 900)}`,
+          name: candidate.name,
+          key: candidate.key,
+          isActive: candidate.isActive !== false,
+          createdAt: now,
+        });
+      }
+
+      if (toAdd.length === 0) {
+        return {
+          success: true,
+          importedCount: 0,
+          duplicatesSkipped,
+          message: "All provided keys already exist in the connection pool.",
+          totalKeysCount: existingEntries.length,
+          activeKeysCount: existingEntries.filter((k) => k.isActive).length,
+          keyEntries: existingEntries.map((e) => ({
+            id: e.id,
+            name: e.name,
+            maskedKey: maskKey(e.key),
+            isActive: e.isActive,
+            createdAt: e.createdAt,
+          })),
+        };
+      }
+
+      const merged = [...existingEntries, ...toAdd];
+      const firstActive = merged.find((k) => k.isActive);
+
+      db.update(upstreamKeys)
+        .set({
+          apiKey: firstActive ? firstActive.key : merged[0]!.key,
+          apiKeys: JSON.stringify(merged),
+          updatedAt: now,
+        })
+        .where(eq(upstreamKeys.id, id))
+        .run();
+
+      return {
+        success: true,
+        importedCount: toAdd.length,
+        duplicatesSkipped,
+        message: `Successfully imported ${toAdd.length} key${toAdd.length > 1 ? "s" : ""}${duplicatesSkipped > 0 ? ` (${duplicatesSkipped} duplicates skipped)` : ""}`,
+        totalKeysCount: merged.length,
+        activeKeysCount: merged.filter((k) => k.isActive).length,
+        keyEntries: merged.map((e) => ({
+          id: e.id,
+          name: e.name,
+          maskedKey: maskKey(e.key),
+          isActive: e.isActive,
+          createdAt: e.createdAt,
+        })),
+      };
+    },
+    {
+      body: t.Object({
+        rawKeys: t.Optional(t.String()),
+        keys: t.Optional(t.Array(t.String())),
+        keyEntries: t.Optional(
+          t.Array(
+            t.Object({
+              id: t.Optional(t.String()),
+              name: t.Optional(t.String()),
+              key: t.String(),
+              isActive: t.Optional(t.Boolean()),
+            })
+          )
+        ),
+        namePrefix: t.Optional(t.String()),
+        defaultActive: t.Optional(t.Boolean()),
+        skipDuplicates: t.Optional(t.Boolean()),
+      }),
+    }
+  )
+  .delete(
+    "/:id/keys/:keyId",
+    ({ params: { id, keyId }, set }) => {
+      const upstream = db
+        .select()
+        .from(upstreamKeys)
+        .where(eq(upstreamKeys.id, id))
+        .get();
+
+      if (!upstream) {
+        set.status = 404;
+        return { success: false, error: "Upstream not found" };
+      }
+
+      const entries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+      const targetIndex = entries.findIndex((e) => e.id === keyId);
+      if (targetIndex === -1) {
+        set.status = 404;
+        return { success: false, error: "Key not found in pool" };
+      }
+
+      if (entries.length <= 1) {
+        set.status = 400;
+        return { success: false, error: "Cannot delete the last key in the connection pool" };
+      }
+
+      const remaining = entries.filter((e) => e.id !== keyId);
+      const firstActive = remaining.find((e) => e.isActive);
+
+      db.update(upstreamKeys)
+        .set({
+          apiKey: firstActive ? firstActive.key : remaining[0]!.key,
+          apiKeys: JSON.stringify(remaining),
+          updatedAt: Date.now(),
+        })
+        .where(eq(upstreamKeys.id, id))
+        .run();
+
+      return {
+        success: true,
+        message: "Key deleted successfully",
+        totalKeysCount: remaining.length,
+        activeKeysCount: remaining.filter((e) => e.isActive).length,
+        keyEntries: remaining.map((e) => ({
+          id: e.id,
+          name: e.name,
+          maskedKey: maskKey(e.key),
+          isActive: e.isActive,
+          createdAt: e.createdAt,
+        })),
+      };
+    }
+  )
+  .post(
+    "/:id/keys/toggle-all",
+    ({ params: { id }, body, set }) => {
+      const upstream = db
+        .select()
+        .from(upstreamKeys)
+        .where(eq(upstreamKeys.id, id))
+        .get();
+
+      if (!upstream) {
+        set.status = 404;
+        return { success: false, error: "Upstream not found" };
+      }
+
+      let entries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+      if (body.enableAll) {
+        entries = entries.map((e) => ({ ...e, isActive: true }));
+      } else if (body.disableAll) {
+        entries = entries.map((e) => ({ ...e, isActive: false }));
+      }
+
+      const firstActive = entries.find((e) => e.isActive);
+
+      db.update(upstreamKeys)
+        .set({
+          apiKey: firstActive ? firstActive.key : entries[0]!.key,
+          apiKeys: JSON.stringify(entries),
+          updatedAt: Date.now(),
+        })
+        .where(eq(upstreamKeys.id, id))
+        .run();
+
+      return {
+        success: true,
+        totalKeysCount: entries.length,
+        activeKeysCount: entries.filter((e) => e.isActive).length,
+        keyEntries: entries.map((e) => ({
+          id: e.id,
+          name: e.name,
+          maskedKey: maskKey(e.key),
+          isActive: e.isActive,
+          createdAt: e.createdAt,
+        })),
+      };
+    },
+    {
+      body: t.Object({
+        enableAll: t.Optional(t.Boolean()),
+        disableAll: t.Optional(t.Boolean()),
+      }),
+    }
+  )
   .post(
     "/:id/keys/toggle",
     ({ params: { id }, body, set }) => {

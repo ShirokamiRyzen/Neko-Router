@@ -98,17 +98,20 @@ export const DashboardTab: React.FC = () => {
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const [statsData, upstreamsData, logsData] = await Promise.all([
+      const [statsData, upstreamsData, logsData, activeData] = await Promise.all([
         apiRequest<TelemetryStats>("/api/telemetry/stats").catch(() => null),
         apiRequest<{ upstreams: UpstreamKeyItem[] }>("/api/upstreams").catch(() => ({ upstreams: [] })),
         apiRequest<{ logs: TelemetryLogItem[] }>("/api/telemetry/logs?limit=12").catch(() => ({ logs: [] })),
+        apiRequest<{ activeUpstreamIds: string[] }>("/api/telemetry/active").catch(() => null),
       ]);
 
       if (statsData) {
         setStats(statsData);
-        if (Array.isArray(statsData.activeUpstreamIds)) {
-          setActiveUpstreamIds(statsData.activeUpstreamIds);
-        }
+      }
+      if (activeData && Array.isArray(activeData.activeUpstreamIds)) {
+        setActiveUpstreamIds(activeData.activeUpstreamIds);
+      } else if (statsData && Array.isArray(statsData.activeUpstreamIds)) {
+        setActiveUpstreamIds(statsData.activeUpstreamIds);
       }
       if (upstreamsData?.upstreams) setUpstreams(upstreamsData.upstreams);
       if (logsData?.logs) setRecentLogs(logsData.logs);
