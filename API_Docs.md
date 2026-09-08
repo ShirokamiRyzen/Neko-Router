@@ -435,11 +435,94 @@ All `/api/*` management endpoints can be authenticated via an **Admin Session Co
   ```
 
 #### 3. Update Client Key Status / Limits
+Modifies key properties, token quota limiter, sliding rate limiter, or adjusts consumed tokens.
 - **`PATCH /api/keys/:id`**
-- **Body:** `{ "isActive": false, "name": "New Name", "rateLimit": 120, "tokenLimit": 2000000 }`
+- **Body (JSON):**
+  ```json
+  {
+    "name": "Updated Bot Name",
+    "apiKeyId": "ak_123456",
+    "isActive": true,
+    "rateLimit": 120,
+    "tokenLimit": 2000000,
+    "adjustTokenLimit": 500000,
+    "usedTokens": 0,
+    "adjustTokens": -50000,
+    "resetUsedTokens": false,
+    "allowedProviders": ["up_provider_1", "up_provider_2"],
+    "roundRobinProviders": true
+  }
+  ```
+  - `rateLimit`: Sliding window request limit per minute (pass `null` or `0` for Unlimited).
+  - `tokenLimit`: Total token consumption cap (pass `null` or `0` for Unlimited).
+  - `adjustTokenLimit`: Delta modifier to increase (`+500000`) or decrease (`-500000`) the existing quota limit.
+  - `usedTokens`: Explicitly overwrite the used token counter.
+  - `adjustTokens`: Delta adjustment to increase or decrease used token count.
+  - `resetUsedTokens`: Resets used token counter to `0`.
 
-#### 4. Revoke / Delete Client Key
+#### 4. Rotate / Regenerate Secret Key
+Immediately invalidates the current `sk-neko-...` key and generates a new key string (or assigns a custom key).
+- **`POST /api/keys/:id/rotate`** *(Alias: `POST /api/keys/:id/regenerate`)*
+- **Body (optional):**
+  ```json
+  {
+    "customKey": "sk-neko-my-new-secret"
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Secret key rotated successfully",
+    "key": "sk-neko-7x8a9b2c3d4e5f6g7h8i9j0k",
+    "displayKey": "sk-neko-7x...9j0k"
+  }
+  ```
+
+#### 5. Quick Adjust Token Quota & Limits
+Dedicated delta adjustment endpoint to top up or reduce token balance and rate limits.
+- **`POST /api/keys/:id/adjust-quota`**
+- **Body (JSON):**
+  ```json
+  {
+    "deltaTokenLimit": 500000,
+    "setTokenLimit": 1500000,
+    "deltaUsedTokens": -50000,
+    "resetUsed": false,
+    "setRateLimit": 60
+  }
+  ```
+
+#### 6. Reset Used Token Quota
+Resets the key's used tokens counter to 0 without altering the quota ceiling.
+- **`POST /api/keys/:id/reset-quota`**
+
+#### 7. Revoke / Delete Client Key
+Permanently deletes the secret key.
 - **`DELETE /api/keys/:id`**
+
+---
+
+### B.2 Router Integration API Keys (`/api/router-keys`)
+Master API keys (`nr-api-...`) used to authenticate programmatic requests to Neko-Router's management APIs and manage downstream Secret Keys.
+
+#### 1. List Router API Keys
+- **`GET /api/router-keys`**
+
+#### 2. Create Router API Key
+- **`POST /api/router-keys`**
+- **Body:** `{ "name": "CI/CD Pipeline", "description": "For deployment scripts", "customKey": "nr-api-my-custom-key" }`
+
+#### 3. Update Router API Key Details
+- **`PATCH /api/router-keys/:id`**
+- **Body:** `{ "name": "Updated Name", "description": "Updated description", "isActive": true }`
+
+#### 4. Rotate / Regenerate Router API Key
+- **`POST /api/router-keys/:id/rotate`** *(Alias: `POST /api/router-keys/:id/regenerate`)*
+- **Body (optional):** `{ "customKey": "nr-api-custom-string" }`
+
+#### 5. Delete Router API Key
+- **`DELETE /api/router-keys/:id`**
 
 ---
 

@@ -194,11 +194,29 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
 
       const updateData: Partial<typeof clientKeys.$inferInsert> = {};
       if (body.name !== undefined) updateData.name = body.name.trim();
-      if (body.apiKeyId !== undefined) updateData.apiKeyId = body.apiKeyId;
+      if (body.apiKeyId !== undefined) {
+        if (body.apiKeyId) {
+          const parent = db.select().from(apiKeys).where(eq(apiKeys.id, body.apiKeyId)).get();
+          if (!parent) {
+            set.status = 400;
+            return { error: "Parent Router API Key not found" };
+          }
+          updateData.apiKeyId = body.apiKeyId;
+        } else {
+          updateData.apiKeyId = null;
+        }
+      }
       if (body.isActive !== undefined) updateData.isActive = body.isActive ? 1 : 0;
-      if (body.rateLimit !== undefined) updateData.rateLimit = body.rateLimit;
+      if (body.rateLimit !== undefined) {
+        updateData.rateLimit = body.rateLimit !== null && body.rateLimit > 0 ? Math.floor(body.rateLimit) : null;
+      }
       if (body.tokenLimit !== undefined) {
-        updateData.tokenLimit = body.tokenLimit && body.tokenLimit > 0 ? body.tokenLimit : null;
+        updateData.tokenLimit = body.tokenLimit !== null && body.tokenLimit > 0 ? Math.floor(body.tokenLimit) : null;
+      }
+      if (body.adjustTokenLimit !== undefined) {
+        const currentLimit = existing.tokenLimit || 0;
+        const newLimit = currentLimit + body.adjustTokenLimit;
+        updateData.tokenLimit = newLimit > 0 ? Math.floor(newLimit) : null;
       }
       if (body.allowedProviders !== undefined) {
         updateData.allowedProviders = JSON.stringify(body.allowedProviders);
@@ -208,6 +226,10 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
       }
       if (body.resetUsedTokens === true) {
         updateData.usedTokens = 0;
+      } else if (body.usedTokens !== undefined) {
+        updateData.usedTokens = Math.max(0, Math.floor(body.usedTokens));
+      } else if (body.adjustTokens !== undefined) {
+        updateData.usedTokens = Math.max(0, Math.floor((existing.usedTokens || 0) + body.adjustTokens));
       }
 
       db.update(clientKeys)
@@ -215,7 +237,9 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         .where(eq(clientKeys.id, id))
         .run();
 
-      return { success: true };
+      const updated = db.select().from(clientKeys).where(eq(clientKeys.id, id)).get();
+
+      return { success: true, key: updated };
     },
     {
       body: t.Object({
@@ -224,9 +248,188 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         isActive: t.Optional(t.Boolean()),
         tokenLimit: t.Optional(t.Nullable(t.Number())),
         rateLimit: t.Optional(t.Nullable(t.Number())),
+        adjustTokenLimit: t.Optional(t.Number()),
+        usedTokens: t.Optional(t.Number()),
+        adjustTokens: t.Optional(t.Number()),
+        resetUsedTokens: t.Optional(t.Boolean()),
         allowedProviders: t.Optional(t.Array(t.String())),
         roundRobinProviders: t.Optional(t.Boolean()),
-        resetUsedTokens: t.Optional(t.Boolean()),
+      }),
+    }
+  )
+  .post(
+    "/:id/rotate",
+    ({ params: { id }, body, set }) => {
+      const existing = db
+        .select()
+        .from(clientKeys)
+        .where(eq(clientKeys.id, id))
+        .get();
+
+      if (!existing) {
+        set.status = 404;
+        return { error: "Key not found" };
+      }
+
+      const customKey = body?.customKey;
+      const newKeyStr = generateKeyString(customKey);
+
+      const duplicate = db
+        .select()
+        .from(clientKeys)
+        .where(eq(clientKeys.key, newKeyStr))
+        .get();
+
+      if (duplicate && duplicate.id !== id) {
+        set.status = 400;
+        return { error: "API Key string already exists" };
+      }
+
+      db.update(clientKeys)
+        .set({ key: newKeyStr })
+        .where(eq(clientKeys.id, id))
+        .run();
+
+      const displayKey =
+        newKeyStr.length > 14
+          ? `${newKeyStr.slice(0, 10)}...${newKeyStr.slice(-4)}`
+          : newKeyStr;
+
+      return {
+        success: true,
+        message: "Secret key rotated successfully",
+        key: newKeyStr,
+        displayKey,
+      };
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          customKey: t.Optional(t.String()),
+        })
+      ),
+    }
+  )
+  .post(
+    "/:id/regenerate",
+    ({ params: { id }, body, set }) => {
+      const existing = db
+        .select()
+        .from(clientKeys)
+        .where(eq(clientKeys.id, id))
+        .get();
+
+      if (!existing) {
+        set.status = 404;
+        return { error: "Key not found" };
+      }
+
+      const customKey = body?.customKey;
+      const newKeyStr = generateKeyString(customKey);
+
+      const duplicate = db
+        .select()
+        .from(clientKeys)
+        .where(eq(clientKeys.key, newKeyStr))
+        .get();
+
+      if (duplicate && duplicate.id !== id) {
+        set.status = 400;
+        return { error: "API Key string already exists" };
+      }
+
+      db.update(clientKeys)
+        .set({ key: newKeyStr })
+        .where(eq(clientKeys.id, id))
+        .run();
+
+      const displayKey =
+        newKeyStr.length > 14
+          ? `${newKeyStr.slice(0, 10)}...${newKeyStr.slice(-4)}`
+          : newKeyStr;
+
+      return {
+        success: true,
+        message: "Secret key regenerated successfully",
+        key: newKeyStr,
+        displayKey,
+      };
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          customKey: t.Optional(t.String()),
+        })
+      ),
+    }
+  )
+  .post(
+    "/:id/adjust-quota",
+    ({ params: { id }, body, set }) => {
+      const existing = db
+        .select()
+        .from(clientKeys)
+        .where(eq(clientKeys.id, id))
+        .get();
+
+      if (!existing) {
+        set.status = 404;
+        return { error: "Key not found" };
+      }
+
+      const updateData: Partial<typeof clientKeys.$inferInsert> = {};
+
+      if (body.deltaTokenLimit !== undefined) {
+        const current = existing.tokenLimit || 0;
+        const next = current + body.deltaTokenLimit;
+        updateData.tokenLimit = next > 0 ? Math.floor(next) : null;
+      }
+      if (body.setTokenLimit !== undefined) {
+        updateData.tokenLimit =
+          body.setTokenLimit !== null && body.setTokenLimit > 0
+            ? Math.floor(body.setTokenLimit)
+            : null;
+      }
+      if (body.deltaUsedTokens !== undefined) {
+        updateData.usedTokens = Math.max(
+          0,
+          Math.floor((existing.usedTokens || 0) + body.deltaUsedTokens)
+        );
+      }
+      if (body.setUsedTokens !== undefined) {
+        updateData.usedTokens = Math.max(0, Math.floor(body.setUsedTokens));
+      }
+      if (body.resetUsed === true) {
+        updateData.usedTokens = 0;
+      }
+      if (body.setRateLimit !== undefined) {
+        updateData.rateLimit =
+          body.setRateLimit !== null && body.setRateLimit > 0
+            ? Math.floor(body.setRateLimit)
+            : null;
+      }
+
+      db.update(clientKeys)
+        .set(updateData)
+        .where(eq(clientKeys.id, id))
+        .run();
+
+      const updated = db.select().from(clientKeys).where(eq(clientKeys.id, id)).get();
+
+      return {
+        success: true,
+        message: "Key quota and limits updated successfully",
+        key: updated,
+      };
+    },
+    {
+      body: t.Object({
+        deltaTokenLimit: t.Optional(t.Number()),
+        setTokenLimit: t.Optional(t.Nullable(t.Number())),
+        deltaUsedTokens: t.Optional(t.Number()),
+        setUsedTokens: t.Optional(t.Number()),
+        resetUsed: t.Optional(t.Boolean()),
+        setRateLimit: t.Optional(t.Nullable(t.Number())),
       }),
     }
   )

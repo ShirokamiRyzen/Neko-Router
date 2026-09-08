@@ -20,5 +20,11 @@
   "18": "React + TypeScript + Vite",
   "19": "frontend/tsconfig.json",
   "20": "vite.config.ts",
-  "22": "Neko-Router API Documentation"
+  "21": "5. Router Management APIs",
+  "22": "Neko-Router API Documentation",
+  "23": "E. Upstream Router Providers & Multi-Key Pool",
+  "24": "B. Client Keys Endpoints",
+  "25": "B.2 Router Integration API Keys (`/api/router-keys`)",
+  "26": "A. Authentication & PIN Endpoints",
+  "27": "F. Database & System Endpoints"
 }

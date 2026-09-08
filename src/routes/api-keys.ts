@@ -161,6 +161,112 @@ export const routerApiKeysRoutes = new Elysia({ prefix: "/api/router-keys" })
 
     return { success: true, isActive: nextState === 1 };
   })
+  .post(
+    "/:id/rotate",
+    ({ params: { id }, body, set }) => {
+      const existing = db
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.id, id))
+        .get();
+
+      if (!existing) {
+        set.status = 404;
+        return { error: "API Key not found" };
+      }
+
+      const customKey = body?.customKey;
+      const newKeyStr = generateApiKeyString(customKey);
+
+      const duplicate = db
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.key, newKeyStr))
+        .get();
+
+      if (duplicate && duplicate.id !== id) {
+        set.status = 400;
+        return { error: "API Key already exists" };
+      }
+
+      db.update(apiKeys)
+        .set({ key: newKeyStr })
+        .where(eq(apiKeys.id, id))
+        .run();
+
+      const displayKey =
+        newKeyStr.length > 18
+          ? `${newKeyStr.slice(0, 11)}...${newKeyStr.slice(-4)}`
+          : newKeyStr;
+
+      return {
+        success: true,
+        message: "Router API key rotated successfully",
+        key: newKeyStr,
+        displayKey,
+      };
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          customKey: t.Optional(t.String()),
+        })
+      ),
+    }
+  )
+  .post(
+    "/:id/regenerate",
+    ({ params: { id }, body, set }) => {
+      const existing = db
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.id, id))
+        .get();
+
+      if (!existing) {
+        set.status = 404;
+        return { error: "API Key not found" };
+      }
+
+      const customKey = body?.customKey;
+      const newKeyStr = generateApiKeyString(customKey);
+
+      const duplicate = db
+        .select()
+        .from(apiKeys)
+        .where(eq(apiKeys.key, newKeyStr))
+        .get();
+
+      if (duplicate && duplicate.id !== id) {
+        set.status = 400;
+        return { error: "API Key already exists" };
+      }
+
+      db.update(apiKeys)
+        .set({ key: newKeyStr })
+        .where(eq(apiKeys.id, id))
+        .run();
+
+      const displayKey =
+        newKeyStr.length > 18
+          ? `${newKeyStr.slice(0, 11)}...${newKeyStr.slice(-4)}`
+          : newKeyStr;
+
+      return {
+        success: true,
+        message: "Router API key rotated successfully",
+        key: newKeyStr,
+        displayKey,
+      };
+    },
+    {
+      body: t.Optional(
+        t.Object({
+          customKey: t.Optional(t.String()),
+        })
+      ),
+    }
+  )
   .delete("/:id", ({ params: { id }, set }) => {
     const existing = db
       .select()

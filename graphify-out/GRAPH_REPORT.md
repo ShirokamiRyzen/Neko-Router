@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-08)
 
 ## Corpus Check
-- 49 files · ~50,003 words
+- 49 files · ~54,216 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 484 nodes · 682 edges · 22 communities (19 shown, 3 thin omitted)
+- 493 nodes · 691 edges · 28 communities (25 shown, 3 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 1 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ec6b491d`
+- Built from commit: `1ea21463`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -34,7 +34,13 @@
 - plugins
 - React + TypeScript + Vite
 - frontend/tsconfig.json
+- 5. Router Management APIs
 - Neko-Router API Documentation
+- E. Upstream Router Providers & Multi-Key Pool
+- B. Client Keys Endpoints
+- B.2 Router Integration API Keys (`/api/router-keys`)
+- A. Authentication & PIN Endpoints
+- F. Database & System Endpoints
 
 ## God Nodes (most connected - your core abstractions)
 1. `compilerOptions` - 20 edges
@@ -49,21 +55,21 @@
 10. `DEFAULT 3 × 3 PANEL SYSTEM` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `proxyOpenAIChatCompletions()` --calls--> `registerActiveRequest()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/telemetry.ts
-- `proxyAnthropicMessages()` --calls--> `registerActiveRequest()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/telemetry.ts
 - `App()` --calls--> `useTheme()`  [EXTRACTED]
   frontend/src/App.tsx → frontend/src/hooks/useTheme.ts
 - `App()` --calls--> `apiRequest()`  [EXTRACTED]
   frontend/src/App.tsx → frontend/src/lib/api.ts
 - `ClientKeysTab()` --calls--> `apiRequest()`  [EXTRACTED]
   frontend/src/components/ClientKeysTab.tsx → frontend/src/lib/api.ts
+- `DashboardTab()` --calls--> `apiRequest()`  [EXTRACTED]
+  frontend/src/components/DashboardTab.tsx → frontend/src/lib/api.ts
+- `DatabaseSettingsTab()` --calls--> `apiRequest()`  [EXTRACTED]
+  frontend/src/components/DatabaseSettingsTab.tsx → frontend/src/lib/api.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (22 total, 3 thin omitted)
+## Communities (28 total, 3 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -74,8 +80,8 @@ Cohesion: 0.06
 Nodes (31): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/vite, @types/bun, @types/node, @types/react (+23 more)
 
 ### Community 2 - "schema.ts"
-Cohesion: 0.08
-Nodes (37): db, initDatabase(), initTablesSync(), reloadDatabase(), ApiKey, apiKeys, ClientKey, clientKeys (+29 more)
+Cohesion: 0.06
+Nodes (43): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), ApiKey, apiKeys, ClientKey (+35 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -90,8 +96,8 @@ Cohesion: 0.08
 Nodes (38): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+30 more)
 
 ### Community 9 - "services/proxy.ts"
-Cohesion: 0.08
-Nodes (46): checkpointWal(), sqlite, UpstreamKey, adminRoutes, proxyRoutes, adjectives, nouns, upstreamRoutes (+38 more)
+Cohesion: 0.11
+Nodes (40): sqlite, UpstreamKey, checkClientRateLimit(), incrementClientKeyTokens(), applyRTKCompression(), checkHttpsRequirement(), clearResponseCache(), computeCacheKey() (+32 more)
 
 ### Community 10 - "compilerOptions"
 Cohesion: 0.08
@@ -118,8 +124,8 @@ Cohesion: 0.20
 Nodes (9): 1. Protocol Overview, 2. Absolute Negative Constraints (Banned Elements), 3. Typographic Architecture, 4. Color Palette (Warm Monochrome + Spot Pastels), 5. Component Specifications, 6. Iconography & Imagery Directives, 7. Subtle Motion & Micro-Animations, 8. Execution Protocol (+1 more)
 
 ### Community 16 - "C. Upstream Router Keys Endpoints"
-Cohesion: 0.05
-Nodes (42): 10. Toggle All Keys in Pool, 1. Aggregated Usage, Cached Tokens & Latency Metrics, 1. Check Authentication Status, 1. Export SQLite Database, 1. Get Active Optimizer & Security Configuration, 1. List All Upstream Providers, 1. List Client Keys, 1. List Upstream Keys (+34 more)
+Cohesion: 0.18
+Nodes (11): 10. Toggle All Keys in Pool, 1. List Upstream Keys, 2. Add Upstream Key, 3. Generate Random Alias, 4. Test Upstream Connectivity, 5. Update Upstream Key, 6. Delete Upstream Provider, 7. Add Key to Provider Pool (+3 more)
 
 ### Community 17 - "plugins"
 Cohesion: 0.22
@@ -129,29 +135,53 @@ Nodes (8): plugins, rules, react/only-export-components, react/rules-of-hooks, $
 Cohesion: 0.50
 Nodes (3): Expanding the Oxlint configuration, React Compiler, React + TypeScript + Vite
 
+### Community 21 - "5. Router Management APIs"
+Cohesion: 0.25
+Nodes (8): 1. Aggregated Usage, Cached Tokens & Latency Metrics, 1. Get Active Optimizer & Security Configuration, 2. Recent Request Telemetry Logs, 2. Update Global Optimizer & Security Configuration, 3. Purge Exact Response Cache, 5. Router Management APIs, D. Telemetry & Token Logs Endpoints, F. Global Prompt & Token Optimizers
+
 ### Community 22 - "Neko-Router API Documentation"
 Cohesion: 0.07
 Nodes (29): 1. Installation:, 1. OpenAI Streaming:, 1. Overview & Base URLs, 2. Anthropic Non-Streaming:, 2. Authentication Mechanisms, 2. Usage with Neko-Router `App` Type:, 3. AI Proxy Endpoints, 4. SDK Integration Guides (+21 more)
 
+### Community 23 - "E. Upstream Router Providers & Multi-Key Pool"
+Cohesion: 0.25
+Nodes (8): 1. List All Upstream Providers, 2. Create Upstream Provider with Multi-Key Pool, 3. Edit Upstream Provider, 4. Fetch Models from Upstream Provider (Default OFF), 5. Toggle Model Status for Upstream, 6. Test Upstream Connectivity, 7. Delete Upstream Provider, E. Upstream Router Providers & Multi-Key Pool
+
+### Community 24 - "B. Client Keys Endpoints"
+Cohesion: 0.25
+Nodes (8): 1. List Client Keys, 2. Create Client Key, 3. Update Client Key Status / Limits, 4. Rotate / Regenerate Secret Key, 5. Quick Adjust Token Quota & Limits, 6. Reset Used Token Quota, 7. Revoke / Delete Client Key, B. Client Keys Endpoints
+
+### Community 25 - "B.2 Router Integration API Keys (`/api/router-keys`)"
+Cohesion: 0.33
+Nodes (6): 1. List Router API Keys, 2. Create Router API Key, 3. Update Router API Key Details, 4. Rotate / Regenerate Router API Key, 5. Delete Router API Key, B.2 Router Integration API Keys (`/api/router-keys`)
+
+### Community 26 - "A. Authentication & PIN Endpoints"
+Cohesion: 0.40
+Nodes (5): 1. Check Authentication Status, 2. Login with 6-Digit Master PIN, 3. Change 6-Digit Master PIN, 4. Logout, A. Authentication & PIN Endpoints
+
+### Community 27 - "F. Database & System Endpoints"
+Cohesion: 0.40
+Nodes (5): 1. Export SQLite Database, 2. Import SQLite Database, 3. Runtime Engine Diagnostics, 4. Health Check, F. Database & System Endpoints
+
 ## Knowledge Gaps
-- **267 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+262 more)
+- **275 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+270 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `5. Router Management APIs` connect `C. Upstream Router Keys Endpoints` to `Neko-Router API Documentation`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
-- **Why does `Neko-Router API Documentation` connect `Neko-Router API Documentation` to `C. Upstream Router Keys Endpoints`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `5. Router Management APIs` connect `5. Router Management APIs` to `C. Upstream Router Keys Endpoints`, `Neko-Router API Documentation`, `E. Upstream Router Providers & Multi-Key Pool`, `B. Client Keys Endpoints`, `B.2 Router Integration API Keys (`/api/router-keys`)`, `A. Authentication & PIN Endpoints`, `F. Database & System Endpoints`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
+- **Why does `Neko-Router API Documentation` connect `Neko-Router API Documentation` to `5. Router Management APIs`?**
+  _High betweenness centrality (0.015) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `dependencies` to `devDependencies`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
 - **What connects `$schema`, `typescript`, `oxc` to the rest of the system?**
-  _267 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _275 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.0625 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.0824829931972789 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06497175141242938 - nodes in this community are weakly interconnected._
