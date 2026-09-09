@@ -77,7 +77,20 @@ export const DashboardTab: React.FC = () => {
       localStorage.setItem("neko_dashboard_subtab", tab);
     } catch { }
   };
-  const [timeFilter, setTimeFilter] = useState<"Today" | "24h" | "7D" | "30D">("Today");
+  const [timeFilter, setTimeFilterState] = useState<"Today" | "24h" | "7D" | "30D" | "All">(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("neko_dashboard_time_filter");
+      if (saved === "Today" || saved === "24h" || saved === "7D" || saved === "30D" || saved === "All") return saved;
+    }
+    return "Today";
+  });
+
+  const setTimeFilter = (filter: "Today" | "24h" | "7D" | "30D" | "All") => {
+    setTimeFilterState(filter);
+    try {
+      localStorage.setItem("neko_dashboard_time_filter", filter);
+    } catch { }
+  };
   const [graphMetricView, setGraphMetricView] = useState<"tokens" | "cost">("tokens");
 
   // Router Graph Canvas Zoom & Pan
@@ -97,23 +110,26 @@ export const DashboardTab: React.FC = () => {
   const zoomRef = useRef(zoom);
   zoomRef.current = zoom;
 
-  const getTimeHours = (filter: "Today" | "24h" | "7D" | "30D") => {
-    if (filter === "Today") {
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-      return Math.max(1, Math.ceil((Date.now() - startOfDay) / (1000 * 60 * 60)));
-    }
-    if (filter === "7D") return 24 * 7;
-    if (filter === "30D") return 24 * 30;
-    return 24;
-  };
-
   const loadAllData = async () => {
     setLoading(true);
     try {
-      const hours = getTimeHours(timeFilter);
+      let statsUrl = "/api/telemetry/stats";
+      if (timeFilter === "All") {
+        statsUrl = "/api/telemetry/stats?all=true";
+      } else if (timeFilter === "Today") {
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        statsUrl = `/api/telemetry/stats?since=${startOfDay}`;
+      } else if (timeFilter === "7D") {
+        statsUrl = `/api/telemetry/stats?hours=${24 * 7}`;
+      } else if (timeFilter === "30D") {
+        statsUrl = `/api/telemetry/stats?hours=${24 * 30}`;
+      } else {
+        statsUrl = "/api/telemetry/stats?hours=24";
+      }
+
       const [statsData, upstreamsData, logsData, activeData] = await Promise.all([
-        apiRequest<TelemetryStats>(`/api/telemetry/stats?hours=${hours}`).catch(() => null),
+        apiRequest<TelemetryStats>(statsUrl).catch(() => null),
         apiRequest<{ upstreams: UpstreamKeyItem[] }>("/api/upstreams").catch(() => ({ upstreams: [] })),
         apiRequest<{ logs: TelemetryLogItem[] }>("/api/telemetry/logs?limit=12").catch(() => ({ logs: [] })),
         apiRequest<{ activeUpstreamIds: string[] }>("/api/telemetry/active").catch(() => null),
@@ -147,12 +163,12 @@ export const DashboardTab: React.FC = () => {
 
   // Computed total cost: prefers backend estimatedCost, fallbacks gracefully to calculating from modelStats or overall tokens
   const totalCost = useMemo(() => {
-    if (stats?.estimatedCost !== undefined && stats.estimatedCost > 0) {
+    if (stats?.estimatedCost !== undefined) {
       return stats.estimatedCost;
     }
     if (stats?.modelStats && stats.modelStats.length > 0) {
       const sum = stats.modelStats.reduce((acc, m) => {
-        if (m.estimatedCost !== undefined && m.estimatedCost > 0) return acc + m.estimatedCost;
+        if (m.estimatedCost !== undefined) return acc + m.estimatedCost;
         const prompt = m.promptTokens ?? Math.round((m.tokens || 0) * 0.7);
         const comp = m.completionTokens ?? Math.round((m.tokens || 0) * 0.3);
         return acc + calculateTokenCost(m.model, prompt, comp, m.cachedTokens || 0);
@@ -447,18 +463,18 @@ export const DashboardTab: React.FC = () => {
           </div>
 
           <div className="flex items-center space-x-2 self-start sm:self-auto">
-            {/* Time Filter Pills matching 9Router (Today, 24h, 7D, 30D) */}
+            {/* Time Filter Pills matching 9Router (Today, 24h, 7D, 30D, All) */}
             <div className="flex items-center p-0.5 rounded-md skeuo-inset text-xs">
-              {(["Today", "24h", "7D", "30D"] as const).map((t) => (
+              {(["Today", "24h", "7D", "30D", "All"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setTimeFilter(t)}
-                  className={`px-2.5 py-1 rounded transition-all font-medium ${timeFilter === t
+                  className={`px-2.5 py-1 rounded transition-all font-medium cursor-pointer ${timeFilter === t
                       ? "skeuo-btn text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs"
                       : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                     }`}
                 >
-                  {t}
+                  {t === "All" ? "All Time" : t}
                 </button>
               ))}
             </div>
@@ -478,8 +494,11 @@ export const DashboardTab: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {/* TOTAL REQUESTS */}
           <div className="skeuo-card p-3.5">
-            <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Total Requests
+            <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+              <span>Total Requests</span>
+              <span className="text-[9px] font-normal px-1 py-0.2 rounded bg-zinc-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                {timeFilter === "All" ? "all time" : timeFilter.toLowerCase()}
+              </span>
             </div>
             <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
               {stats ? stats.totalRequests.toLocaleString() : "0"}
@@ -532,8 +551,11 @@ export const DashboardTab: React.FC = () => {
 
           {/* EST. COST */}
           <div className="skeuo-card p-3.5">
-            <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-              Est. Cost
+            <div className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider flex items-center justify-between">
+              <span>Est. Cost</span>
+              <span className="text-[9px] font-normal px-1 py-0.2 rounded bg-zinc-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                {timeFilter === "All" ? "all time" : timeFilter.toLowerCase()}
+              </span>
             </div>
             <div className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mt-1">
               {formatCost(totalCost)}
@@ -891,7 +913,7 @@ export const DashboardTab: React.FC = () => {
         <div className="skeuo-card p-5">
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-3 flex items-center space-x-2">
             <Layers className="w-4 h-4 text-zinc-500" />
-            <span>Active Model Distribution (24h)</span>
+            <span>Active Model Distribution ({timeFilter === "All" ? "All Time" : timeFilter})</span>
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">

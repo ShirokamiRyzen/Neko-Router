@@ -75,8 +75,8 @@
     "semantic_hash": ""
   },
   "src/routes/telemetry.ts": {
-    "mtime": 1788784923.2201903,
-    "ast_hash": "23753e07d5fa03976a87d8a37b9fd79b",
+    "mtime": 1788917593.8528967,
+    "ast_hash": "5c937c9c547a3216804afda3b5bb2314",
     "semantic_hash": ""
   },
   "src/routes/upstreams.ts": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "src/services/telemetry.ts": {
-    "mtime": 1788831200.886529,
-    "ast_hash": "3cbe59b17ec0e88a1914b74bc354e0d4",
+    "mtime": 1788917586.364683,
+    "ast_hash": "0eb277cf0c1f5a4d2b07c73c5812808a",
     "semantic_hash": ""
   },
   ".agents/skills/brandkit/SKILL.md": {
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ClientKeysTab.tsx": {
-    "mtime": 1788830076.6219685,
-    "ast_hash": "b5a6057214663a9d43943eecb77d8079",
+    "mtime": 1788917752.3841748,
+    "ast_hash": "632ee6a2254302abb32a255e3ffbe4e1",
     "semantic_hash": ""
   },
   "frontend/src/components/CodeSnippetViewer.tsx": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/DashboardTab.tsx": {
-    "mtime": 1788831229.59406,
-    "ast_hash": "5bfb1c3505d0e2747e4312dda5f175a0",
+    "mtime": 1788917631.1946008,
+    "ast_hash": "493f75ebeca6e210088d0f6b459c8169",
     "semantic_hash": ""
   },
   "frontend/src/components/DatabaseSettingsTab.tsx": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/UpstreamKeysTab.tsx": {
-    "mtime": 1788911861.9759362,
-    "ast_hash": "03b3135eba3938b473d4caa0f5cd34bf",
+    "mtime": 1788911950.8568325,
+    "ast_hash": "7c65683e89ec8170acf1d90f9dd16c08",
     "semantic_hash": ""
   },
   "frontend/src/hooks/useTheme.ts": {
@@ -290,8 +290,8 @@
     "semantic_hash": ""
   },
   "src/services/antigravity.ts": {
-    "mtime": 1788878573.421912,
-    "ast_hash": "7e6f54ca22c26876575ef951e2c86d57",
+    "mtime": 1788912125.841136,
+    "ast_hash": "0fac16810f8043557bbf397116069c94",
     "semantic_hash": ""
   },
   "scripts/dev.ts": {

@@ -20,7 +20,6 @@ import {
   Shuffle,
   Edit3,
   CheckCircle2,
-  AlertCircle,
 } from "lucide-react";
 import {
   apiRequest,
@@ -1604,9 +1603,8 @@ export const ClientKeysTab: React.FC = () => {
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
               </div>
               <div className="flex items-center justify-between flex-1">
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-1.5">
-                  <Edit3 className="w-4 h-4 text-indigo-500" />
-                  <span>Edit Key Limits: {editingSecretKey.name}</span>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                  Edit Key Limits: {editingSecretKey.name}
                 </h3>
                 <span className="font-mono text-[11px] text-zinc-400">
                   {editingSecretKey.displayKey}
@@ -1977,9 +1975,8 @@ export const ClientKeysTab: React.FC = () => {
                 <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
               </div>
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-1.5">
-                <RotateCw className="w-4 h-4 text-amber-500" />
-                <span>Rotate Secret Key: {rotatingSecretKey.name}</span>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Rotate Secret Key: {rotatingSecretKey.name}
               </h3>
             </div>
 
@@ -2148,9 +2145,8 @@ export const ClientKeysTab: React.FC = () => {
                 <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
               </div>
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-1.5">
-                <Edit3 className="w-4 h-4 text-emerald-500" />
-                <span>Edit Router API Key: {editingApiKey.name}</span>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Edit Router API Key: {editingApiKey.name}
               </h3>
             </div>
 
@@ -2230,9 +2226,8 @@ export const ClientKeysTab: React.FC = () => {
                 <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
               </div>
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-1.5">
-                <RotateCw className="w-4 h-4 text-amber-500" />
-                <span>Rotate Router API Key: {rotatingApiKey.name}</span>
+              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Rotate Router API Key: {rotatingApiKey.name}
               </h3>
             </div>
 

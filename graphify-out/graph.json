@@ -183,7 +183,7 @@
       "label": "ClientKeysTab()",
       "file_type": "code",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L32",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "frontend_src_components_clientkeystab_clientkeystab",
       "community": 7,
@@ -2188,8 +2188,8 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "src_db_schema_upstreamkey",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "upstreamkey"
     },
     {
@@ -2375,8 +2375,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_routes_proxy",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "routes/proxy.ts"
     },
     {
@@ -2526,7 +2526,7 @@
       "label": "ANTIGRAVITY_DEFAULT_MODELS",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L27",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "src_services_antigravity_antigravity_default_models",
       "community": 9,
@@ -2537,7 +2537,7 @@
       "label": "getAntigravityClientMetadata()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L47",
+      "source_location": "L51",
       "_origin": "ast",
       "id": "src_services_antigravity_getantigravityclientmetadata",
       "community": 9,
@@ -2548,7 +2548,7 @@
       "label": "buildAntigravityAuthUrl()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L54",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "src_services_antigravity_buildantigravityauthurl",
       "community": 9,
@@ -2559,7 +2559,7 @@
       "label": "exchangeAntigravityCode()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L70",
+      "source_location": "L74",
       "_origin": "ast",
       "id": "src_services_antigravity_exchangeantigravitycode",
       "community": 9,
@@ -2570,7 +2570,7 @@
       "label": "refreshAntigravityToken()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L230",
+      "source_location": "L234",
       "_origin": "ast",
       "id": "src_services_antigravity_refreshantigravitytoken",
       "community": 9,
@@ -2581,29 +2581,29 @@
       "label": "ensureAntigravityAccessToken()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L264",
+      "source_location": "L268",
       "_origin": "ast",
       "id": "src_services_antigravity_ensureantigravityaccesstoken",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "ensureantigravityaccesstoken()"
     },
     {
       "label": "forceRefreshAntigravityToken()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L284",
+      "source_location": "L288",
       "_origin": "ast",
       "id": "src_services_antigravity_forcerefreshantigravitytoken",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "forcerefreshantigravitytoken()"
     },
     {
       "label": "getAntigravityHeaders()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L327",
+      "source_location": "L331",
       "_origin": "ast",
       "id": "src_services_antigravity_getantigravityheaders",
       "community": 9,
@@ -2614,7 +2614,7 @@
       "label": "fetchAntigravityModels()",
       "file_type": "code",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L340",
+      "source_location": "L344",
       "_origin": "ast",
       "id": "src_services_antigravity_fetchantigravitymodels",
       "community": 9,
@@ -2705,8 +2705,8 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "src_services_auth_incrementclientkeytokens",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "incrementclientkeytokens()"
     },
     {
@@ -2727,8 +2727,8 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "src_services_auth_checkclientratelimit",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "checkclientratelimit()"
     },
     {
@@ -2848,8 +2848,8 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "src_services_codex_refreshcodextoken",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "refreshcodextoken()"
     },
     {
@@ -2859,8 +2859,8 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "src_services_codex_ensurecodexaccesstoken",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "ensurecodexaccesstoken()"
     },
     {
@@ -2925,8 +2925,8 @@
       "source_location": "L413",
       "_origin": "ast",
       "id": "src_services_codex_transformchattocodexresponses",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "transformchattocodexresponses()"
     },
     {
@@ -3002,8 +3002,8 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "src_services_copilot_getcopilotheaders",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getcopilotheaders()"
     },
     {
@@ -3068,8 +3068,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_optimizer",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "optimizer.ts"
     },
     {
@@ -3079,8 +3079,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_services_optimizer_optimizationsettings",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "optimizationsettings"
     },
     {
@@ -3090,8 +3090,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_services_optimizer_getoptimizationsettings",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getoptimizationsettings()"
     },
     {
@@ -3101,8 +3101,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "src_services_optimizer_ishttpsrequest",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "ishttpsrequest()"
     },
     {
@@ -3112,8 +3112,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_services_optimizer_checkhttpsrequirement",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "checkhttpsrequirement()"
     },
     {
@@ -3123,8 +3123,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_services_optimizer_updateoptimizationsettings",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "updateoptimizationsettings()"
     },
     {
@@ -3134,8 +3134,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "src_services_optimizer_applyrtkcompression",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "applyrtkcompression()"
     },
     {
@@ -3145,8 +3145,8 @@
       "source_location": "L164",
       "_origin": "ast",
       "id": "src_services_optimizer_minifycontent",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "minifycontent()"
     },
     {
@@ -3156,8 +3156,8 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "src_services_optimizer_optimizerequestbody",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "optimizerequestbody()"
     },
     {
@@ -3167,8 +3167,8 @@
       "source_location": "L227",
       "_origin": "ast",
       "id": "src_services_optimizer_computecachekey",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "computecachekey()"
     },
     {
@@ -3178,8 +3178,8 @@
       "source_location": "L242",
       "_origin": "ast",
       "id": "src_services_optimizer_getcachedresponse",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getcachedresponse()"
     },
     {
@@ -3189,8 +3189,8 @@
       "source_location": "L279",
       "_origin": "ast",
       "id": "src_services_optimizer_setcachedresponse",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "setcachedresponse()"
     },
     {
@@ -3211,8 +3211,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_proxy",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "services/proxy.ts"
     },
     {
@@ -3222,8 +3222,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_services_proxy_cancellabletransformer",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "cancellabletransformer"
     },
     {
@@ -3233,8 +3233,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "src_services_proxy_proxyopenaichatcompletions",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "proxyopenaichatcompletions()"
     },
     {
@@ -3244,8 +3244,8 @@
       "source_location": "L668",
       "_origin": "ast",
       "id": "src_services_proxy_proxyanthropicmessages",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "proxyanthropicmessages()"
     },
     {
@@ -3255,8 +3255,8 @@
       "source_location": "L1120",
       "_origin": "ast",
       "id": "src_services_proxy_getmodelcapabilities",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getmodelcapabilities()"
     },
     {
@@ -3266,8 +3266,8 @@
       "source_location": "L1157",
       "_origin": "ast",
       "id": "src_services_proxy_getmodelcontextwindow",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getmodelcontextwindow()"
     },
     {
@@ -3277,8 +3277,8 @@
       "source_location": "L1171",
       "_origin": "ast",
       "id": "src_services_proxy_getmodelmaxtokens",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getmodelmaxtokens()"
     },
     {
@@ -3288,8 +3288,8 @@
       "source_location": "L1183",
       "_origin": "ast",
       "id": "src_services_proxy_enrichmodel",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "enrichmodel()"
     },
     {
@@ -3299,8 +3299,8 @@
       "source_location": "L1249",
       "_origin": "ast",
       "id": "src_services_proxy_proxyopenaimodels",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "proxyopenaimodels()"
     },
     {
@@ -3310,8 +3310,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_router",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "router.ts"
     },
     {
@@ -3321,8 +3321,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_services_router_roundrobinindex",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "roundrobinindex"
     },
     {
@@ -3332,8 +3332,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_services_router_keyrotationindex",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "keyrotationindex"
     },
     {
@@ -3343,8 +3343,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_services_router_modelconfig",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "modelconfig"
     },
     {
@@ -3354,8 +3354,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_services_router_parseupstreammodels",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "parseupstreammodels()"
     },
     {
@@ -3376,8 +3376,8 @@
       "source_location": "L37",
       "_origin": "ast",
       "id": "src_services_router_parseupstreamkeyentries",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "parseupstreamkeyentries()"
     },
     {
@@ -3387,8 +3387,8 @@
       "source_location": "L92",
       "_origin": "ast",
       "id": "src_services_router_parseupstreamkeys",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "parseupstreamkeys()"
     },
     {
@@ -3398,8 +3398,8 @@
       "source_location": "L100",
       "_origin": "ast",
       "id": "src_services_router_getapikeyforupstream",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getapikeyforupstream()"
     },
     {
@@ -3409,8 +3409,8 @@
       "source_location": "L125",
       "_origin": "ast",
       "id": "src_services_router_getactiveupstreamkeys",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getactiveupstreamkeys()"
     },
     {
@@ -3420,8 +3420,8 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "src_services_router_parseallowedproviders",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "parseallowedproviders()"
     },
     {
@@ -3431,8 +3431,8 @@
       "source_location": "L155",
       "_origin": "ast",
       "id": "src_services_router_providermodelrotationindex",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "providermodelrotationindex"
     },
     {
@@ -3442,8 +3442,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_services_router_upstreamselectionresult",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "upstreamselectionresult"
     },
     {
@@ -3453,8 +3453,8 @@
       "source_location": "L163",
       "_origin": "ast",
       "id": "src_services_router_selectupstreamkey",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "selectupstreamkey()"
     },
     {
@@ -3464,8 +3464,8 @@
       "source_location": "L263",
       "_origin": "ast",
       "id": "src_services_router_getbaseurl",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getbaseurl()"
     },
     {
@@ -3497,8 +3497,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "src_services_telemetry_recordtelemetry",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "recordtelemetry()"
     },
     {
@@ -3541,8 +3541,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "src_services_telemetry_registeractiverequest",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "registeractiverequest()"
     },
     {
@@ -3568,10 +3568,21 @@
       "norm_label": "calculatetokencost()"
     },
     {
-      "label": "getTelemetryStats()",
+      "label": "TelemetryStatsOptions",
       "file_type": "code",
       "source_file": "src/services/telemetry.ts",
       "source_location": "L240",
+      "_origin": "ast",
+      "id": "src_services_telemetry_telemetrystatsoptions",
+      "community": 2,
+      "community_name": "schema.ts",
+      "norm_label": "telemetrystatsoptions"
+    },
+    {
+      "label": "getTelemetryStats()",
+      "file_type": "code",
+      "source_file": "src/services/telemetry.ts",
+      "source_location": "L246",
       "_origin": "ast",
       "id": "src_services_telemetry_gettelemetrystats",
       "community": 2,
@@ -3582,7 +3593,7 @@
       "label": "getRecentLogs()",
       "file_type": "code",
       "source_file": "src/services/telemetry.ts",
-      "source_location": "L324",
+      "source_location": "L358",
       "_origin": "ast",
       "id": "src_services_telemetry_getrecentlogs",
       "community": 2,
@@ -5268,8 +5279,8 @@
       "source_location": "L357",
       "_origin": "ast",
       "id": "api_docs_a_authentication_pin_endpoints",
-      "community": 26,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "a. authentication & pin endpoints"
     },
     {
@@ -5279,8 +5290,8 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "api_docs_1_check_authentication_status",
-      "community": 26,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. check authentication status"
     },
     {
@@ -5290,8 +5301,8 @@
       "source_location": "L369",
       "_origin": "ast",
       "id": "api_docs_2_login_with_6_digit_master_pin",
-      "community": 26,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. login with 6-digit master pin"
     },
     {
@@ -5301,8 +5312,8 @@
       "source_location": "L381",
       "_origin": "ast",
       "id": "api_docs_3_change_6_digit_master_pin",
-      "community": 26,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. change 6-digit master pin"
     },
     {
@@ -5312,8 +5323,8 @@
       "source_location": "L393",
       "_origin": "ast",
       "id": "api_docs_4_logout",
-      "community": 26,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. logout"
     },
     {
@@ -5323,8 +5334,8 @@
       "source_location": "L399",
       "_origin": "ast",
       "id": "api_docs_b_client_keys_endpoints",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "b. client keys endpoints"
     },
     {
@@ -5334,8 +5345,8 @@
       "source_location": "L401",
       "_origin": "ast",
       "id": "api_docs_1_list_client_keys",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. list client keys"
     },
     {
@@ -5345,8 +5356,8 @@
       "source_location": "L425",
       "_origin": "ast",
       "id": "api_docs_2_create_client_key",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. create client key"
     },
     {
@@ -5356,8 +5367,8 @@
       "source_location": "L437",
       "_origin": "ast",
       "id": "api_docs_3_update_client_key_status_limits",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. update client key status / limits"
     },
     {
@@ -5367,8 +5378,8 @@
       "source_location": "L463",
       "_origin": "ast",
       "id": "api_docs_4_rotate_regenerate_secret_key",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. rotate / regenerate secret key"
     },
     {
@@ -5378,8 +5389,8 @@
       "source_location": "L482",
       "_origin": "ast",
       "id": "api_docs_5_quick_adjust_token_quota_limits",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "5. quick adjust token quota & limits"
     },
     {
@@ -5389,8 +5400,8 @@
       "source_location": "L496",
       "_origin": "ast",
       "id": "api_docs_6_reset_used_token_quota",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "6. reset used token quota"
     },
     {
@@ -5400,8 +5411,8 @@
       "source_location": "L500",
       "_origin": "ast",
       "id": "api_docs_7_revoke_delete_client_key",
-      "community": 24,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "7. revoke / delete client key"
     },
     {
@@ -5411,8 +5422,8 @@
       "source_location": "L506",
       "_origin": "ast",
       "id": "api_docs_b_2_router_integration_api_keys_api_router_keys",
-      "community": 25,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "b.2 router integration api keys (`/api/router-keys`)"
     },
     {
@@ -5422,8 +5433,8 @@
       "source_location": "L509",
       "_origin": "ast",
       "id": "api_docs_1_list_router_api_keys",
-      "community": 25,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. list router api keys"
     },
     {
@@ -5433,8 +5444,8 @@
       "source_location": "L512",
       "_origin": "ast",
       "id": "api_docs_2_create_router_api_key",
-      "community": 25,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. create router api key"
     },
     {
@@ -5444,8 +5455,8 @@
       "source_location": "L516",
       "_origin": "ast",
       "id": "api_docs_3_update_router_api_key_details",
-      "community": 25,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. update router api key details"
     },
     {
@@ -5455,8 +5466,8 @@
       "source_location": "L520",
       "_origin": "ast",
       "id": "api_docs_4_rotate_regenerate_router_api_key",
-      "community": 25,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. rotate / regenerate router api key"
     },
     {
@@ -5466,8 +5477,8 @@
       "source_location": "L524",
       "_origin": "ast",
       "id": "api_docs_5_delete_router_api_key",
-      "community": 25,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "5. delete router api key"
     },
     {
@@ -5631,8 +5642,8 @@
       "source_location": "L713",
       "_origin": "ast",
       "id": "api_docs_e_upstream_router_providers_multi_key_pool",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "e. upstream router providers & multi-key pool"
     },
     {
@@ -5642,8 +5653,8 @@
       "source_location": "L717",
       "_origin": "ast",
       "id": "api_docs_1_list_all_upstream_providers",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. list all upstream providers"
     },
     {
@@ -5653,8 +5664,8 @@
       "source_location": "L747",
       "_origin": "ast",
       "id": "api_docs_2_create_upstream_provider_with_multi_key_pool",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. create upstream provider with multi-key pool"
     },
     {
@@ -5664,8 +5675,8 @@
       "source_location": "L763",
       "_origin": "ast",
       "id": "api_docs_3_edit_upstream_provider",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. edit upstream provider"
     },
     {
@@ -5675,8 +5686,8 @@
       "source_location": "L780",
       "_origin": "ast",
       "id": "api_docs_4_fetch_models_from_upstream_provider_default_off",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. fetch models from upstream provider (default off)"
     },
     {
@@ -5686,8 +5697,8 @@
       "source_location": "L798",
       "_origin": "ast",
       "id": "api_docs_5_toggle_model_status_for_upstream",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "5. toggle model status for upstream"
     },
     {
@@ -5697,8 +5708,8 @@
       "source_location": "L821",
       "_origin": "ast",
       "id": "api_docs_6_test_upstream_connectivity",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "6. test upstream connectivity"
     },
     {
@@ -5708,8 +5719,8 @@
       "source_location": "L826",
       "_origin": "ast",
       "id": "api_docs_7_delete_upstream_provider",
-      "community": 23,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "7. delete upstream provider"
     },
     {
@@ -5719,8 +5730,8 @@
       "source_location": "L832",
       "_origin": "ast",
       "id": "api_docs_f_database_system_endpoints",
-      "community": 27,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "f. database & system endpoints"
     },
     {
@@ -5730,8 +5741,8 @@
       "source_location": "L834",
       "_origin": "ast",
       "id": "api_docs_1_export_sqlite_database",
-      "community": 27,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. export sqlite database"
     },
     {
@@ -5741,8 +5752,8 @@
       "source_location": "L839",
       "_origin": "ast",
       "id": "api_docs_2_import_sqlite_database",
-      "community": 27,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. import sqlite database"
     },
     {
@@ -5752,8 +5763,8 @@
       "source_location": "L845",
       "_origin": "ast",
       "id": "api_docs_3_runtime_engine_diagnostics",
-      "community": 27,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. runtime engine diagnostics"
     },
     {
@@ -5763,8 +5774,8 @@
       "source_location": "L862",
       "_origin": "ast",
       "id": "api_docs_4_health_check",
-      "community": 27,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. health check"
     },
     {
@@ -6677,7 +6688,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L32",
+      "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6689,7 +6700,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6701,7 +6712,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6713,7 +6724,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6725,7 +6736,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6737,7 +6748,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L25",
+      "source_location": "L24",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6750,7 +6761,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L120",
+      "source_location": "L119",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab_clientkeystab",
@@ -6900,7 +6911,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L847",
+      "source_location": "L869",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -6912,7 +6923,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L335",
+      "source_location": "L351",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -6925,7 +6936,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L116",
+      "source_location": "L132",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -6937,7 +6948,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L158",
+      "source_location": "L174",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -6949,7 +6960,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L539",
+      "source_location": "L561",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -10832,7 +10843,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L27",
+      "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10843,7 +10854,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L54",
+      "source_location": "L58",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10854,7 +10865,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L264",
+      "source_location": "L268",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10865,7 +10876,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L70",
+      "source_location": "L74",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10876,7 +10887,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L340",
+      "source_location": "L344",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10887,7 +10898,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L284",
+      "source_location": "L288",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10898,7 +10909,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L47",
+      "source_location": "L51",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10909,7 +10920,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L327",
+      "source_location": "L331",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10920,7 +10931,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L230",
+      "source_location": "L234",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity",
@@ -10980,7 +10991,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L127",
+      "source_location": "L131",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity_exchangeantigravitycode",
@@ -10992,7 +11003,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L345",
+      "source_location": "L349",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity_fetchantigravitymodels",
@@ -11004,7 +11015,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L290",
+      "source_location": "L294",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity_forcerefreshantigravitytoken",
@@ -11016,7 +11027,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L278",
+      "source_location": "L282",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity_ensureantigravityaccesstoken",
@@ -11053,7 +11064,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L297",
+      "source_location": "L301",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity_forcerefreshantigravitytoken",
@@ -11088,7 +11099,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/antigravity.ts",
-      "source_location": "L344",
+      "source_location": "L348",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_antigravity_fetchantigravitymodels",
@@ -13041,7 +13052,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/telemetry.ts",
-      "source_location": "L324",
+      "source_location": "L358",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_telemetry",
@@ -13052,7 +13063,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/telemetry.ts",
-      "source_location": "L240",
+      "source_location": "L246",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_telemetry",
@@ -13104,11 +13115,22 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/telemetry.ts",
+      "source_location": "L240",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_services_telemetry",
+      "target": "src_services_telemetry_telemetrystatsoptions",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "calls",
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/telemetry.ts",
-      "source_location": "L319",
+      "source_location": "L353",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_telemetry_gettelemetrystats",
@@ -13120,7 +13142,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/telemetry.ts",
-      "source_location": "L285",
+      "source_location": "L319",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_telemetry_gettelemetrystats",
@@ -15445,5 +15467,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a49e4729abefbd269644009683b15ec610189c40"
+  "built_at_commit": "fd575e6e1fdcbbccae6426ef6565823f49db3490"
 }

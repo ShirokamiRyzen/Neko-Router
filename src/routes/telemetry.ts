@@ -15,10 +15,26 @@ export const telemetryRoutes = new Elysia({ prefix: "/api/telemetry" })
       activeUpstreamIds: getActiveUpstreamIds(),
     };
   })
-  .get("/stats", ({ query }) => {
-    const rangeHours = Number(query.hours) || 24;
-    return getTelemetryStats(rangeHours * 60 * 60 * 1000);
-  })
+  .get(
+    "/stats",
+    ({ query }) => {
+      if (query.all === "true" || query.hours === "all" || query.hours === "0") {
+        return getTelemetryStats({ all: true });
+      }
+      if (query.since && !isNaN(Number(query.since)) && Number(query.since) > 0) {
+        return getTelemetryStats({ since: Number(query.since) });
+      }
+      const rangeHours = Number(query.hours) || 24;
+      return getTelemetryStats({ timeRangeMs: rangeHours * 60 * 60 * 1000 });
+    },
+    {
+      query: t.Object({
+        hours: t.Optional(t.String()),
+        since: t.Optional(t.String()),
+        all: t.Optional(t.String()),
+      }),
+    }
+  )
   .get(
     "/logs",
     ({ query }) => {

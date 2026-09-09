@@ -237,8 +237,44 @@ export function calculateTokenCost(
   return cost;
 }
 
-export function getTelemetryStats(timeRangeMs = 24 * 60 * 60 * 1000) {
-  const since = Date.now() - timeRangeMs;
+export interface TelemetryStatsOptions {
+  timeRangeMs?: number;
+  since?: number;
+  all?: boolean;
+}
+
+export function getTelemetryStats(
+  params: number | TelemetryStatsOptions = 24 * 60 * 60 * 1000
+) {
+  let isAll = false;
+  let since = 0;
+
+  if (typeof params === "number") {
+    if (params <= 0) {
+      isAll = true;
+    } else {
+      since = Date.now() - params;
+    }
+  } else if (params) {
+    if (params.all) {
+      isAll = true;
+    } else if (params.since !== undefined && params.since > 0) {
+      since = params.since;
+    } else if (params.timeRangeMs !== undefined && params.timeRangeMs > 0) {
+      since = Date.now() - params.timeRangeMs;
+    } else if (params.timeRangeMs === 0) {
+      isAll = true;
+    } else {
+      since = Date.now() - 24 * 60 * 60 * 1000;
+    }
+  } else {
+    since = Date.now() - 24 * 60 * 60 * 1000;
+  }
+
+  const totalWhere = isAll ? sql`1=1` : sql`${telemetryLogs.createdAt} >= ${since}`;
+  const successWhere = isAll
+    ? sql`${telemetryLogs.statusCode} >= 200 AND ${telemetryLogs.statusCode} < 300`
+    : sql`${telemetryLogs.createdAt} >= ${since} AND ${telemetryLogs.statusCode} >= 200 AND ${telemetryLogs.statusCode} < 300`;
 
   const totalReq = db
     .select({
@@ -250,15 +286,13 @@ export function getTelemetryStats(timeRangeMs = 24 * 60 * 60 * 1000) {
       avgDuration: sql<number>`coalesce(avg(${telemetryLogs.durationMs}), 0)`,
     })
     .from(telemetryLogs)
-    .where(sql`${telemetryLogs.createdAt} >= ${since}`)
+    .where(totalWhere)
     .get();
 
   const successCount = db
     .select({ count: sql<number>`count(*)` })
     .from(telemetryLogs)
-    .where(
-      sql`${telemetryLogs.createdAt} >= ${since} AND ${telemetryLogs.statusCode} >= 200 AND ${telemetryLogs.statusCode} < 300`
-    )
+    .where(successWhere)
     .get()?.count || 0;
 
   // Breakdown by model with prompt, completion, and cached tokens
@@ -273,7 +307,7 @@ export function getTelemetryStats(timeRangeMs = 24 * 60 * 60 * 1000) {
       tokens: sql<number>`coalesce(sum(${telemetryLogs.totalTokens}), 0)`,
     })
     .from(telemetryLogs)
-    .where(sql`${telemetryLogs.createdAt} >= ${since}`)
+    .where(totalWhere)
     .groupBy(telemetryLogs.model, telemetryLogs.provider)
     .all();
 
