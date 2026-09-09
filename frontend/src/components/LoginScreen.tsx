@@ -1,15 +1,137 @@
-import React, { useState } from "react";
-import { Cat, Lock, ArrowRight, KeyRound } from "lucide-react";
-import { apiRequest } from "../lib/api";
+import React, { useState, useEffect, useRef } from "react";
+import { Cat, Lock, ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
+import { apiRequest, type AuthStatus } from "../lib/api";
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: string | HTMLElement,
+        options: {
+          sitekey: string;
+          theme?: "light" | "dark" | "auto";
+          callback?: (token: string) => void;
+          "error-callback"?: (error?: any) => void;
+          "expired-callback"?: () => void;
+        }
+      ) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId?: string) => void;
+    };
+  }
+}
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
+  turnstileSiteKey?: string;
+  turnstileEnabled?: boolean;
 }
 
-export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+export const LoginScreen: React.FC<LoginScreenProps> = ({
+  onLoginSuccess,
+  turnstileSiteKey,
+  turnstileEnabled,
+}) => {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const [siteKey, setSiteKey] = useState<string>(turnstileSiteKey || "");
+  const [turnstileActive, setTurnstileActive] = useState<boolean>(
+    Boolean(turnstileEnabled && turnstileSiteKey)
+  );
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
+
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
+
+  // Sync or fetch Turnstile config
+  useEffect(() => {
+    if (turnstileSiteKey !== undefined) {
+      setSiteKey(turnstileSiteKey);
+      setTurnstileActive(Boolean(turnstileEnabled && turnstileSiteKey));
+    } else {
+      apiRequest<AuthStatus>("/api/auth/status")
+        .then((res) => {
+          if (res?.turnstileSiteKey && res?.turnstileEnabled) {
+            setSiteKey(res.turnstileSiteKey);
+            setTurnstileActive(true);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [turnstileSiteKey, turnstileEnabled]);
+
+  // Load and render Turnstile widget
+  useEffect(() => {
+    if (!turnstileActive || !siteKey) return;
+
+    let isMounted = true;
+
+    const renderWidget = () => {
+      if (!isMounted || !turnstileContainerRef.current || !window.turnstile) return;
+      if (widgetIdRef.current) return;
+
+      try {
+        widgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+          sitekey: siteKey,
+          theme: "dark",
+          callback: (token: string) => {
+            if (isMounted) {
+              setTurnstileToken(token);
+              setError("");
+            }
+          },
+          "expired-callback": () => {
+            if (isMounted) setTurnstileToken("");
+          },
+          "error-callback": () => {
+            if (isMounted) {
+              setTurnstileToken("");
+              setError("Cloudflare Turnstile challenge error. Please refresh.");
+            }
+          },
+        });
+      } catch (e) {
+        console.error("Turnstile render error:", e);
+      }
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      let script = document.getElementById("cf-turnstile-script") as HTMLScriptElement | null;
+      if (!script) {
+        script = document.createElement("script");
+        script.id = "cf-turnstile-script";
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+
+      const interval = setInterval(() => {
+        if (window.turnstile) {
+          clearInterval(interval);
+          renderWidget();
+        }
+      }, 100);
+
+      return () => {
+        clearInterval(interval);
+      };
+    }
+
+    return () => {
+      isMounted = false;
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch (e) {}
+        widgetIdRef.current = null;
+      }
+    };
+  }, [turnstileActive, siteKey]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,11 +141,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     try {
       await apiRequest("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({
+          pin,
+          turnstileToken: turnstileActive ? turnstileToken : undefined,
+        }),
       });
       onLoginSuccess();
     } catch (err: any) {
       setError(err.message || "Invalid PIN. Access denied.");
+      if (turnstileActive && widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.reset(widgetIdRef.current);
+          setTurnstileToken("");
+        } catch (e) {}
+      }
     } finally {
       setLoading(false);
     }
@@ -72,19 +203,34 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             </div>
           </div>
 
+          {/* Cloudflare Turnstile Container */}
+          {turnstileActive && (
+            <div className="flex flex-col items-center justify-center pt-2 min-h-[66px]">
+              <div ref={turnstileContainerRef} className="cf-turnstile-wrapper" />
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={loading || !pin}
-            className="w-full mt-4 py-2.5 px-4 rounded-md skeuo-btn-primary font-medium text-sm flex items-center justify-center space-x-2 disabled:opacity-50"
+            disabled={loading || !pin || (turnstileActive && !turnstileToken)}
+            className="w-full mt-4 py-2.5 px-4 rounded-md skeuo-btn-primary font-medium text-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
           >
             <span>{loading ? "Verifying..." : "Unlock Dashboard"}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="mt-6 text-center text-xs text-zinc-400 dark:text-zinc-500 flex items-center justify-center space-x-1">
-          <Lock className="w-3 h-3" />
-          <span>Protected by Bun.password bcrypt auth</span>
+        <div className="mt-6 text-center text-xs text-zinc-400 dark:text-zinc-500 flex flex-col items-center justify-center space-y-1">
+          <div className="flex items-center space-x-1">
+            <Lock className="w-3 h-3" />
+            <span>Protected by Bun.password bcrypt auth</span>
+          </div>
+          {turnstileActive && (
+            <div className="flex items-center space-x-1 text-[11px] text-zinc-400 dark:text-zinc-400">
+              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              <span>Cloudflare Turnstile Active</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

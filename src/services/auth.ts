@@ -24,6 +24,90 @@ export function isDefaultPin(): boolean {
   }
 }
 
+export function getTurnstileConfig(): {
+  siteKey: string;
+  secretKey: string;
+  enabled: boolean;
+} {
+  let siteKey = process.env.TURNSTILE_SITE_KEY || "";
+  let secretKey = process.env.TURNSTILE_SECRET_KEY || "";
+
+  try {
+    const siteRow = sqlite
+      .query("SELECT value FROM settings WHERE key = 'turnstile_site_key'")
+      .get() as { value: string } | null;
+    if (siteRow?.value) siteKey = siteRow.value;
+
+    const secretRow = sqlite
+      .query("SELECT value FROM settings WHERE key = 'turnstile_secret_key'")
+      .get() as { value: string } | null;
+    if (secretRow?.value) secretKey = secretRow.value;
+  } catch (e) {
+    // ignore
+  }
+
+  const enabled = Boolean(siteKey.trim() && secretKey.trim());
+  return { siteKey: siteKey.trim(), secretKey: secretKey.trim(), enabled };
+}
+
+export async function verifyTurnstileToken(
+  token: string,
+  remoteIp?: string
+): Promise<{ success: boolean; error?: string }> {
+  const { secretKey, enabled } = getTurnstileConfig();
+  if (!enabled) {
+    return { success: true };
+  }
+
+  if (!token || !token.trim()) {
+    return {
+      success: false,
+      error: "Cloudflare Turnstile verification is required",
+    };
+  }
+
+  try {
+    const formData = new URLSearchParams();
+    formData.append("secret", secretKey);
+    formData.append("response", token.trim());
+    if (remoteIp) {
+      formData.append("remoteip", remoteIp);
+    }
+
+    const res = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        body: formData,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+
+    const data = (await res.json()) as {
+      success: boolean;
+      "error-codes"?: string[];
+    };
+
+    if (data.success) {
+      return { success: true };
+    }
+
+    console.warn("Turnstile siteverify failed:", data["error-codes"]);
+    return {
+      success: false,
+      error: `Turnstile verification failed (${data["error-codes"]?.join(", ") || "invalid"})`,
+    };
+  } catch (e: any) {
+    console.error("Turnstile request failed:", e);
+    return {
+      success: false,
+      error: "Failed to connect to Cloudflare Turnstile service",
+    };
+  }
+}
+
 export async function verifyPin(pin: string): Promise<boolean> {
   try {
     const row = sqlite

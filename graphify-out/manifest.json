@@ -60,8 +60,8 @@
     "semantic_hash": ""
   },
   "src/routes/auth.ts": {
-    "mtime": 1788776589.6786137,
-    "ast_hash": "d55f792f9a1c19c559c3ddc15aed6f95",
+    "mtime": 1788918560.4124177,
+    "ast_hash": "c3caf90c6bfe37734fa4c3a4b284ccf7",
     "semantic_hash": ""
   },
   "src/routes/keys.ts": {
@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
-    "mtime": 1788786899.9209332,
-    "ast_hash": "2e9a44135f92b23091cd61b8acdc6120",
+    "mtime": 1788918550.7941687,
+    "ast_hash": "6d09d01ef983b8f425e3de017309b063",
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
@@ -150,8 +150,8 @@
     "semantic_hash": ""
   },
   "frontend/src/App.tsx": {
-    "mtime": 1788788613.557804,
-    "ast_hash": "601899f4f54f9bfe5479a40eedb2deda",
+    "mtime": 1788918582.9024174,
+    "ast_hash": "2a1e1af542fa94b2eea5a4f73bc7e871",
     "semantic_hash": ""
   },
   "frontend/src/components/ClientKeysTab.tsx": {
@@ -180,8 +180,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/LoginScreen.tsx": {
-    "mtime": 1788788613.5638423,
-    "ast_hash": "845b4a5f2c673911f6f3d7e3c30c4b31",
+    "mtime": 1788918594.1374073,
+    "ast_hash": "74c38ca0d63ad7cc23f5b16ad4036b5a",
     "semantic_hash": ""
   },
   "frontend/src/components/SetupScreen.tsx": {
@@ -190,8 +190,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Sidebar.tsx": {
-    "mtime": 1788788613.5638423,
-    "ast_hash": "c68194b0c690a93b34bb6fb99d686aa5",
+    "mtime": 1788918254.5620358,
+    "ast_hash": "8df45050a01c3f96be92fcc48972b631",
     "semantic_hash": ""
   },
   "frontend/src/components/TelemetryTab.tsx": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "frontend/src/lib/api.ts": {
-    "mtime": 1788878614.3605924,
-    "ast_hash": "017488481917c046503965208fe81372",
+    "mtime": 1788918567.3149648,
+    "ast_hash": "a33024463b578165158fa0089b169861",
     "semantic_hash": ""
   },
   "frontend/src/main.tsx": {

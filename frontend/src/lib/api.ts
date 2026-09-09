@@ -31,6 +31,8 @@ export async function apiRequest<T = any>(
 export interface AuthStatus {
   isDefaultPin: boolean;
   authenticated: boolean;
+  turnstileEnabled?: boolean;
+  turnstileSiteKey?: string;
 }
 
 export interface ApiKeyItem {

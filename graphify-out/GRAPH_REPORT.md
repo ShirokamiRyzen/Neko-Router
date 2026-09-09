@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-09)
 
 ## Corpus Check
-- 53 files · ~66,645 words
+- 53 files · ~67,351 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 548 nodes · 824 edges · 25 communities (21 shown, 4 thin omitted)
+- 551 nodes · 831 edges · 25 communities (21 shown, 4 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `fd575e6e`
+- Built from commit: `b88ceb9b`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -78,7 +78,7 @@ Nodes (33): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss
 
 ### Community 2 - "schema.ts"
 Cohesion: 0.07
-Nodes (43): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+35 more)
+Nodes (46): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+38 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -90,11 +90,11 @@ Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT,
 
 ### Community 7 - "App.tsx"
 Cohesion: 0.07
-Nodes (41): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+33 more)
+Nodes (42): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+34 more)
 
 ### Community 9 - "upstreams.ts"
 Cohesion: 0.08
-Nodes (37): db, upstreamKeys, adjectives, nouns, ANTIGRAVITY_CONFIG, ANTIGRAVITY_DEFAULT_MODELS, buildAntigravityAuthUrl(), exchangeAntigravityCode() (+29 more)
+Nodes (35): upstreamKeys, adjectives, nouns, ANTIGRAVITY_CONFIG, ANTIGRAVITY_DEFAULT_MODELS, buildAntigravityAuthUrl(), exchangeAntigravityCode(), fetchAntigravityModels() (+27 more)
 
 ### Community 10 - "compilerOptions"
 Cohesion: 0.08
@@ -142,10 +142,10 @@ Nodes (29): 1. Installation:, 1. OpenAI Streaming:, 1. Overview & Base URLs, 2. 
 
 ### Community 23 - "services/proxy.ts"
 Cohesion: 0.11
-Nodes (43): UpstreamKey, ensureAntigravityAccessToken(), forceRefreshAntigravityToken(), checkClientRateLimit(), incrementClientKeyTokens(), ensureCodexAccessToken(), refreshCodexToken(), transformChatToCodexResponses() (+35 more)
+Nodes (44): UpstreamKey, ensureAntigravityAccessToken(), forceRefreshAntigravityToken(), checkClientRateLimit(), incrementClientKeyTokens(), ensureCodexAccessToken(), refreshCodexToken(), transformChatToCodexResponses() (+36 more)
 
 ## Knowledge Gaps
-- **284 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+279 more)
+- **285 isolated node(s):** `$schema`, `typescript`, `oxc`, `react/rules-of-hooks`, `warn` (+280 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -159,10 +159,10 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `react` connect `App.tsx` to `plugins`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `$schema`, `typescript`, `oxc` to the rest of the system?**
-  _284 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _285 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.07142857142857142 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0701344243132671 - nodes in this community are weakly interconnected._

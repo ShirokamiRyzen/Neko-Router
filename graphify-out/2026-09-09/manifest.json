@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ClientKeysTab.tsx": {
-    "mtime": 1788917703.2008846,
-    "ast_hash": "d945b8cb3c52a91232802fb05649cfb9",
+    "mtime": 1788917752.3841748,
+    "ast_hash": "632ee6a2254302abb32a255e3ffbe4e1",
     "semantic_hash": ""
   },
   "frontend/src/components/CodeSnippetViewer.tsx": {

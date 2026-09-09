@@ -82,9 +82,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-68 bg-[#f8f9fa] dark:bg-[#111216] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${
-          isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
-        }`}
+        className={`fixed top-0 bottom-0 left-0 z-50 w-68 bg-[#f8f9fa] dark:bg-[#111216] border-r border-zinc-200 dark:border-zinc-800 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
+          }`}
       >
         {/* Brand Header */}
         <div className="h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center shrink-0">
@@ -139,18 +138,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         setActiveTab(item.id);
                         onClose();
                       }}
-                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-all duration-120 group cursor-pointer ${
-                        isActive
+                      className={`w-full flex items-center space-x-3 px-3 py-2 rounded-md text-left transition-all duration-120 group cursor-pointer ${isActive
                           ? "bg-gradient-to-b from-zinc-800 to-zinc-900 text-zinc-100 font-medium border border-zinc-700/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_1px_2px_rgba(0,0,0,0.4)]"
                           : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/40"
-                      }`}
+                        }`}
                     >
                       <Icon
-                        className={`w-4 h-4 shrink-0 transition-colors ${
-                          isActive
+                        className={`w-4 h-4 shrink-0 transition-colors ${isActive
                             ? "text-zinc-100"
                             : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
-                        }`}
+                          }`}
                       />
                       <div className="flex-1 min-w-0">
                         <div className="text-xs truncate">{item.label}</div>
@@ -186,7 +183,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full flex items-center space-x-2.5 px-3 py-1.5 rounded-md text-xs font-medium text-zinc-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors border border-transparent hover:border-red-500/20"
           >
             <LogOut className="w-4 h-4" />
-            <span>Lock Dashboard</span>
+            <span>Logout</span>
           </button>
         </div>
       </aside>

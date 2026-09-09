@@ -1,5 +1,12 @@
 import { Elysia, t } from "elysia";
-import { isDefaultPin, verifyPin, changePin, getJwtSecret } from "../services/auth";
+import {
+  isDefaultPin,
+  verifyPin,
+  changePin,
+  getJwtSecret,
+  getTurnstileConfig,
+  verifyTurnstileToken,
+} from "../services/auth";
 import { jwt } from "@elysiajs/jwt";
 
 export const authRoutes = new Elysia({ prefix: "/api/auth" })
@@ -26,15 +33,42 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
       }
     }
 
+    const { siteKey, enabled } = getTurnstileConfig();
+
     return {
       isDefaultPin: isDefault,
       authenticated,
+      turnstileEnabled: enabled,
+      turnstileSiteKey: enabled ? siteKey : "",
     };
   })
   .post(
     "/login",
-    async ({ body, cookie, jwt, set }) => {
-      const { pin } = body;
+    async ({ body, cookie, jwt, set, headers }) => {
+      const { pin, turnstileToken } = body;
+
+      const { enabled } = getTurnstileConfig();
+      if (enabled) {
+        const clientIp =
+          headers["cf-connecting-ip"] ||
+          (typeof headers["x-forwarded-for"] === "string"
+            ? headers["x-forwarded-for"].split(",")[0]?.trim()
+            : undefined) ||
+          headers["x-real-ip"];
+
+        const turnstileCheck = await verifyTurnstileToken(
+          turnstileToken || "",
+          clientIp
+        );
+        if (!turnstileCheck.success) {
+          set.status = 403;
+          return {
+            success: false,
+            message: turnstileCheck.error || "Turnstile verification failed",
+          };
+        }
+      }
+
       const isValid = await verifyPin(pin);
 
       if (!isValid) {
@@ -61,6 +95,7 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
     {
       body: t.Object({
         pin: t.String(),
+        turnstileToken: t.Optional(t.String()),
       }),
     }
   )
