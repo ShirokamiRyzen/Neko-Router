@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "src/routes/proxy.ts": {
-    "mtime": 1788827062.9983356,
-    "ast_hash": "2d3a3892527e4d8a4c7f1d8307438d05",
+    "mtime": 1788952097.814005,
+    "ast_hash": "f5ce396acfc33bd4c098ad697b176bdd",
     "semantic_hash": ""
   },
   "src/routes/telemetry.ts": {
@@ -170,8 +170,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/DatabaseSettingsTab.tsx": {
-    "mtime": 1788788613.5589979,
-    "ast_hash": "fcfacfe4ff95ed2eb6d2b2aed64ec463",
+    "mtime": 1788951837.5868306,
+    "ast_hash": "4c4d03b6bc3b32483e352897a5648cdb",
     "semantic_hash": ""
   },
   "frontend/src/components/Header.tsx": {

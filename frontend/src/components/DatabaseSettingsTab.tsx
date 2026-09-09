@@ -18,6 +18,31 @@ import {
 } from "lucide-react";
 import { apiRequest, type SystemInfo, type OptimizationSettings } from "../lib/api";
 
+const formatBytes = (bytes?: number): string => {
+  if (!bytes || bytes <= 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const unitIndex = Math.min(Math.max(i, 0), units.length - 1);
+  const val = bytes / Math.pow(1024, unitIndex);
+  return `${parseFloat(val.toFixed(2))} ${units[unitIndex]}`;
+};
+
+const formatUptime = (totalSeconds?: number): string => {
+  if (!totalSeconds || totalSeconds <= 0) return "0s";
+  const d = Math.floor(totalSeconds / 86400);
+  const h = Math.floor((totalSeconds % 86400) / 3600);
+  const m = Math.floor((totalSeconds % 3600) / 60);
+  const s = Math.floor(totalSeconds % 60);
+
+  const parts: string[] = [];
+  if (d > 0) parts.push(`${d}d`);
+  if (h > 0) parts.push(`${h}h`);
+  if (m > 0) parts.push(`${m}m`);
+  parts.push(`${s}s`);
+
+  return parts.join(" ");
+};
+
 export const DatabaseSettingsTab: React.FC = () => {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [loadingInfo, setLoadingInfo] = useState(true);
@@ -679,14 +704,14 @@ export const DatabaseSettingsTab: React.FC = () => {
             <div className="skeuo-card-subtle p-3 rounded-md">
               <span className="text-zinc-400 block text-[10px]">Database Size</span>
               <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                {systemInfo ? Math.round((systemInfo.dbSizeBytes / 1024) * 10) / 10 : 0} KB
+                {systemInfo ? formatBytes(systemInfo.dbSizeBytes) : "..."}
               </span>
             </div>
 
             <div className="skeuo-card-subtle p-3 rounded-md">
               <span className="text-zinc-400 block text-[10px]">Uptime</span>
               <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                {systemInfo ? `${Math.floor(systemInfo.uptimeSeconds / 60)}m ${systemInfo.uptimeSeconds % 60}s` : "..."}
+                {systemInfo ? formatUptime(systemInfo.uptimeSeconds) : "..."}
               </span>
             </div>
           </div>
