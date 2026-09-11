@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/routes/keys.ts": {
-    "mtime": 1789137414.0040302,
-    "ast_hash": "736e823c917252b9aa492b11a6c8fa9f",
+    "mtime": 1789142158.1069782,
+    "ast_hash": "b84f15c89905747df76dfbec9dc59661",
     "semantic_hash": ""
   },
   "src/routes/proxy.ts": {
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ClientKeysTab.tsx": {
-    "mtime": 1789137565.2925239,
-    "ast_hash": "e3dae4f67ba7dffbd884dd25429866a6",
+    "mtime": 1789142182.4779737,
+    "ast_hash": "32f18b511fd715293dfaa543422e3fe2",
     "semantic_hash": ""
   },
   "frontend/src/components/CodeSnippetViewer.tsx": {
@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/DashboardTab.tsx": {
-    "mtime": 1788917631.1946008,
-    "ast_hash": "493f75ebeca6e210088d0f6b459c8169",
+    "mtime": 1789142524.2796216,
+    "ast_hash": "aeecf77d118083e5a9e95ffe84825765",
     "semantic_hash": ""
   },
   "frontend/src/components/DatabaseSettingsTab.tsx": {
@@ -305,13 +305,18 @@
     "semantic_hash": ""
   },
   "src/routes/api-providers.ts": {
-    "mtime": 1789131999.5076683,
-    "ast_hash": "a4f6f56f8f526e28a0cd1121a5ef0a49",
+    "mtime": 1789142112.2073815,
+    "ast_hash": "f9adfd74ef1b547b13c95d875ca1e47f",
     "semantic_hash": ""
   },
   "src/services/bandelbanget.ts": {
     "mtime": 1789141748.6253834,
     "ast_hash": "db9cf6af07e00f16c0133cf9a60f38e9",
+    "semantic_hash": ""
+  },
+  "frontend/src/components/ProviderIcon.tsx": {
+    "mtime": 1789142496.9197116,
+    "ast_hash": "8622d101f9c89cc6f2901f923bc54f08",
     "semantic_hash": ""
   }
 }

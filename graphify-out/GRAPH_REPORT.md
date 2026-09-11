@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-11)
 
 ## Corpus Check
-- 55 files · ~73,635 words
+- 55 files · ~73,859 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 571 nodes · 890 edges · 30 communities (26 shown, 4 thin omitted)
+- 572 nodes · 896 edges · 30 communities (26 shown, 4 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7f212a16`
+- Built from commit: `4d2715b1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -95,7 +95,7 @@ Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT,
 
 ### Community 7 - "App.tsx"
 Cohesion: 0.06
-Nodes (46): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+38 more)
+Nodes (50): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+42 more)
 
 ### Community 9 - "upstreams.ts"
 Cohesion: 0.08

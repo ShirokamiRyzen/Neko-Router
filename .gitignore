@@ -38,5 +38,7 @@ data/*.db
 data/*.db-shm
 data/*.db-wal
 data/*.sqlite
+data/*.bak
 data/temp_*
+*.bak
 bun.lock

@@ -21,6 +21,7 @@ import {
   calculateTokenCost,
   formatCost,
 } from "../lib/api";
+import { OpenAIIcon, GithubIcon, GoogleIcon } from "./UpstreamKeysTab";
 
 function formatTimeAgo(timestamp: number): string {
   const diff = Math.max(0, Date.now() - timestamp);
@@ -50,6 +51,82 @@ function getProviderTag(name: string): string {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
   return clean.slice(0, 2);
+}
+
+function renderNodeIcon(node: any) {
+  const n = (node.name || "").toLowerCase();
+  const b = (node.baseUrl || "").toLowerCase();
+  const p = (node.provider || "").toLowerCase();
+  const id = (node.id || "").toLowerCase();
+
+  // BandelBanget
+  if (b.includes("bandelbanget") || n.includes("bandelbanget") || id.includes("bandelbanget")) {
+    return (
+      <img
+        src="https://bandelbanget.xyz/favicon.ico"
+        alt="BB"
+        className="w-3.5 h-3.5 object-contain rounded-xs"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    );
+  }
+
+  // Antigravity
+  if (b.includes("cloudcode-pa.googleapis.com") || n.includes("antigravity") || id === "antigravity") {
+    return (
+      <img
+        src="https://antigravity.google/favicon.ico"
+        alt="AG"
+        className="w-3.5 h-3.5 object-contain rounded-xs"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    );
+  }
+
+  // GitHub Copilot
+  if (b.includes("githubcopilot.com") || n.includes("copilot") || id === "github-copilot") {
+    return <GithubIcon className="w-3.5 h-3.5 text-white" />;
+  }
+
+  // OpenAI Codex
+  if (b.includes("chatgpt.com/backend-api/codex") || n.includes("codex") || id === "openai-codex") {
+    return <OpenAIIcon className="w-3.5 h-3.5 text-emerald-400" />;
+  }
+
+  // OpenAI / ChatGPT
+  if (b.includes("api.openai.com") || n.includes("openai") || (p === "openai" && (n.includes("gpt") || n.includes("o1") || n.includes("o3")))) {
+    return <OpenAIIcon className="w-3.5 h-3.5 text-emerald-400" />;
+  }
+
+  // Gemini / Google
+  if (b.includes("generativelanguage.googleapis.com") || n.includes("gemini")) {
+    return <GoogleIcon className="w-3.5 h-3.5" />;
+  }
+
+  // DeepSeek
+  if (b.includes("deepseek") || n.includes("deepseek")) {
+    return (
+      <img
+        src="https://www.deepseek.com/favicon.ico"
+        alt="DS"
+        className="w-3.5 h-3.5 object-contain rounded-xs"
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    );
+  }
+
+  // Fallback: 2-letter tag text
+  return (
+    <span className="text-[10px] font-mono font-bold text-zinc-300">
+      {node.tag || (node.name ? node.name.slice(0, 2).toUpperCase() : "ND")}
+    </span>
+  );
 }
 
 export const DashboardTab: React.FC = () => {
@@ -765,14 +842,14 @@ export const DashboardTab: React.FC = () => {
                     }}
                   >
                     <div
-                      className={`px-3.5 py-2 rounded-lg bg-[#14151c] transition-all flex items-center space-x-2.5 ${isNodeActive
+                      className={`px-3 py-1.5 rounded-lg bg-[#14151c] transition-all flex items-center space-x-2.5 ${isNodeActive
                           ? "border border-orange-500/80 shadow-[0_0_18px_rgba(249,115,22,0.4)] ring-1 ring-orange-500/30"
                           : "border border-zinc-800 hover:border-zinc-700 shadow-[0_4px_12px_rgba(0,0,0,0.6)]"
                         }`}
                     >
-                      <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-zinc-800/80 text-zinc-300 border border-zinc-700/60">
-                        {node.tag}
-                      </span>
+                      <div className="w-5 h-5 rounded flex items-center justify-center shrink-0 overflow-hidden bg-zinc-800/90 border border-zinc-700/70 shadow-xs">
+                        {renderNodeIcon(node)}
+                      </div>
                       <span className="text-xs font-medium text-zinc-200 whitespace-nowrap">
                         {node.name}
                       </span>

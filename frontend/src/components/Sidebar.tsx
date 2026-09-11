@@ -93,17 +93,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Cat className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <div className="flex items-center space-x-1">
-                  <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
-                    Neko<span className="text-zinc-400 dark:text-zinc-500 font-normal">Router</span>
-                  </span>
-                </div>
-                <div className="flex items-center space-x-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 tracking-wider">
-                    ONLINE · v1.0
-                  </span>
-                </div>
+                <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
+                  Neko<span className="text-zinc-400 dark:text-zinc-500 font-normal">Router</span>
+                </span>
               </div>
             </div>
 

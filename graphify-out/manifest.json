@@ -165,8 +165,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/DashboardTab.tsx": {
-    "mtime": 1788917631.1946008,
-    "ast_hash": "493f75ebeca6e210088d0f6b459c8169",
+    "mtime": 1789142568.7955658,
+    "ast_hash": "43034b4918eafef7d15af8633b6f5519",
     "semantic_hash": ""
   },
   "frontend/src/components/DatabaseSettingsTab.tsx": {
@@ -190,8 +190,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Sidebar.tsx": {
-    "mtime": 1789132973.5483384,
-    "ast_hash": "8df45050a01c3f96be92fcc48972b631",
+    "mtime": 1789142623.0660014,
+    "ast_hash": "12f9baac2ceeb0f5788ef2fba2fcfffa",
     "semantic_hash": ""
   },
   "frontend/src/components/TelemetryTab.tsx": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/Topbar.tsx": {
-    "mtime": 1788788613.5638423,
-    "ast_hash": "f32ebf0730e228ef1b8833b4335c6c5f",
+    "mtime": 1789142643.3607097,
+    "ast_hash": "4c11d78f77f20fd72c9c86100ec43cca",
     "semantic_hash": ""
   },
   "frontend/src/components/UpstreamKeysTab.tsx": {

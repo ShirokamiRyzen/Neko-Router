@@ -1,5 +1,5 @@
 import React from "react";
-import { Menu, BookOpen, Sun, Moon, Radio } from "lucide-react";
+import { Menu, BookOpen, Sun, Moon } from "lucide-react";
 
 interface TopbarProps {
   activeTab: string;
@@ -66,11 +66,6 @@ export const Topbar: React.FC<TopbarProps> = ({
 
         {/* Right: Quick actions */}
         <div className="flex items-center space-x-2.5">
-          {/* Status badge */}
-          <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 dark:bg-gradient-to-b dark:from-emerald-950/80 dark:to-emerald-900/40 dark:border-emerald-800/60 dark:border-t-emerald-600/50 text-emerald-600 dark:text-emerald-400 text-xs font-semibold shadow-[inset_0_1px_0_rgba(52,211,153,0.15)]">
-            <Radio className="w-3 h-3 animate-pulse" />
-            <span>PORT 3000 · WAL</span>
-          </div>
 
           {/* Swagger Link */}
           <a
