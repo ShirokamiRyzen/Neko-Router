@@ -1,8 +1,20 @@
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { clientKeys, apiKeys, telemetryLogs } from "../db/schema";
+import { clientKeys, apiKeys, telemetryLogs, upstreamKeys } from "../db/schema";
 import { authMiddleware } from "../middleware/auth";
 import { eq, desc, sql } from "drizzle-orm";
+
+function getFollowUpstreamIds(): Set<string> {
+  const rows = db
+    .select({ id: upstreamKeys.id })
+    .from(upstreamKeys)
+    .where(eq(upstreamKeys.followUpstream, 1))
+    .all();
+  const set = new Set(rows.map((r) => r.id));
+  set.add("up_bandelbanget_follow");
+  set.add("bb");
+  return set;
+}
 
 function generateKeyString(custom?: string): string {
   if (custom && custom.trim().length > 0) {
@@ -60,11 +72,14 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
           if (k.allowedProviders) allowedList = JSON.parse(k.allowedProviders);
         } catch (e) {}
 
+        // Filter ghost non-upstream IDs like "openai"
+        allowedList = (Array.isArray(allowedList) ? allowedList : []).filter((p) => p !== "openai");
+
         return {
           ...k,
           apiKeyId: k.apiKeyId || null,
           apiKeyName: k.apiKeyName || "Unassigned",
-          allowedProviders: Array.isArray(allowedList) ? allowedList : [],
+          allowedProviders: allowedList,
           roundRobinProviders: k.roundRobinProviders !== 0,
           isFollowUpstream: Boolean(k.isFollowUpstream),
           displayKey:
@@ -83,15 +98,17 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
       const id = "ck_" + crypto.randomUUID().replace(/-/g, "");
       let keyStr: string;
 
-      let allowedArr = Array.isArray(allowedProviders) ? allowedProviders : [];
-      const hasFollow = allowedArr.includes("up_bandelbanget_follow") || allowedArr.includes("bb");
+      const followIds = getFollowUpstreamIds();
+      let allowedArr = (Array.isArray(allowedProviders) ? allowedProviders : []).filter((p) => p !== "openai");
+      const hasFollow = allowedArr.some((p) => followIds.has(p));
       const isFollow = Boolean(isFollowUpstream) || hasFollow;
 
       if (isFollow) {
         // Exclusivity: Pass-through cannot be mixed with normal providers
-        allowedArr = allowedArr.filter((p: string) => p === "up_bandelbanget_follow" || p === "bb");
+        allowedArr = allowedArr.filter((p: string) => followIds.has(p));
         if (allowedArr.length === 0) {
-          allowedArr = ["up_bandelbanget_follow"];
+          const firstFollow = Array.from(followIds)[0] || "up_bandelbanget_follow";
+          allowedArr = [firstFollow];
         }
 
         // Follow Upstream mode: Key is NOT randomly generated with sk-neko- prefix
@@ -104,7 +121,7 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
           keyStr = existingDefault ? `bb-default-${id.slice(3, 8)}` : "bb-default";
         }
       } else {
-        allowedArr = allowedArr.filter((p: string) => p !== "up_bandelbanget_follow" && p !== "bb");
+        allowedArr = allowedArr.filter((p: string) => !followIds.has(p));
         keyStr = generateKeyString(customKey);
       }
 
@@ -248,13 +265,14 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         updateData.tokenLimit = newLimit > 0 ? Math.floor(newLimit) : null;
       }
       if (body.allowedProviders !== undefined) {
-        let arr = Array.isArray(body.allowedProviders) ? body.allowedProviders : [];
-        const hasFollow = arr.includes("up_bandelbanget_follow") || arr.includes("bb");
+        const followIds = getFollowUpstreamIds();
+        let arr = (Array.isArray(body.allowedProviders) ? body.allowedProviders : []).filter((p) => p !== "openai");
+        const hasFollow = arr.some((p) => followIds.has(p));
         if (hasFollow) {
-          arr = arr.filter((p: string) => p === "up_bandelbanget_follow" || p === "bb");
+          arr = arr.filter((p: string) => followIds.has(p));
           updateData.isFollowUpstream = 1;
         } else {
-          arr = arr.filter((p: string) => p !== "up_bandelbanget_follow" && p !== "bb");
+          arr = arr.filter((p: string) => !followIds.has(p));
           updateData.isFollowUpstream = 0;
         }
         updateData.allowedProviders = JSON.stringify(arr);
@@ -504,14 +522,16 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         return { success: false, error: "Key not found" };
       }
 
+      const followIds = getFollowUpstreamIds();
       let currentAllowed: string[] = [];
       try {
         if (existing.allowedProviders) currentAllowed = JSON.parse(existing.allowedProviders);
       } catch (e) {}
+      currentAllowed = currentAllowed.filter((p) => p !== "openai");
 
       let updatedAllowed: string[];
       const providerId = body.providerId;
-      const isTargetFollow = providerId === "up_bandelbanget_follow" || providerId === "bb";
+      const isTargetFollow = followIds.has(providerId);
 
       const willAllow = body.allowed !== undefined ? body.allowed : !currentAllowed.includes(providerId);
 
@@ -521,14 +541,14 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
           updatedAllowed = [providerId];
         } else {
           // Normal provider: remove any pass-through
-          const nonFollow = currentAllowed.filter((p) => p !== "up_bandelbanget_follow" && p !== "bb");
+          const nonFollow = currentAllowed.filter((p) => !followIds.has(p));
           updatedAllowed = nonFollow.includes(providerId) ? nonFollow : [...nonFollow, providerId];
         }
       } else {
         updatedAllowed = currentAllowed.filter((p) => p !== providerId);
       }
 
-      const hasFollow = updatedAllowed.includes("up_bandelbanget_follow") || updatedAllowed.includes("bb");
+      const hasFollow = updatedAllowed.some((p) => followIds.has(p));
 
       db.update(clientKeys)
         .set({

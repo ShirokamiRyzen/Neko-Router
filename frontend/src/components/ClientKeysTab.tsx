@@ -20,6 +20,7 @@ import {
   Shuffle,
   Edit3,
   CheckCircle2,
+  Radio,
 } from "lucide-react";
 import {
   apiRequest,
@@ -695,7 +696,23 @@ export const ClientKeysTab: React.FC = () => {
                         : 0;
                       const isExceeded = hasTokenLimit && (k.usedTokens || 0) >= (k.tokenLimit || 1);
 
-                      const allowedCount = k.allowedProviders ? k.allowedProviders.length : 0;
+                      const isKeyPassThrough = Boolean(
+                        k.isFollowUpstream ||
+                        k.key === "bb-default" ||
+                        k.key?.startsWith("bb-default") ||
+                        (k.allowedProviders || []).some((id) => {
+                          const up = upstreams.find((u) => u.id === id);
+                          return up ? isPassThrough(up) : (id === "up_bandelbanget_follow" || id === "bb");
+                        })
+                      );
+
+                      const relevantUpstreams = isKeyPassThrough
+                        ? upstreams.filter(isPassThrough)
+                        : upstreams.filter((u) => !isPassThrough(u));
+
+                      const allowedCount = (k.allowedProviders || []).filter((id) =>
+                        relevantUpstreams.some((u) => u.id === id)
+                      ).length;
                       const isRoundRobin = k.roundRobinProviders !== false;
 
                       return (
@@ -711,22 +728,31 @@ export const ClientKeysTab: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-5 py-3.5 font-mono text-zinc-500 dark:text-zinc-400">
-                            <div className="flex items-center space-x-2">
-                              <span className="skeuo-card-subtle px-2 py-0.5 rounded text-[11px]">
-                                {k.displayKey}
-                              </span>
-                              <button
-                                onClick={() => copyToClipboard(k.key, k.id)}
-                                className="p-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-                                title="Copy secret key"
-                              >
-                                {isCopied ? (
-                                  <Check className="w-3.5 h-3.5 text-emerald-500" />
-                                ) : (
-                                  <Copy className="w-3.5 h-3.5" />
-                                )}
-                              </button>
-                            </div>
+                            {isKeyPassThrough || k.key === "bb-default" || k.key?.startsWith("bb-default") ? (
+                              <div className="flex items-center space-x-2">
+                                <span className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded text-[11px] font-bold bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                                  <Radio className="w-3 h-3 text-purple-400 animate-pulse" />
+                                  <span>Pass-Through</span>
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-2">
+                                <span className="skeuo-card-subtle px-2 py-0.5 rounded text-[11px]">
+                                  {k.displayKey}
+                                </span>
+                                <button
+                                  onClick={() => copyToClipboard(k.key, k.id)}
+                                  className="p-1 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                                  title="Copy secret key"
+                                >
+                                  {isCopied ? (
+                                    <Check className="w-3.5 h-3.5 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </td>
 
                           {/* Parent API Key Badge */}
@@ -764,9 +790,13 @@ export const ClientKeysTab: React.FC = () => {
                               title="Configure permitted upstream providers and round-robin for this secret key"
                             >
                               <Layers className="w-3.5 h-3.5 text-indigo-500" />
-                              {allowedCount > 0 ? (
+                              {isKeyPassThrough ? (
+                                <span className="font-semibold text-purple-400">
+                                  {allowedCount} of {relevantUpstreams.length} Allowed
+                                </span>
+                              ) : allowedCount > 0 ? (
                                 <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                  {allowedCount} of {upstreams.length} Allowed
+                                  {allowedCount} of {relevantUpstreams.length} Allowed
                                 </span>
                               ) : (
                                 <span className="font-semibold text-amber-600 dark:text-amber-400">
@@ -1701,9 +1731,27 @@ export const ClientKeysTab: React.FC = () => {
 
             {/* Modal Footer */}
             <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs">
-              <span className="text-zinc-400 text-[11px]">
-                {(activePermKey.allowedProviders || []).length} of {upstreams.length} providers allowed
-              </span>
+              {(() => {
+                const isPermPassThrough = Boolean(
+                  activePermKey.isFollowUpstream ||
+                  (activePermKey.allowedProviders || []).some((id) => {
+                    const up = upstreams.find((u) => u.id === id);
+                    return up ? isPassThrough(up) : (id === "up_bandelbanget_follow" || id === "bb");
+                  })
+                );
+                const relevantList = isPermPassThrough
+                  ? upstreams.filter(isPassThrough)
+                  : upstreams.filter((u) => !isPassThrough(u));
+                const allowedInMode = (activePermKey.allowedProviders || []).filter((id) =>
+                  relevantList.some((u) => u.id === id)
+                ).length;
+
+                return (
+                  <span className="text-zinc-400 text-[11px]">
+                    {allowedInMode} of {relevantList.length} provider{relevantList.length === 1 ? "" : "s"} allowed
+                  </span>
+                );
+              })()}
               <button
                 type="button"
                 onClick={() => setActivePermKey(null)}

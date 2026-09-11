@@ -183,7 +183,7 @@
       "label": "ClientKeysTab()",
       "file_type": "code",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L31",
+      "source_location": "L32",
       "_origin": "ast",
       "id": "frontend_src_components_clientkeystab_clientkeystab",
       "community": 7,
@@ -2067,8 +2067,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_db_index_db",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "db"
     },
     {
@@ -2155,8 +2155,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_db_schema_upstreamkeys",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "upstreamkeys"
     },
     {
@@ -2424,10 +2424,21 @@
       "norm_label": "keys.ts"
     },
     {
-      "label": "generateKeyString()",
+      "label": "getFollowUpstreamIds()",
       "file_type": "code",
       "source_file": "src/routes/keys.ts",
       "source_location": "L7",
+      "_origin": "ast",
+      "id": "src_routes_keys_getfollowupstreamids",
+      "community": 2,
+      "community_name": "schema.ts",
+      "norm_label": "getfollowupstreamids()"
+    },
+    {
+      "label": "generateKeyString()",
+      "file_type": "code",
+      "source_file": "src/routes/keys.ts",
+      "source_location": "L19",
       "_origin": "ast",
       "id": "src_routes_keys_generatekeystring",
       "community": 2,
@@ -2438,7 +2449,7 @@
       "label": "keysRoutes",
       "file_type": "code",
       "source_file": "src/routes/keys.ts",
-      "source_location": "L23",
+      "source_location": "L35",
       "_origin": "ast",
       "id": "src_routes_keys_keysroutes",
       "community": 2,
@@ -3310,8 +3321,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_optimizer",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "optimizer.ts"
     },
     {
@@ -3321,8 +3332,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_services_optimizer_optimizationsettings",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "optimizationsettings"
     },
     {
@@ -3332,8 +3343,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_services_optimizer_getoptimizationsettings",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getoptimizationsettings()"
     },
     {
@@ -3343,8 +3354,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "src_services_optimizer_ishttpsrequest",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "ishttpsrequest()"
     },
     {
@@ -3354,8 +3365,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_services_optimizer_checkhttpsrequirement",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "checkhttpsrequirement()"
     },
     {
@@ -3365,8 +3376,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_services_optimizer_updateoptimizationsettings",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "updateoptimizationsettings()"
     },
     {
@@ -3376,8 +3387,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "src_services_optimizer_applyrtkcompression",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "applyrtkcompression()"
     },
     {
@@ -3387,8 +3398,8 @@
       "source_location": "L164",
       "_origin": "ast",
       "id": "src_services_optimizer_minifycontent",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "minifycontent()"
     },
     {
@@ -3398,8 +3409,8 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "src_services_optimizer_optimizerequestbody",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "optimizerequestbody()"
     },
     {
@@ -6930,7 +6941,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L31",
+      "source_location": "L32",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6942,7 +6953,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6954,7 +6965,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6966,7 +6977,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6978,7 +6989,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -6990,7 +7001,7 @@
       "context": "import",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L24",
+      "source_location": "L25",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab",
@@ -7003,7 +7014,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L119",
+      "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab_clientkeystab",
@@ -10007,6 +10018,18 @@
       "relation": "imports",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "src/routes/keys.ts",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_routes_keys",
+      "target": "src_db_schema_upstreamkeys",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "src/routes/upstreams.ts",
       "source_location": "L3",
       "weight": 1.0,
@@ -10911,7 +10934,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/routes/keys.ts",
-      "source_location": "L7",
+      "source_location": "L19",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_routes_keys",
@@ -10922,7 +10945,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/routes/keys.ts",
-      "source_location": "L23",
+      "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_routes_keys",
+      "target": "src_routes_keys_getfollowupstreamids",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/routes/keys.ts",
+      "source_location": "L35",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_routes_keys",
@@ -16457,5 +16491,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "e1576d21bed87c16cc83774b60d987529800f6cd"
+  "built_at_commit": "7f212a16611c731984455c72f910fa33167470cb"
 }

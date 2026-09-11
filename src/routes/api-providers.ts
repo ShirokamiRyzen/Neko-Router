@@ -190,7 +190,7 @@ export const apiProvidersRoutes = new Elysia({ prefix: "/api/api-providers" })
           rateLimit: null,
           tokenLimit: null,
           usedTokens: 0,
-          allowedProviders: JSON.stringify([followUpstream.id, "openai"]),
+          allowedProviders: JSON.stringify([followUpstream.id]),
           roundRobinProviders: 1,
           isFollowUpstream: 1,
           createdAt: now,
