@@ -3021,25 +3021,44 @@ export const UpstreamKeysTab: React.FC = () => {
               </div>
 
               {/* Modal Actions */}
-              <div className="flex items-center justify-end space-x-2 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="skeuo-btn px-4 py-2 rounded-md text-xs font-medium cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="skeuo-btn-primary px-5 py-2 rounded-md text-xs font-semibold cursor-pointer"
-                >
-                  {saving
-                    ? "Saving..."
-                    : editingUpstream
-                      ? "Save Changes"
-                      : "Create"}
-                </button>
+              <div className="flex items-center justify-between pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                {editingUpstream ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to delete "${editingUpstream.name}"?`)) {
+                        handleDelete(editingUpstream.id);
+                        setIsModalOpen(false);
+                      }
+                    }}
+                    className="px-3 py-2 rounded-md text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-500/20 cursor-pointer flex items-center space-x-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Delete Provider</span>
+                  </button>
+                ) : (
+                  <div />
+                )}
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="skeuo-btn px-4 py-2 rounded-md text-xs font-medium cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="skeuo-btn-primary px-5 py-2 rounded-md text-xs font-semibold cursor-pointer"
+                  >
+                    {saving
+                      ? "Saving..."
+                      : editingUpstream
+                        ? "Save Changes"
+                        : "Create"}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -3566,16 +3585,32 @@ export const UpstreamKeysTab: React.FC = () => {
             </div>
 
             <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs">
-              <span className="text-zinc-400 text-[11px]">
-                {connectionsList.filter((k) => k.isActive).length} active connections participating in routing
-              </span>
               <button
                 type="button"
-                onClick={() => setActiveConnectionsUpstream(null)}
-                className="skeuo-btn-primary px-4 py-1.5 rounded-md font-semibold text-xs cursor-pointer"
+                onClick={() => {
+                  if (confirm(`Are you sure you want to completely delete "${activeConnectionsUpstream.name}" provider?`)) {
+                    handleDelete(activeConnectionsUpstream.id);
+                    setActiveConnectionsUpstream(null);
+                  }
+                }}
+                className="px-3 py-1.5 rounded-md text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 border border-red-500/20 cursor-pointer flex items-center space-x-1"
+                title="Delete this entire upstream provider"
               >
-                Done
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Provider</span>
               </button>
+              <div className="flex items-center space-x-3">
+                <span className="text-zinc-400 text-[11px]">
+                  {connectionsList.filter((k) => k.isActive).length} active connections
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveConnectionsUpstream(null)}
+                  className="skeuo-btn-primary px-4 py-1.5 rounded-md font-semibold text-xs cursor-pointer"
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>
