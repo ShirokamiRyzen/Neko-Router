@@ -1,6 +1,6 @@
 import { sqlite, db } from "../db";
-import { clientKeys, apiKeys, type ClientKey, type ApiKey } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { clientKeys, apiKeys, upstreamKeys, type ClientKey, type ApiKey } from "../db/schema";
+import { eq, and, or } from "drizzle-orm";
 
 export function getJwtSecret(): string {
   try {
@@ -195,6 +195,89 @@ export async function validateClientKey(
         .run();
     } catch (e) {}
     return keyRecord;
+  }
+
+  // Jika key menggunakan format internal sk-neko- tetapi tidak ditemukan di DB, maka invalid
+  if (providedKey.startsWith("sk-neko-")) {
+    return null;
+  }
+
+  // Cek apakah request ini adalah upstream key atau mode pass-through:
+  // 1. Ada upstream aktif dengan flag followUpstream = 1
+  // 2. Atau key ini cocok dengan apiKey / apiKeys pada upstream providers yang aktif
+  const followUpstream = db
+    .select()
+    .from(upstreamKeys)
+    .where(and(eq(upstreamKeys.followUpstream, 1), eq(upstreamKeys.isActive, 1)))
+    .get();
+
+  let isKnownUpstreamKey = false;
+  if (!followUpstream) {
+    const allActiveUpstreams = db
+      .select()
+      .from(upstreamKeys)
+      .where(eq(upstreamKeys.isActive, 1))
+      .all();
+
+    for (const u of allActiveUpstreams) {
+      if (u.apiKey && u.apiKey.trim() === providedKey.trim()) {
+        isKnownUpstreamKey = true;
+        break;
+      }
+      if (u.apiKeys) {
+        try {
+          const parsed = JSON.parse(u.apiKeys);
+          if (Array.isArray(parsed)) {
+            for (const item of parsed) {
+              const k = typeof item === "string" ? item.trim() : item?.key?.trim();
+              if (k === providedKey.trim()) {
+                isKnownUpstreamKey = true;
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+      if (isKnownUpstreamKey) break;
+    }
+  }
+
+  if (followUpstream || isKnownUpstreamKey) {
+    const followClientKey = db
+      .select()
+      .from(clientKeys)
+      .where(or(eq(clientKeys.isFollowUpstream, 1), eq(clientKeys.key, "bb-default")))
+      .get();
+
+    if (followClientKey && followClientKey.isActive) {
+      try {
+        db.update(clientKeys)
+          .set({ lastUsedAt: Date.now() })
+          .where(eq(clientKeys.id, followClientKey.id))
+          .run();
+      } catch (e) {}
+      return {
+        ...followClientKey,
+        key: providedKey,
+        isFollowUpstream: 1,
+      };
+    }
+
+    return {
+      id: "ck_passthrough_upstream",
+      apiKeyId: null,
+      name: "Pass-Through Upstream",
+      key: providedKey,
+      isActive: 1,
+      rateLimit: null,
+      tokenLimit: null,
+      usedTokens: 0,
+      allowedProviders: "[]",
+      roundRobinProviders: 0,
+      isFollowUpstream: 1,
+      createdAt: Date.now(),
+      lastUsedAt: Date.now(),
+    };
   }
 
   return null;

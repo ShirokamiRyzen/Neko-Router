@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-11)
 
 ## Corpus Check
-- 55 files · ~74,021 words
+- 55 files · ~74,251 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 572 nodes · 897 edges · 30 communities (26 shown, 4 thin omitted)
+- 572 nodes · 898 edges · 30 communities (26 shown, 4 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4fa30413`
+- Built from commit: `a6e72129`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -190,4 +190,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.05647517039922103 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05679974034404414 - nodes in this community are weakly interconnected._

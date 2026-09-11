@@ -85,8 +85,8 @@
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
-    "mtime": 1789143702.5139968,
-    "ast_hash": "8f702bdbade991cde8f0147529434365",
+    "mtime": 1789144275.1340363,
+    "ast_hash": "69daf36b89115884fbb2ac5a8ea37677",
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {

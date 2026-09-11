@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "src/routes/proxy.ts": {
-    "mtime": 1789139638.810928,
-    "ast_hash": "57ff85e325f5e8a274f635aac3779e3d",
+    "mtime": 1789143710.2380114,
+    "ast_hash": "40aee91fcb19852b1e1cb540d4b82c93",
     "semantic_hash": ""
   },
   "src/routes/telemetry.ts": {
@@ -85,13 +85,13 @@
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
-    "mtime": 1789132019.8766744,
-    "ast_hash": "90e21152f4280a5cb111a3945d5397f0",
+    "mtime": 1789143702.5139968,
+    "ast_hash": "8f702bdbade991cde8f0147529434365",
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
-    "mtime": 1789139753.5249512,
-    "ast_hash": "88e43928b88f0533ccb144b7c2f0d1f0",
+    "mtime": 1789143754.6059701,
+    "ast_hash": "f821400f76ba8308697bc56107564369",
     "semantic_hash": ""
   },
   "src/services/router.ts": {
