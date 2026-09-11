@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "src/routes/upstreams.ts": {
-    "mtime": 1789139665.2898536,
-    "ast_hash": "d76ae7461ee3489bb46c517ac3be7add",
+    "mtime": 1789140595.71559,
+    "ast_hash": "0b9cd52f1afb64b46de2868711ad54e2",
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/UpstreamKeysTab.tsx": {
-    "mtime": 1789140211.49504,
-    "ast_hash": "cf57ee49fcbef5065a891c59bbb84443",
+    "mtime": 1789140613.665738,
+    "ast_hash": "0751f2d1e790c63bf9254e77345a4c15",
     "semantic_hash": ""
   },
   "frontend/src/hooks/useTheme.ts": {

@@ -1288,6 +1288,7 @@ export const UpstreamKeysTab: React.FC = () => {
         await apiRequest("/api/upstreams", {
           method: "POST",
           body: JSON.stringify({
+            id: activePreset?.id === "bandelbanget-input" ? "up_bandelbanget_input" : undefined,
             provider,
             name: alias,
             prefix: prefix ? prefix.trim() : null,
@@ -1830,7 +1831,12 @@ export const UpstreamKeysTab: React.FC = () => {
         return Boolean(u.followUpstream) || u.id === "up_bandelbanget_follow";
       }
       if (preset.id === "bandelbanget-input") {
-        return !u.followUpstream && (u.id === "up_bandelbanget_input" || u.name.toLowerCase().includes("input key"));
+        return (
+          !u.followUpstream &&
+          (u.id === "up_bandelbanget_input" ||
+            u.name.toLowerCase().includes("bandelbanget") ||
+            u.name.toLowerCase().includes("input key"))
+        );
       }
       if (preset.domainMatch && u.baseUrl && u.baseUrl.toLowerCase().includes(preset.domainMatch)) {
         return true;

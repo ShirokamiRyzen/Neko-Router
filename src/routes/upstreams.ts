@@ -626,7 +626,10 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         }
       }
 
-      const id = "up_" + crypto.randomUUID().replace(/-/g, "");
+      const id =
+        (body as any).id && typeof (body as any).id === "string" && (body as any).id.trim().length > 0
+          ? (body as any).id.trim()
+          : "up_" + crypto.randomUUID().replace(/-/g, "");
       const now = Date.now();
       const firstActive = normalizedEntries.find((k) => k.isActive);
 
