@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-11)
 
 ## Corpus Check
-- 55 files · ~72,624 words
+- 55 files · ~73,238 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 570 nodes · 884 edges · 29 communities (25 shown, 4 thin omitted)
+- 570 nodes · 888 edges · 30 communities (26 shown, 4 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `7cec945f`
+- Built from commit: `26dea6f0`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -36,6 +36,7 @@
 - frontend/tsconfig.json
 - 5. Router Management APIs
 - Neko-Router API Documentation
+- services/proxy.ts
 - E. Upstream Router Providers & Multi-Key Pool
 - B. Client Keys Endpoints
 - B.2 Router Integration API Keys (`/api/router-keys`)
@@ -52,25 +53,25 @@
 6. `compilerOptions` - 15 edges
 7. `proxyAnthropicMessages()` - 14 edges
 8. `parseUpstreamKeyEntries()` - 13 edges
-9. `db` - 11 edges
+9. `db` - 12 edges
 10. `Design System: Taste Standard` - 11 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `UpstreamSelectionResult` --references--> `UpstreamKey`  [EXTRACTED]
   src/services/router.ts → src/db/schema.ts
+- `proxyOpenAIChatCompletions()` --calls--> `getCopilotInternalToken()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/copilot.ts
+- `proxyOpenAIChatCompletions()` --calls--> `transformCopilotRequestBody()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/copilot.ts
 - `proxyAnthropicMessages()` --calls--> `getOptimizationSettings()`  [EXTRACTED]
   src/services/proxy.ts → src/services/optimizer.ts
 - `proxyOpenAIChatCompletions()` --calls--> `getOptimizationSettings()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/optimizer.ts
-- `proxyAnthropicMessages()` --calls--> `optimizeRequestBody()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/optimizer.ts
-- `proxyOpenAIChatCompletions()` --calls--> `optimizeRequestBody()`  [EXTRACTED]
   src/services/proxy.ts → src/services/optimizer.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (29 total, 4 thin omitted)
+## Communities (30 total, 4 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.07
@@ -81,8 +82,8 @@ Cohesion: 0.06
 Nodes (33): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/vite, @types/bun, @types/node, @types/react (+25 more)
 
 ### Community 2 - "schema.ts"
-Cohesion: 0.05
-Nodes (66): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+58 more)
+Cohesion: 0.06
+Nodes (59): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+51 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -97,8 +98,8 @@ Cohesion: 0.06
 Nodes (46): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), CodeSnippetViewerProps, DashboardTab(), formatTimeAgo() (+38 more)
 
 ### Community 9 - "upstreams.ts"
-Cohesion: 0.06
-Nodes (72): db, UpstreamKey, upstreamKeys, adjectives, nouns, ANTIGRAVITY_CONFIG, ANTIGRAVITY_DEFAULT_MODELS, buildAntigravityAuthUrl() (+64 more)
+Cohesion: 0.08
+Nodes (37): db, upstreamKeys, adjectives, nouns, ANTIGRAVITY_CONFIG, ANTIGRAVITY_DEFAULT_MODELS, buildAntigravityAuthUrl(), exchangeAntigravityCode() (+29 more)
 
 ### Community 10 - "compilerOptions"
 Cohesion: 0.08
@@ -144,6 +145,10 @@ Nodes (8): 1. Aggregated Usage, Cached Tokens & Latency Metrics, 1. Get Active O
 Cohesion: 0.07
 Nodes (29): 1. Installation:, 1. OpenAI Streaming:, 1. Overview & Base URLs, 2. Anthropic Non-Streaming:, 2. Authentication Mechanisms, 2. Usage with Neko-Router `App` Type:, 3. AI Proxy Endpoints, 4. SDK Integration Guides (+21 more)
 
+### Community 23 - "services/proxy.ts"
+Cohesion: 0.10
+Nodes (42): UpstreamKey, AVAILABLE_ENDPOINTS, formatBytes(), formatUptime(), getV1Directory(), MOTIVATIONAL_QUOTES, proxyRoutes, ensureAntigravityAccessToken() (+34 more)
+
 ### Community 24 - "E. Upstream Router Providers & Multi-Key Pool"
 Cohesion: 0.25
 Nodes (8): 1. List All Upstream Providers, 2. Create Upstream Provider with Multi-Key Pool, 3. Edit Upstream Provider, 4. Fetch Models from Upstream Provider (Default OFF), 5. Toggle Model Status for Upstream, 6. Test Upstream Connectivity, 7. Delete Upstream Provider, E. Upstream Router Providers & Multi-Key Pool
@@ -185,4 +190,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.051425213047311194 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.05765765765765766 - nodes in this community are weakly interconnected._

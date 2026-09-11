@@ -243,6 +243,7 @@ export const UpstreamKeysTab: React.FC = () => {
   // Add / Edit Modal State (9Router style)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUpstream, setEditingUpstream] = useState<UpstreamKeyItem | null>(null);
+  const [activePreset, setActivePreset] = useState<ProviderPreset | null>(null);
   const [provider, setProvider] = useState<"openai" | "anthropic">("openai");
   const [alias, setAlias] = useState("");
   const [prefix, setPrefix] = useState("");
@@ -974,6 +975,9 @@ export const UpstreamKeysTab: React.FC = () => {
     setCheckStatus(null);
     setModalError("");
 
+    const presetObj = typeof preset === "object" ? (preset as ProviderPreset) : null;
+    setActivePreset(presetObj);
+
     if (typeof preset === "object" && (preset.id === "bandelbanget-follow" || Boolean((preset as any).followUpstream))) {
       const found = upstreams.find((u) => Boolean(u.followUpstream) || u.id === "up_bandelbanget_follow");
       openPassThroughModal(found || null);
@@ -1042,6 +1046,13 @@ export const UpstreamKeysTab: React.FC = () => {
 
   const openEditModal = async (item: UpstreamKeyItem) => {
     setEditingUpstream(item);
+    const matchedPreset = PRESET_PROVIDERS.find(
+      (p) =>
+        p.id === item.id ||
+        (p.domainMatch && item.baseUrl?.toLowerCase().includes(p.domainMatch)) ||
+        p.name.toLowerCase() === item.name.toLowerCase()
+    );
+    setActivePreset(matchedPreset || null);
     setProvider(item.provider);
     setAlias(item.name);
     setPrefix(item.prefix || "");
@@ -2098,10 +2109,7 @@ export const UpstreamKeysTab: React.FC = () => {
                           openCreateModal(preset);
                         }
                       }}
-                      className={`p-4 rounded-xl border flex flex-col justify-between transition-all cursor-pointer group ${isConnected
-                        ? "skeuo-card border-zinc-400/40 dark:border-zinc-700/60 shadow-sm"
-                        : "bg-zinc-50/60 dark:bg-zinc-900/30 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400/50 dark:hover:border-zinc-600"
-                        }`}
+                      className="p-4 rounded-xl skeuo-card hover:border-zinc-300 dark:hover:border-zinc-700 transition-all cursor-pointer flex flex-col justify-between group"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2">
@@ -2222,11 +2230,7 @@ export const UpstreamKeysTab: React.FC = () => {
                           }
                         }
                       }}
-                      className={`p-4 rounded-xl border flex flex-col justify-between transition-all cursor-pointer group ${
-                        isConnected
-                          ? "skeuo-card border-zinc-400/40 dark:border-zinc-700/60 shadow-sm"
-                          : "bg-zinc-50/60 dark:bg-zinc-900/30 border-zinc-200 dark:border-zinc-800 hover:border-zinc-400/50 dark:hover:border-zinc-600"
-                      }`}
+                      className="p-4 rounded-xl skeuo-card hover:border-zinc-300 dark:hover:border-zinc-700 transition-all cursor-pointer flex flex-col justify-between group"
                     >
                       <div>
                         <div className="flex items-start justify-between gap-2">
@@ -2522,18 +2526,22 @@ export const UpstreamKeysTab: React.FC = () => {
                 <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
               </div>
               <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                {isAccountMode
+                {activePreset
+                  ? editingUpstream
+                    ? `Edit ${activePreset.name}`
+                    : `Setup ${activePreset.name}`
+                  : isAccountMode
                   ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
                     ? editingUpstream
-                      ? "Edit Provider Antigravity (Google OAuth)"
-                      : "Setup Provider Antigravity (Google OAuth Multi-Account)"
+                      ? "Edit Antigravity"
+                      : "Setup Antigravity"
                     : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
                       ? editingUpstream
-                        ? "Edit Provider OpenAI Codex (OAuth)"
-                        : "Setup Provider OpenAI Codex (ChatGPT OAuth Multi-Account)"
+                        ? "Edit OpenAI Codex"
+                        : "Setup OpenAI Codex"
                       : editingUpstream
-                        ? "Edit Provider GitHub Copilot (OAuth)"
-                        : "Setup Provider GitHub Copilot (OAuth Multi-Account)"
+                        ? "Edit GitHub Copilot"
+                        : "Setup GitHub Copilot"
                   : editingUpstream
                     ? `Edit ${provider === "openai" ? "OpenAI" : "Anthropic"} Compatible`
                     : `Add ${provider === "openai" ? "OpenAI" : "Anthropic"} Compatible`}
@@ -2632,93 +2640,124 @@ export const UpstreamKeysTab: React.FC = () => {
             )}
 
             <form onSubmit={handleSaveUpstream} className="space-y-3.5 text-xs">
-              {/* Name */}
-              <div>
-                <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  {isAccountMode ? "Provider / Pool Name *" : "Name *"}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={alias}
-                  onChange={(e) => setAlias(e.target.value)}
-                  placeholder={
-                    isAccountMode
-                      ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
-                        ? "Antigravity Pool"
-                        : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
-                          ? "OpenAI Codex Pool"
-                          : "GitHub Copilot Pool"
-                      : provider === "openai"
-                        ? "OpenAI Compatible (Prod)"
-                        : "Anthropic Compatible"
-                  }
-                  className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-                />
-                <p className="mt-1 text-[10px] text-zinc-400">
-                  {isAccountMode ? "Identifier name for this OAuth account pool." : "Required. A friendly label for this node."}
-                </p>
-              </div>
-
-              {/* Prefix */}
-              <div>
-                <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Prefix (optional)
-                </label>
-                <input
-                  type="text"
-                  value={prefix}
-                  onChange={(e) => setPrefix(e.target.value)}
-                  placeholder={
-                    isAccountMode
-                      ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
-                        ? "antigravity"
-                        : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
-                          ? "codex"
-                          : "copilot"
-                      : "e.g. oc-prod"
-                  }
-                  className="w-full px-3 py-2 rounded-md skeuo-inset font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-                />
-                <p className="mt-1 text-[10px] text-zinc-400">
-                  Optional. Used as the provider prefix for model IDs (e.g. codex/gpt-5.4).
-                </p>
-              </div>
-
-              {/* API Type */}
-              <div>
-                <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  API Type
-                </label>
-                <select
-                  value={apiType}
-                  onChange={(e) => setApiType(e.target.value)}
-                  className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600 cursor-pointer"
-                >
-                  <option value="Chat Completions">Chat Completions</option>
-                  <option value="Anthropic Messages">Messages API</option>
-                  <option value="Completions">Completions</option>
-                </select>
-              </div>
-
-              {/* Base URL - Hidden for OAuth providers */}
-              {!isAccountMode && (
-                <div>
-                  <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                    Base URL *
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder={provider === "openai" ? "https://api.openai.com/v1" : "https://api.anthropic.com"}
-                    className="w-full px-3 py-2 rounded-md skeuo-inset font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-                  />
-                  <p className="mt-1 text-[10px] text-zinc-400">
-                    Use the base URL (ending in /v1 for OpenAI compatible).
-                  </p>
+              {activePreset && !isAccountMode ? (
+                <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-9 h-9 rounded-lg ${activePreset.iconBg} flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden shadow-xs`}>
+                      <img
+                        src="https://bandelbanget.xyz/favicon.ico"
+                        alt={activePreset.name}
+                        className="w-5 h-5 rounded object-contain"
+                        onError={(e) => { e.currentTarget.style.display = "none"; }}
+                      />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center space-x-2">
+                        <span>{activePreset.name}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/15 text-purple-400 font-semibold border border-purple-500/30">
+                          {activePreset.badge || "Template Provider"}
+                        </span>
+                      </div>
+                      <div className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+                        {baseUrl}
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-emerald-500 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                    Template Preconfigured
+                  </span>
                 </div>
+              ) : (
+                <>
+                  {/* Name */}
+                  <div>
+                    <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      {isAccountMode ? "Provider / Pool Name *" : "Name *"}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={alias}
+                      onChange={(e) => setAlias(e.target.value)}
+                      placeholder={
+                        isAccountMode
+                          ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
+                            ? "Antigravity Pool"
+                            : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
+                              ? "OpenAI Codex Pool"
+                              : "GitHub Copilot Pool"
+                          : provider === "openai"
+                            ? "OpenAI Compatible (Prod)"
+                            : "Anthropic Compatible"
+                      }
+                      className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                    />
+                    <p className="mt-1 text-[10px] text-zinc-400">
+                      {isAccountMode ? "Identifier name for this OAuth account pool." : "Required. A friendly label for this node."}
+                    </p>
+                  </div>
+
+                  {/* Prefix */}
+                  <div>
+                    <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Prefix (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={prefix}
+                      onChange={(e) => setPrefix(e.target.value)}
+                      placeholder={
+                        isAccountMode
+                          ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
+                            ? "antigravity"
+                            : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
+                              ? "codex"
+                              : "copilot"
+                          : "e.g. oc-prod"
+                      }
+                      className="w-full px-3 py-2 rounded-md skeuo-inset font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                    />
+                    <p className="mt-1 text-[10px] text-zinc-400">
+                      Optional. Used as the provider prefix for model IDs (e.g. codex/gpt-5.4).
+                    </p>
+                  </div>
+
+                  {/* API Type */}
+                  <div>
+                    <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      API Type
+                    </label>
+                    <select
+                      value={apiType}
+                      onChange={(e) => setApiType(e.target.value)}
+                      className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600 cursor-pointer"
+                    >
+                      <option value="Chat Completions">Chat Completions</option>
+                      <option value="Anthropic Messages">Messages API</option>
+                      <option value="Completions">Completions</option>
+                    </select>
+                  </div>
+
+                  {/* Base URL - Hidden for OAuth providers */}
+                  {!isAccountMode && (
+                    <div>
+                      <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                        Base URL *
+                      </label>
+                      <input
+                        type="url"
+                        required
+                        value={baseUrl}
+                        onChange={(e) => setBaseUrl(e.target.value)}
+                        placeholder={provider === "openai" ? "https://api.openai.com/v1" : "https://api.anthropic.com"}
+                        className="w-full px-3 py-2 rounded-md skeuo-inset font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                      />
+                      <p className="mt-1 text-[10px] text-zinc-400">
+                        Use the base URL (ending in /v1 for OpenAI compatible).
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Multi-Key Pool / Account Pool & Round Robin */}

@@ -216,7 +216,7 @@ export const proxyRoutes = new Elysia()
 
     // Jika ada SK yang valid, saring model sesuai allowed providers; jika tanpa SK, tampilkan semua model aktif
     const clientKey = key ? await validateClientKey(key) : null;
-    return proxyOpenAIModels(clientKey);
+    return proxyOpenAIModels(clientKey, request.headers);
   })
   .get("/models", async ({ request }) => {
     const authHeader = request.headers.get("Authorization");
@@ -226,7 +226,7 @@ export const proxyRoutes = new Elysia()
       : xApiKey?.trim();
 
     const clientKey = key ? await validateClientKey(key) : null;
-    return proxyOpenAIModels(clientKey);
+    return proxyOpenAIModels(clientKey, request.headers);
   })
 
   // Anthropic Messages

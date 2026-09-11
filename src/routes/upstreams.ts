@@ -898,10 +898,26 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
     try {
       if (isFollow) {
         try {
-          const liveModels = await fetchBandelBangetLiveModels();
-          fetchedModelIds = liveModels.map((m: any) => m.id);
-        } catch (e) {
-          fetchedModelIds = ["auto", "deepseek-v4-flash", "claude-opus-5", "gpt-5.6", "glm-5.1", "kimi-k2.7-code"];
+          const targetBase = (upstream.baseUrl || "https://bandelbanget.xyz/v1").replace(/\/+$/, "");
+          const targetUrl = targetBase.endsWith("/v1") ? `${targetBase}/models` : `${targetBase}/v1/models`;
+          const res = await fetch(targetUrl, {
+            headers: key ? { Authorization: `Bearer ${key}` } : { Accept: "application/json" },
+            signal: AbortSignal.timeout(15000),
+          });
+          if (res.ok) {
+            const data = (await res.json()) as any;
+            if (Array.isArray(data?.data)) {
+              fetchedModelIds = data.data.map((m: any) => m.id).filter(Boolean);
+            }
+          }
+        } catch (e) {}
+        if (fetchedModelIds.length === 0) {
+          try {
+            const liveModels = await fetchBandelBangetLiveModels();
+            fetchedModelIds = liveModels.map((m: any) => m.id);
+          } catch (e) {
+            fetchedModelIds = ["auto", "deepseek-v4-flash", "claude-opus-5", "gpt-5.6", "glm-5.1", "kimi-k2.7-code"];
+          }
         }
       } else if (upstream.provider === "openai") {
         const isCopilot =
@@ -1005,7 +1021,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
     // All newly fetched models default to enabled: false!
     const newModels = uniqueIds.map((modelId) => ({
       id: modelId,
-      enabled: existingEnabledMap.get(modelId) ?? false, // Default is OFF!
+      enabled: isFollow ? true : (existingEnabledMap.get(modelId) ?? false),
     }));
 
     db.update(upstreamKeys)

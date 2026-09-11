@@ -7,8 +7,10 @@ import {
   parseUpstreamKeyEntries,
 } from "./router";
 import { recordTelemetry, registerActiveRequest } from "./telemetry";
-import { incrementClientKeyTokens, checkClientRateLimit } from "./auth";
-import type { ClientKey, UpstreamKey } from "../db/schema";
+import { incrementClientKeyTokens, checkClientRateLimit, validateClientKey } from "./auth";
+import { db } from "../db";
+import { upstreamKeys, type ClientKey, type UpstreamKey } from "../db/schema";
+import { eq, or, like } from "drizzle-orm";
 import {
   getOptimizationSettings,
   optimizeRequestBody,
@@ -1260,7 +1262,86 @@ function enrichModel(provider: string, m: any, defaultCreated?: number) {
   return modelObj;
 }
 
-export async function proxyOpenAIModels(clientKey: ClientKey | null): Promise<Response> {
+export async function proxyOpenAIModels(
+  clientKey: ClientKey | null,
+  headers?: Headers
+): Promise<Response> {
+  const authHeader = headers?.get("Authorization");
+  const xApiKey = headers?.get("x-api-key");
+  const passedKey = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : xApiKey?.trim();
+
+  // Find if there is a followUpstream / pass-through provider
+  const followUpstream = db
+    .select()
+    .from(upstreamKeys)
+    .where(
+      or(
+        eq(upstreamKeys.followUpstream, 1),
+        like(upstreamKeys.baseUrl, "%bandelbanget%")
+      )
+    )
+    .get();
+
+  // Determine if this request is a pass-through request
+  const isPassThrough = Boolean(
+    (clientKey && (
+      clientKey.isFollowUpstream === 1 ||
+      (clientKey.allowedProviders && (
+        clientKey.allowedProviders.includes("up_bandelbanget_follow") ||
+        clientKey.allowedProviders.includes("bb") ||
+        (followUpstream && clientKey.allowedProviders.includes(followUpstream.id))
+      ))
+    )) ||
+    // If the client passed their upstream BB key directly (not an sk-neko- key)
+    (passedKey && !passedKey.startsWith("sk-neko-"))
+  );
+
+  if (isPassThrough && followUpstream) {
+    const targetBase = (followUpstream.baseUrl || "https://bandelbanget.xyz/v1").replace(/\/+$/, "");
+    const targetUrl = targetBase.endsWith("/v1") ? `${targetBase}/models` : `${targetBase}/v1/models`;
+
+    // Forward with the client's key, or fallback to default upstream key
+    let authToSend: string;
+    if (passedKey && !passedKey.startsWith("sk-neko-") && passedKey !== "bb-default") {
+      authToSend = `Bearer ${passedKey}`;
+    } else if (followUpstream.apiKey) {
+      authToSend = `Bearer ${followUpstream.apiKey}`;
+    } else {
+      authToSend = authHeader || "Bearer bb-default";
+    }
+
+    try {
+      const upstreamRes = await fetch(targetUrl, {
+        method: "GET",
+        headers: {
+          Authorization: authToSend,
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (upstreamRes.ok) {
+        const data = (await upstreamRes.json()) as any;
+        if (Array.isArray(data?.data)) {
+          data.data = data.data.map((m: any) => ({
+            ...m,
+            owned_by: "NekoRouter",
+          }));
+        }
+        return new Response(JSON.stringify(data), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      } else {
+        console.warn("Pass-through /models upstream responded with status", upstreamRes.status);
+      }
+    } catch (err) {
+      console.error("Failed to proxy /v1/models directly to upstream:", err);
+    }
+  }
+
   let activeOpenAI = getActiveUpstreamKeys("openai");
   let activeAnthropic = getActiveUpstreamKeys("anthropic");
   let allActive = [...activeOpenAI, ...activeAnthropic];
@@ -1282,15 +1363,22 @@ export async function proxyOpenAIModels(clientKey: ClientKey | null): Promise<Re
         headers: { "Content-Type": "application/json" },
       });
     }
-    allActive = allActive.filter(
-      (u) => allowed.includes(u.id) || allowed.includes(u.provider)
-    );
+    const hasSpecificUpstreamIds = allowed.some((a) => a.startsWith("up_"));
+    allActive = allActive.filter((u) => {
+      if (hasSpecificUpstreamIds) {
+        return allowed.includes(u.id);
+      }
+      return allowed.includes(u.id) || allowed.includes(u.provider);
+    });
   }
 
   // Kumpulkan hanya model yang secara eksplisit diaktifkan (enabled: true) pada provider yang aktif
   const enabledModelMap = new Map<string, any>();
 
   for (const upstream of allActive) {
+    // Exclude follow upstream from local manual model list aggregation
+    if (Boolean((upstream as any).followUpstream)) continue;
+
     const rawPrefix = upstream.prefix ? upstream.prefix.trim() : "";
     const effectivePrefix = rawPrefix.length > 0 ? rawPrefix : upstream.provider;
     const models = parseUpstreamModels(upstream.models);

@@ -22,6 +22,7 @@
   "20": "vite.config.ts",
   "21": "5. Router Management APIs",
   "22": "Neko-Router API Documentation",
+  "23": "services/proxy.ts",
   "24": "E. Upstream Router Providers & Multi-Key Pool",
   "25": "B. Client Keys Endpoints",
   "26": "B.2 Router Integration API Keys (`/api/router-keys`)",

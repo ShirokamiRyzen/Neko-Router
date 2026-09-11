@@ -70,8 +70,8 @@
     "semantic_hash": ""
   },
   "src/routes/proxy.ts": {
-    "mtime": 1789132139.431168,
-    "ast_hash": "4b9b189af75e617628b79a0d2e03af9a",
+    "mtime": 1789139638.810928,
+    "ast_hash": "57ff85e325f5e8a274f635aac3779e3d",
     "semantic_hash": ""
   },
   "src/routes/telemetry.ts": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "src/routes/upstreams.ts": {
-    "mtime": 1789138462.7280622,
-    "ast_hash": "8c216a5f92499a5bb78faf3142f46d98",
+    "mtime": 1789139665.2898536,
+    "ast_hash": "d76ae7461ee3489bb46c517ac3be7add",
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
-    "mtime": 1789132027.1512609,
-    "ast_hash": "6dd3dd53af2a419206ab57972c954363",
+    "mtime": 1789139753.5249512,
+    "ast_hash": "88e43928b88f0533ccb144b7c2f0d1f0",
     "semantic_hash": ""
   },
   "src/services/router.ts": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/UpstreamKeysTab.tsx": {
-    "mtime": 1789137576.0813744,
-    "ast_hash": "c412dde260bd8ccf4f32da29791aebe0",
+    "mtime": 1789138772.0776775,
+    "ast_hash": "d17eb3469b2183e1ea20c46b61c3fc6c",
     "semantic_hash": ""
   },
   "frontend/src/hooks/useTheme.ts": {
