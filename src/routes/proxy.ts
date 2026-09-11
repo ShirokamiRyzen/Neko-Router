@@ -166,20 +166,20 @@ export const proxyRoutes = new Elysia()
       ? authHeader.slice(7).trim()
       : xApiKey?.trim();
 
-    if (!key) {
-      set.status = 401;
-      return {
-        error: {
-          message:
-            "Missing API key. Pass your Neko-Router key via 'Authorization: Bearer <key>' or 'x-api-key: <key>'.",
-          type: "invalid_request_error",
-          code: "invalid_api_key",
-        },
-      };
-    }
-
-    const clientKey = await validateClientKey(key);
+    const effectiveKey = key || "bb-default";
+    const clientKey = await validateClientKey(effectiveKey);
     if (!clientKey) {
+      if (!key) {
+        set.status = 401;
+        return {
+          error: {
+            message:
+              "Missing API key. Pass your Neko-Router key via 'Authorization: Bearer <key>' or 'x-api-key: <key>'.",
+            type: "invalid_request_error",
+            code: "invalid_api_key",
+          },
+        };
+      }
       set.status = 401;
       return {
         error: {
@@ -235,20 +235,20 @@ export const proxyRoutes = new Elysia()
     const xApiKey = request.headers.get("x-api-key");
     const key = xApiKey?.trim() || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null);
 
-    if (!key) {
-      set.status = 401;
-      return {
-        type: "error",
-        error: {
-          type: "authentication_error",
-          message:
-            "Missing API key. Pass your Neko-Router key via 'x-api-key: <key>' or 'Authorization: Bearer <key>'.",
-        },
-      };
-    }
-
-    const clientKey = await validateClientKey(key);
+    const effectiveKey = key || "bb-default";
+    const clientKey = await validateClientKey(effectiveKey);
     if (!clientKey) {
+      if (!key) {
+        set.status = 401;
+        return {
+          type: "error",
+          error: {
+            type: "authentication_error",
+            message:
+              "Missing API key. Pass your Neko-Router key via 'x-api-key: <key>' or 'Authorization: Bearer <key>'.",
+          },
+        };
+      }
       set.status = 401;
       return {
         type: "error",

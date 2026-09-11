@@ -46,7 +46,7 @@ export function parseUpstreamKeyEntries(
         parsed.forEach((item, index) => {
           if (typeof item === "string") {
             const trimmed = item.trim();
-            if (trimmed.length > 0) {
+            if (trimmed.length > 0 && trimmed !== "bb-default" && trimmed !== "sk-bb-placeholder") {
               result.push({
                 id: `key_${index + 1}_${trimmed.slice(-4)}`,
                 name: `API Key #${index + 1}`,
@@ -56,7 +56,7 @@ export function parseUpstreamKeyEntries(
             }
           } else if (item && typeof item === "object") {
             const keyVal = typeof item.key === "string" ? item.key.trim() : "";
-            if (keyVal.length > 0) {
+            if (keyVal.length > 0 && keyVal !== "bb-default" && keyVal !== "sk-bb-placeholder") {
               result.push({
                 id: item.id || `key_${index + 1}_${keyVal.slice(-4)}`,
                 name: item.name ? String(item.name).trim() : `API Key #${index + 1}`,
@@ -69,12 +69,17 @@ export function parseUpstreamKeyEntries(
             }
           }
         });
-        if (result.length > 0) return result;
+        return result;
       }
     } catch (e) {}
   }
 
-  if (fallbackKey && fallbackKey.trim().length > 0) {
+  if (
+    fallbackKey &&
+    fallbackKey.trim().length > 0 &&
+    fallbackKey !== "bb-default" &&
+    fallbackKey !== "sk-bb-placeholder"
+  ) {
     const trimmed = fallbackKey.trim();
     return [
       {
@@ -206,6 +211,18 @@ export function selectUpstreamKey(
 
   if (cleanTarget.length > 0 && cleanTarget !== "unknown") {
     eligibleKeys = eligibleKeys.filter((k) => {
+      // Pass-through: 100% bypass model check because it directly forwards to upstream
+      if (Boolean((k as any).followUpstream)) {
+        if (prefixInTarget) {
+          const kPrefix = (k.prefix ? k.prefix.trim() : "").toLowerCase();
+          const kProvider = k.provider.toLowerCase();
+          if (kPrefix.length > 0 && kPrefix !== prefixInTarget && kProvider !== prefixInTarget) {
+            return false;
+          }
+        }
+        return true;
+      }
+
       // If client explicitly requested a prefix (e.g. "ryzumi/auto" or "openai/gpt-4o"), filter by prefix
       if (prefixInTarget) {
         const kPrefix = (k.prefix ? k.prefix.trim() : "").toLowerCase();

@@ -186,21 +186,36 @@ export async function validateClientKey(
     .where(eq(clientKeys.key, providedKey))
     .get();
 
-  if (!keyRecord || !keyRecord.isActive) {
-    return null;
+  if (keyRecord && keyRecord.isActive) {
+    // Update lastUsedAt asynchronously
+    try {
+      db.update(clientKeys)
+        .set({ lastUsedAt: Date.now() })
+        .where(eq(clientKeys.id, keyRecord.id))
+        .run();
+    } catch (e) {}
+    return keyRecord;
   }
 
-  // Update lastUsedAt asynchronously
-  try {
-    db.update(clientKeys)
-      .set({ lastUsedAt: Date.now() })
-      .where(eq(clientKeys.id, keyRecord.id))
-      .run();
-  } catch (e) {
-    // ignore
+  // If no direct key matched, check if an active Follow Upstream client key exists.
+  // In Follow Upstream mode, the router forwards requests directly to BB using default BB key or valid BB key.
+  const followKeyRecord = db
+    .select()
+    .from(clientKeys)
+    .where(eq(clientKeys.isFollowUpstream, 1))
+    .get();
+
+  if (followKeyRecord && followKeyRecord.isActive) {
+    try {
+      db.update(clientKeys)
+        .set({ lastUsedAt: Date.now() })
+        .where(eq(clientKeys.id, followKeyRecord.id))
+        .run();
+    } catch (e) {}
+    return followKeyRecord;
   }
 
-  return keyRecord;
+  return null;
 }
 
 export function incrementClientKeyTokens(clientKeyId: string, tokens: number): void {

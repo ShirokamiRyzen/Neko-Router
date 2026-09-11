@@ -27,6 +27,7 @@ export const clientKeys = sqliteTable("client_keys", {
   usedTokens: integer("used_tokens").notNull().default(0), // consumed tokens
   allowedProviders: text("allowed_providers").notNull().default("[]"), // JSON string array of upstream IDs. Default '[]' (ALL OFF)
   roundRobinProviders: integer("round_robin_providers").notNull().default(1), // 1 = round robin across eligible providers, 0 = primary only
+  isFollowUpstream: integer("is_follow_upstream").notNull().default(0), // 1 = follow upstream pass-through mode
   createdAt: integer("created_at").notNull(),
   lastUsedAt: integer("last_used_at"),
 });
@@ -43,6 +44,7 @@ export const upstreamKeys = sqliteTable("upstream_keys", {
   isActive: integer("is_active").notNull().default(1),
   roundRobin: integer("round_robin").notNull().default(1), // 1 = round-robin across active keys, 0 = primary/sequential
   weight: integer("weight").notNull().default(1),
+  followUpstream: integer("follow_upstream").notNull().default(0), // 1 = follow upstream pass-through & live models
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 });

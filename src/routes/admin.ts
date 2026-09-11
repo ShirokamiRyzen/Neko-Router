@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { DB_PATH, checkpointWal, reloadDatabase, sqlite } from "../db";
+import { DB_PATH, checkpointWal, initTablesSync, sqlite } from "../db";
 import { authMiddleware } from "../middleware/auth";
 import { Database } from "bun:sqlite";
 import { unlinkSync, copyFileSync, existsSync } from "fs";
@@ -154,31 +154,85 @@ export const adminRoutes = new Elysia({ prefix: "/api/admin" })
           };
         }
 
-        // Backup current database
-        if (existsSync(DB_PATH)) {
-          copyFileSync(DB_PATH, `${DB_PATH}.bak`);
-        }
-
-        // Safely replace current DB
-        checkpointWal();
+        // Backup current database using online SQLite VACUUM INTO
+        const backupPath = `${DB_PATH}.bak`;
         try {
-          sqlite.close();
-        } catch (e) {
-          // ignore
+          if (existsSync(backupPath)) unlinkSync(backupPath);
+          sqlite.run("VACUUM INTO ?", [backupPath]);
+        } catch {
+          try {
+            copyFileSync(DB_PATH, backupPath);
+          } catch {}
         }
 
-        // Remove old wal and shm files
-        const walPath = `${DB_PATH}-wal`;
-        const shmPath = `${DB_PATH}-shm`;
-        if (existsSync(walPath)) unlinkSync(walPath);
-        if (existsSync(shmPath)) unlinkSync(shmPath);
+        // Attach imported DB and atomically synchronize tables
+        // Avoids file locking (EBUSY) issues on Windows
+        const normalizedTempPath = tempPath.replace(/\\/g, "/");
+        sqlite.run("ATTACH DATABASE ? AS imported_db", [normalizedTempPath]);
+        try {
+          const syncTx = sqlite.transaction(() => {
+            sqlite.run("PRAGMA foreign_keys = OFF;");
 
-        // Move temp file to DB_PATH
-        copyFileSync(tempPath, DB_PATH);
-        unlinkSync(tempPath);
+            const importedTables = (
+              sqlite
+                .query(
+                  "SELECT name FROM imported_db.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                )
+                .all() as { name: string }[]
+            ).map((r) => r.name);
 
-        // Reload DB instance
-        reloadDatabase();
+            const mainTables = (
+              sqlite
+                .query(
+                  "SELECT name FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                )
+                .all() as { name: string }[]
+            ).map((r) => r.name);
+
+            for (const table of importedTables) {
+              if (mainTables.includes(table)) {
+                const mainCols = (
+                  sqlite.query(`PRAGMA main.table_info("${table}")`).all() as {
+                    name: string;
+                  }[]
+                ).map((c) => c.name);
+                const importedCols = (
+                  sqlite
+                    .query(`PRAGMA imported_db.table_info("${table}")`)
+                    .all() as { name: string }[]
+                ).map((c) => c.name);
+                const commonCols = mainCols.filter((c) =>
+                  importedCols.includes(c)
+                );
+
+                if (commonCols.length > 0) {
+                  const colList = commonCols.map((c) => `"${c}"`).join(", ");
+                  sqlite.run(`DELETE FROM main."${table}";`);
+                  sqlite.run(
+                    `INSERT INTO main."${table}" (${colList}) SELECT ${colList} FROM imported_db."${table}";`
+                  );
+                }
+              }
+            }
+
+            sqlite.run("PRAGMA foreign_keys = ON;");
+          });
+
+          syncTx();
+        } finally {
+          try {
+            sqlite.run("DETACH DATABASE imported_db;");
+          } catch {}
+        }
+
+        // Clean up temp file
+        if (existsSync(tempPath)) {
+          unlinkSync(tempPath);
+        }
+
+        // Checkpoint WAL to flush imported data cleanly and verify schema
+        initTablesSync();
+        checkpointWal();
 
         return {
           success: true,

@@ -60,6 +60,7 @@ export interface ClientKeyItem {
   usedTokens: number;
   allowedProviders?: string[];
   roundRobinProviders?: boolean;
+  isFollowUpstream?: boolean;
   createdAt: number;
   lastUsedAt: number | null;
   totalRequests: number;
@@ -70,6 +71,12 @@ export interface UpstreamModelItem {
   id: string;
   name?: string;
   enabled: boolean;
+  vision?: boolean;
+  grade?: string;
+  modalities?: {
+    input?: string[];
+    output?: string[];
+  };
 }
 
 export interface UpstreamKeyEntryItem {
@@ -92,6 +99,7 @@ export interface UpstreamKeyItem {
   isActive: number;
   roundRobin?: boolean;
   weight: number;
+  followUpstream?: boolean;
   createdAt: number;
   updatedAt: number;
   apiKey?: string;
@@ -104,6 +112,30 @@ export interface UpstreamKeyItem {
   models?: UpstreamModelItem[];
   totalModelsCount?: number;
   enabledModelsCount?: number;
+}
+
+export interface BandelBangetCardInfo {
+  id: string;
+  name: string;
+  baseUrl: string;
+  prefix?: string | null;
+  isActive: number;
+  followUpstream: boolean;
+  mode: "follow_upstream" | "input_key";
+  models: UpstreamModelItem[];
+  totalModelsCount: number;
+  enabledModelsCount: number;
+  activeKeysCount: number;
+  totalKeysCount: number;
+  clientKeysUsingCount?: number;
+}
+
+export interface BandelBangetStatusResponse {
+  success: boolean;
+  cards: {
+    followUpstream: BandelBangetCardInfo;
+    inputKey: BandelBangetCardInfo;
+  };
 }
 
 export interface TelemetryStats {

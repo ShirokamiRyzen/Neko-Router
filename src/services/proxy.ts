@@ -317,9 +317,23 @@ export async function proxyOpenAIChatCompletions(
       }
       requestPayload = transformChatToCodexResponses(optimizedBody, model);
     } else {
+      const isFollowUpstream = Boolean((upstream as any).followUpstream);
+      let authHeaderVal = `Bearer ${currentUpstreamKey}`;
+      if (isFollowUpstream) {
+        // In Follow Upstream mode, forward client's valid BB key if passed, or fallback to BB default key
+        const clientAuth = reqHeaders.get("Authorization");
+        const clientKeyHeader = reqHeaders.get("x-api-key");
+        const passedKey = clientAuth?.startsWith("Bearer ") ? clientAuth.slice(7).trim() : clientKeyHeader?.trim();
+        if (passedKey && !passedKey.startsWith("sk-neko-") && passedKey !== "bb-default") {
+          authHeaderVal = `Bearer ${passedKey}`;
+        } else {
+          authHeaderVal = "Bearer bb-default";
+        }
+      }
+
       upstreamHeaders = {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${currentUpstreamKey}`,
+        Authorization: authHeaderVal,
       };
     }
 

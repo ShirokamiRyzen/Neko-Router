@@ -9,6 +9,7 @@ import { upstreamRoutes } from "./routes/upstreams";
 import { telemetryRoutes } from "./routes/telemetry";
 import { adminRoutes } from "./routes/admin";
 import { proxyRoutes } from "./routes/proxy";
+import { apiProvidersRoutes } from "./routes/api-providers";
 import { existsSync, statSync } from "fs";
 import { join } from "path";
 
@@ -42,6 +43,7 @@ const app = new Elysia()
           { name: "Keys", description: "Client access keys management" },
           { name: "Router Keys", description: "Router integration API keys management" },
           { name: "Upstreams", description: "Upstream provider keys management" },
+          { name: "API Providers", description: "BandelBanget and external API providers management" },
           { name: "Telemetry", description: "Token usage and latency metrics" },
           { name: "Admin", description: "Database backup, restore, and system metrics" },
         ],
@@ -55,6 +57,7 @@ const app = new Elysia()
   .use(keysRoutes)
   .use(routerApiKeysRoutes)
   .use(upstreamRoutes)
+  .use(apiProvidersRoutes)
   .use(telemetryRoutes)
   .use(adminRoutes)
   .use(proxyRoutes);

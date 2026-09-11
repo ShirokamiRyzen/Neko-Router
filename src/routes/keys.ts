@@ -42,6 +42,7 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         usedTokens: clientKeys.usedTokens,
         allowedProviders: clientKeys.allowedProviders,
         roundRobinProviders: clientKeys.roundRobinProviders,
+        isFollowUpstream: clientKeys.isFollowUpstream,
         createdAt: clientKeys.createdAt,
         lastUsedAt: clientKeys.lastUsedAt,
         totalRequests: sql<number>`(SELECT count(*) FROM ${telemetryLogs} WHERE ${telemetryLogs.clientKeyId} = ${clientKeys.id})`,
@@ -65,6 +66,7 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
           apiKeyName: k.apiKeyName || "Unassigned",
           allowedProviders: Array.isArray(allowedList) ? allowedList : [],
           roundRobinProviders: k.roundRobinProviders !== 0,
+          isFollowUpstream: Boolean(k.isFollowUpstream),
           displayKey:
             k.key.length > 14
               ? `${k.key.slice(0, 10)}...${k.key.slice(-4)}`
@@ -76,8 +78,35 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
   .post(
     "/",
     ({ body, set }) => {
-      const { name, apiKeyId, customKey, tokenLimit, rateLimit, allowedProviders, roundRobinProviders } = body;
-      const keyStr = generateKeyString(customKey);
+      const { name, apiKeyId, customKey, tokenLimit, rateLimit, allowedProviders, roundRobinProviders, isFollowUpstream } = body;
+
+      const id = "ck_" + crypto.randomUUID().replace(/-/g, "");
+      let keyStr: string;
+
+      let allowedArr = Array.isArray(allowedProviders) ? allowedProviders : [];
+      const hasFollow = allowedArr.includes("up_bandelbanget_follow") || allowedArr.includes("bb");
+      const isFollow = Boolean(isFollowUpstream) || hasFollow;
+
+      if (isFollow) {
+        // Exclusivity: Pass-through cannot be mixed with normal providers
+        allowedArr = allowedArr.filter((p: string) => p === "up_bandelbanget_follow" || p === "bb");
+        if (allowedArr.length === 0) {
+          allowedArr = ["up_bandelbanget_follow"];
+        }
+
+        // Follow Upstream mode: Key is NOT randomly generated with sk-neko- prefix
+        // Uses default BB key or valid BB key pass-through
+        if (customKey && customKey.trim().length > 0) {
+          keyStr = customKey.trim();
+        } else {
+          // Check if bb-default is taken, if so use bb-default-<id-slice>
+          const existingDefault = db.select().from(clientKeys).where(eq(clientKeys.key, "bb-default")).get();
+          keyStr = existingDefault ? `bb-default-${id.slice(3, 8)}` : "bb-default";
+        }
+      } else {
+        allowedArr = allowedArr.filter((p: string) => p !== "up_bandelbanget_follow" && p !== "bb");
+        keyStr = generateKeyString(customKey);
+      }
 
       // Check duplicate
       const existing = db
@@ -124,10 +153,7 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         }
       }
 
-      const id = "ck_" + crypto.randomUUID().replace(/-/g, "");
       const now = Date.now();
-      // Default: OFF ALL PROVIDERS (empty array)
-      const allowedArr = Array.isArray(allowedProviders) ? allowedProviders : [];
 
       db.insert(clientKeys)
         .values({
@@ -141,6 +167,7 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
           usedTokens: 0,
           allowedProviders: JSON.stringify(allowedArr),
           roundRobinProviders: roundRobinProviders !== false ? 1 : 0,
+          isFollowUpstream: isFollow ? 1 : 0,
           createdAt: now,
           lastUsedAt: null,
         })
@@ -162,6 +189,7 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
           usedTokens: 0,
           allowedProviders: allowedArr,
           roundRobinProviders: roundRobinProviders !== false,
+          isFollowUpstream: isFollow,
           createdAt: now,
         },
       };
@@ -175,6 +203,7 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         rateLimit: t.Optional(t.Nullable(t.Number())),
         allowedProviders: t.Optional(t.Array(t.String())),
         roundRobinProviders: t.Optional(t.Boolean()),
+        isFollowUpstream: t.Optional(t.Boolean()),
       }),
     }
   )
@@ -219,7 +248,16 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         updateData.tokenLimit = newLimit > 0 ? Math.floor(newLimit) : null;
       }
       if (body.allowedProviders !== undefined) {
-        updateData.allowedProviders = JSON.stringify(body.allowedProviders);
+        let arr = Array.isArray(body.allowedProviders) ? body.allowedProviders : [];
+        const hasFollow = arr.includes("up_bandelbanget_follow") || arr.includes("bb");
+        if (hasFollow) {
+          arr = arr.filter((p: string) => p === "up_bandelbanget_follow" || p === "bb");
+          updateData.isFollowUpstream = 1;
+        } else {
+          arr = arr.filter((p: string) => p !== "up_bandelbanget_follow" && p !== "bb");
+          updateData.isFollowUpstream = 0;
+        }
+        updateData.allowedProviders = JSON.stringify(arr);
       }
       if (body.roundRobinProviders !== undefined) {
         updateData.roundRobinProviders = body.roundRobinProviders ? 1 : 0;
@@ -473,24 +511,30 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
 
       let updatedAllowed: string[];
       const providerId = body.providerId;
+      const isTargetFollow = providerId === "up_bandelbanget_follow" || providerId === "bb";
 
-      if (body.allowed !== undefined) {
-        if (body.allowed) {
-          updatedAllowed = currentAllowed.includes(providerId) ? currentAllowed : [...currentAllowed, providerId];
+      const willAllow = body.allowed !== undefined ? body.allowed : !currentAllowed.includes(providerId);
+
+      if (willAllow) {
+        if (isTargetFollow) {
+          // Exclusivity: Pass-through cannot be mixed with normal providers
+          updatedAllowed = [providerId];
         } else {
-          updatedAllowed = currentAllowed.filter((p) => p !== providerId);
+          // Normal provider: remove any pass-through
+          const nonFollow = currentAllowed.filter((p) => p !== "up_bandelbanget_follow" && p !== "bb");
+          updatedAllowed = nonFollow.includes(providerId) ? nonFollow : [...nonFollow, providerId];
         }
       } else {
-        // Toggle
-        if (currentAllowed.includes(providerId)) {
-          updatedAllowed = currentAllowed.filter((p) => p !== providerId);
-        } else {
-          updatedAllowed = [...currentAllowed, providerId];
-        }
+        updatedAllowed = currentAllowed.filter((p) => p !== providerId);
       }
 
+      const hasFollow = updatedAllowed.includes("up_bandelbanget_follow") || updatedAllowed.includes("bb");
+
       db.update(clientKeys)
-        .set({ allowedProviders: JSON.stringify(updatedAllowed) })
+        .set({
+          allowedProviders: JSON.stringify(updatedAllowed),
+          isFollowUpstream: hasFollow ? 1 : 0,
+        })
         .where(eq(clientKeys.id, id))
         .run();
 

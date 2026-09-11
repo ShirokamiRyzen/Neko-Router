@@ -44,6 +44,7 @@ export function initTablesSync(): void {
       used_tokens INTEGER NOT NULL DEFAULT 0,
       allowed_providers TEXT NOT NULL DEFAULT '[]',
       round_robin_providers INTEGER NOT NULL DEFAULT 1,
+      is_follow_upstream INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       last_used_at INTEGER
     );
@@ -60,6 +61,7 @@ export function initTablesSync(): void {
       is_active INTEGER NOT NULL DEFAULT 1,
       round_robin INTEGER NOT NULL DEFAULT 1,
       weight INTEGER NOT NULL DEFAULT 1,
+      follow_upstream INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -126,6 +128,12 @@ export function initTablesSync(): void {
   } catch (e) {}
   try {
     sqlite.run("ALTER TABLE client_keys ADD COLUMN round_robin_providers INTEGER NOT NULL DEFAULT 1;");
+  } catch (e) {}
+  try {
+    sqlite.run("ALTER TABLE client_keys ADD COLUMN is_follow_upstream INTEGER NOT NULL DEFAULT 0;");
+  } catch (e) {}
+  try {
+    sqlite.run("ALTER TABLE upstream_keys ADD COLUMN follow_upstream INTEGER NOT NULL DEFAULT 0;");
   } catch (e) {}
 
   // Safe index creations

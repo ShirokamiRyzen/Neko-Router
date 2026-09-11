@@ -30,6 +30,9 @@ export const ROUTE_TO_TAB: Record<string, string> = {
   "/providers": "upstream-keys",
   "/upstream-keys": "upstream-keys",
   "/upstreams": "upstream-keys",
+  "/api-providers": "upstream-keys",
+  "/api-provider": "upstream-keys",
+  "/bandelbanget": "upstream-keys",
   "/telemetry": "telemetry",
   "/logs": "telemetry",
   "/settings": "database",
@@ -57,12 +60,12 @@ export function getTabFromLocation(): string {
   if (tabParam && ROUTE_TO_TAB[`/${tabParam}`]) {
     return ROUTE_TO_TAB[`/${tabParam}`];
   }
-  if (tabParam && ["dashboard", "client-keys", "upstream-keys", "telemetry", "database"].includes(tabParam)) {
+  if (tabParam && ["dashboard", "client-keys", "upstream-keys", "api-providers", "telemetry", "database"].includes(tabParam)) {
     return tabParam;
   }
 
   const saved = localStorage.getItem("neko_active_tab");
-  if (saved && ["dashboard", "client-keys", "upstream-keys", "telemetry", "database"].includes(saved)) {
+  if (saved && ["dashboard", "client-keys", "upstream-keys", "api-providers", "telemetry", "database"].includes(saved)) {
     return saved;
   }
 
@@ -117,7 +120,7 @@ export const App: React.FC = () => {
       setAuthStatus(status);
     } catch (e) {
       console.error("Auth check failed:", e);
-      setAuthStatus({ isDefaultPin: true, authenticated: false });
+      setAuthStatus({ isDefaultPin: false, authenticated: false });
     } finally {
       setLoading(false);
     }

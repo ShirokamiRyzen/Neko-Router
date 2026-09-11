@@ -37,6 +37,7 @@ import {
   CODEX_CONFIG,
   CODEX_DEFAULT_MODELS,
 } from "../services/codex";
+import { fetchBandelBangetLiveModels } from "../services/bandelbanget";
 
 const adjectives = [
   "hyper", "quantum", "stellar", "apex", "swift", "cyber", "turbo",
@@ -129,8 +130,8 @@ async function testSingleKey(
     baseUrl && baseUrl.trim().length > 0
       ? baseUrl.replace(/\/+$/, "")
       : provider === "openai"
-      ? "https://api.openai.com/v1"
-      : "https://api.anthropic.com";
+        ? "https://api.openai.com/v1"
+        : "https://api.anthropic.com";
 
   // Check if token is a GitHub Copilot token (starts with ghu_ or gho_)
   const isCopilot = key.startsWith("ghu_") || key.startsWith("gho_") || effectiveBaseUrl.includes("githubcopilot.com");
@@ -485,7 +486,8 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
 
     return {
       upstreams: list.map((item) => {
-        const entries = parseUpstreamKeyEntries(item.apiKeys, item.apiKey);
+        const isFollow = Boolean((item as any).followUpstream);
+        const entries = isFollow ? [] : parseUpstreamKeyEntries(item.apiKeys, item.apiKey);
         const activeEntries = entries.filter((e) => e.isActive);
         const models = parseUpstreamModels(item.models);
         const enabledCount = models.filter((m) => m.enabled).length;
@@ -501,7 +503,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           weight: item.weight,
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
-          apiKey: activeEntries[0]?.key || entries[0]?.key || item.apiKey || "",
+          apiKey: isFollow ? "" : (activeEntries[0]?.key || entries[0]?.key || item.apiKey || ""),
           apiKeys: entries.map((e) => e.key),
           keyEntries: entries.map((e) => ({
             id: e.id,
@@ -512,11 +514,12 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           })),
           totalKeysCount: entries.length,
           activeKeysCount: activeEntries.length,
-          maskedKey: maskKey(activeEntries[0]?.key || entries[0]?.key || item.apiKey || ""),
+          maskedKey: isFollow ? "" : maskKey(activeEntries[0]?.key || entries[0]?.key || item.apiKey || ""),
           maskedKeys: entries.map((e) => maskKey(e.key)),
           models,
           totalModelsCount: models.length,
           enabledModelsCount: enabledCount,
+          followUpstream: isFollow,
         };
       }),
     };
@@ -533,7 +536,8 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       return { error: "Upstream key not found" };
     }
 
-    const entries = parseUpstreamKeyEntries(item.apiKeys, item.apiKey);
+    const isFollow = Boolean((item as any).followUpstream);
+    const entries = isFollow ? [] : parseUpstreamKeyEntries(item.apiKeys, item.apiKey);
     const activeEntries = entries.filter((e) => e.isActive);
     const models = parseUpstreamModels(item.models);
 
@@ -547,9 +551,10 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         isActive: item.isActive,
         roundRobin: (item as any).roundRobin !== 0,
         weight: item.weight,
+        followUpstream: isFollow,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
-        apiKey: activeEntries[0]?.key || entries[0]?.key || item.apiKey,
+        apiKey: isFollow ? "" : (activeEntries[0]?.key || entries[0]?.key || item.apiKey || ""),
         apiKeys: entries.map((e) => e.key),
         keyEntries: entries,
         totalKeysCount: entries.length,
@@ -611,9 +616,14 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           }));
       }
 
+      const isFollowUp = Boolean((body as any).followUpstream);
       if (normalizedEntries.length === 0) {
-        set.status = 400;
-        return { error: "At least one API Key must be provided" };
+        if (isFollowUp) {
+          normalizedEntries = [];
+        } else {
+          set.status = 400;
+          return { error: "At least one API Key must be provided" };
+        }
       }
 
       const id = "up_" + crypto.randomUUID().replace(/-/g, "");
@@ -626,13 +636,14 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           provider,
           name: name?.trim() || generateRandomAlias(),
           prefix: prefix ? prefix.trim() : null,
-          apiKey: firstActive ? firstActive.key : normalizedEntries[0]!.key,
+          apiKey: isFollowUp ? "" : (firstActive ? firstActive.key : (normalizedEntries[0]?.key || "")),
           apiKeys: JSON.stringify(normalizedEntries),
           models: models ? JSON.stringify(models) : JSON.stringify([]),
           baseUrl: baseUrl?.trim() || null,
           isActive: 1,
-          roundRobin: roundRobin !== false ? 1 : 0,
+          roundRobin: isFollowUp ? 0 : (roundRobin !== false ? 1 : 0),
           weight: weight ?? 1,
+          followUpstream: isFollowUp ? 1 : 0,
           createdAt: now,
           updatedAt: now,
         })
@@ -645,13 +656,14 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           provider,
           name: name?.trim() || generateRandomAlias(),
           prefix: prefix ? prefix.trim() : null,
-          apiKey: firstActive ? firstActive.key : normalizedEntries[0]!.key,
+          apiKey: isFollowUp ? "" : (firstActive ? firstActive.key : (normalizedEntries[0]?.key || "")),
           apiKeys: normalizedEntries.map((e) => e.key),
           keyEntries: normalizedEntries,
           baseUrl: baseUrl?.trim() || null,
           isActive: 1,
-          roundRobin: roundRobin !== false,
+          roundRobin: isFollowUp ? false : (roundRobin !== false),
           weight: weight ?? 1,
+          followUpstream: Boolean(isFollowUp),
         },
       };
     },
@@ -676,6 +688,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         baseUrl: t.Optional(t.String()),
         weight: t.Optional(t.Number()),
         roundRobin: t.Optional(t.Boolean()),
+        followUpstream: t.Optional(t.Boolean()),
         models: t.Optional(
           t.Array(
             t.Object({
@@ -713,6 +726,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       if (body.isActive !== undefined) updateData.isActive = body.isActive ? 1 : 0;
       if (body.roundRobin !== undefined) updateData.roundRobin = body.roundRobin ? 1 : 0;
       if (body.weight !== undefined) updateData.weight = Math.max(1, body.weight);
+      if (body.followUpstream !== undefined) updateData.followUpstream = body.followUpstream ? 1 : 0;
 
       // Multiple keys update - gracefully merge if key is omitted
       if (body.keyEntries !== undefined) {
@@ -826,6 +840,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         isActive: t.Optional(t.Boolean()),
         roundRobin: t.Optional(t.Boolean()),
         weight: t.Optional(t.Number()),
+        followUpstream: t.Optional(t.Boolean()),
         models: t.Optional(
           t.Array(
             t.Object({
@@ -865,8 +880,9 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       return { success: false, error: "Upstream not found" };
     }
 
+    const isFollow = Boolean((upstream as any).followUpstream);
     const key = getApiKeyForUpstream(upstream);
-    if (!key) {
+    if (!key && !isFollow) {
       set.status = 400;
       return { success: false, error: "No API key configured for this upstream" };
     }
@@ -880,7 +896,14 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
     let fetchedModelIds: string[] = [];
 
     try {
-      if (upstream.provider === "openai") {
+      if (isFollow) {
+        try {
+          const liveModels = await fetchBandelBangetLiveModels();
+          fetchedModelIds = liveModels.map((m: any) => m.id);
+        } catch (e) {
+          fetchedModelIds = ["auto", "deepseek-v4-flash", "claude-opus-5", "gpt-5.6", "glm-5.1", "kimi-k2.7-code"];
+        }
+      } else if (upstream.provider === "openai") {
         const isCopilot =
           upstream.baseUrl?.includes("githubcopilot.com") ||
           key.startsWith("ghu_") ||
@@ -948,7 +971,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
               fetchedModelIds = data.data.map((m: any) => m.id).filter(Boolean);
             }
           }
-        } catch (e) {}
+        } catch (e) { }
 
         // Fallback standard Claude catalog if provider endpoint did not return
         if (fetchedModelIds.length === 0) {
@@ -1024,10 +1047,10 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         models = models.map((m) =>
           m.id === body.modelId
             ? {
-                ...m,
-                enabled:
-                  body.enabled !== undefined ? body.enabled : !m.enabled,
-              }
+              ...m,
+              enabled:
+                body.enabled !== undefined ? body.enabled : !m.enabled,
+            }
             : m
         );
       }
@@ -1092,6 +1115,11 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       if (!upstream) {
         set.status = 404;
         return { success: false, error: "Upstream not found" };
+      }
+
+      if (Boolean((upstream as any).followUpstream)) {
+        set.status = 400;
+        return { success: false, error: "Follow Upstream is a zero-key pass-through provider and cannot accept API keys." };
       }
 
       const existingEntries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
@@ -1217,6 +1245,11 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       if (!upstream) {
         set.status = 404;
         return { success: false, error: "Upstream not found" };
+      }
+
+      if (Boolean((upstream as any).followUpstream)) {
+        set.status = 400;
+        return { success: false, error: "Follow Upstream is a zero-key pass-through provider and cannot accept API keys." };
       }
 
       const existingEntries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
