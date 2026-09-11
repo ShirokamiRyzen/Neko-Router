@@ -477,19 +477,36 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       }),
     }
   )
-  .get("/", () => {
+  .get("/", async () => {
     const list = db
       .select()
       .from(upstreamKeys)
       .orderBy(desc(upstreamKeys.createdAt))
       .all();
 
-    return {
-      upstreams: list.map((item) => {
+    const upstreams = await Promise.all(
+      list.map(async (item) => {
         const isFollow = Boolean((item as any).followUpstream);
         const entries = isFollow ? [] : parseUpstreamKeyEntries(item.apiKeys, item.apiKey);
         const activeEntries = entries.filter((e) => e.isActive);
-        const models = parseUpstreamModels(item.models);
+        let models = parseUpstreamModels(item.models);
+
+        // Fetch live models dynamically from BandelBanget upstream if empty
+        if (models.length === 0 && !isFollow && (item.baseUrl?.includes("bandelbanget.xyz") || item.name.toLowerCase().includes("bandelbanget") || item.id === "up_bandelbanget_input")) {
+          try {
+            const live = await fetchBandelBangetLiveModels();
+            if (live.length > 0) {
+              models = live.map((m) => ({ id: m.id, name: m.name || m.id, enabled: true }));
+              try {
+                db.update(upstreamKeys)
+                  .set({ models: JSON.stringify(models) })
+                  .where(eq(upstreamKeys.id, item.id))
+                  .run();
+              } catch (e) {}
+            }
+          } catch (e) {}
+        }
+
         const enabledCount = models.filter((m) => m.enabled).length;
 
         return {
@@ -521,8 +538,10 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           enabledModelsCount: enabledCount,
           followUpstream: isFollow,
         };
-      }),
-    };
+      })
+    );
+
+    return { upstreams };
   })
   .get("/:id", ({ params: { id }, set }) => {
     const item = db
@@ -565,7 +584,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
   })
   .post(
     "/",
-    ({ body, set }) => {
+    async ({ body, set }) => {
       const { provider, name, prefix, apiKey, apiKeys, keyEntries, rawKeys, baseUrl, weight, roundRobin, models } = body;
 
       // Extract and normalize keys list
@@ -633,6 +652,17 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       const now = Date.now();
       const firstActive = normalizedEntries.find((k) => k.isActive);
 
+      let initialModels = models;
+      if ((!initialModels || !Array.isArray(initialModels) || initialModels.length === 0) && !isFollowUp) {
+        if (baseUrl?.includes("bandelbanget.xyz") || name?.toLowerCase().includes("bandelbanget") || id === "up_bandelbanget_input") {
+          try {
+            initialModels = await fetchBandelBangetLiveModels();
+          } catch (e) {
+            initialModels = [];
+          }
+        }
+      }
+
       db.insert(upstreamKeys)
         .values({
           id,
@@ -641,7 +671,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           prefix: prefix ? prefix.trim() : null,
           apiKey: isFollowUp ? "" : (firstActive ? firstActive.key : (normalizedEntries[0]?.key || "")),
           apiKeys: JSON.stringify(normalizedEntries),
-          models: models ? JSON.stringify(models) : JSON.stringify([]),
+          models: initialModels ? JSON.stringify(initialModels) : JSON.stringify([]),
           baseUrl: baseUrl?.trim() || null,
           isActive: 1,
           roundRobin: isFollowUp ? 0 : (roundRobin !== false ? 1 : 0),
@@ -919,7 +949,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
             const liveModels = await fetchBandelBangetLiveModels();
             fetchedModelIds = liveModels.map((m: any) => m.id);
           } catch (e) {
-            fetchedModelIds = ["auto", "deepseek-v4-flash", "claude-opus-5", "gpt-5.6", "glm-5.1", "kimi-k2.7-code"];
+            fetchedModelIds = [];
           }
         }
       } else if (upstream.provider === "openai") {
@@ -954,6 +984,15 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           }
         } else if (isCodex) {
           fetchedModelIds = [...CODEX_DEFAULT_MODELS];
+        } else if (upstream.baseUrl?.includes("bandelbanget.xyz") || upstream.name.toLowerCase().includes("bandelbanget")) {
+          try {
+            const liveModels = await fetchBandelBangetLiveModels();
+            if (liveModels.length > 0) {
+              fetchedModelIds = liveModels.map((m) => m.id);
+            }
+          } catch (e) {
+            console.error("Failed to fetch live models for BandelBanget:", e);
+          }
         } else {
           const url = `${getBaseUrl(upstream)}/models`;
           const res = await fetch(url, {

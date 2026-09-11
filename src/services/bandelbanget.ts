@@ -164,19 +164,11 @@ export async function ensureBandelBangetProviders(): Promise<{
 
   if (!follow) {
     // Fetch live models for initial setup
-    let initialModels: any[] = [];
+    let initialModels: BandelBangetModelItem[] = [];
     try {
       initialModels = await fetchBandelBangetLiveModels();
     } catch (e) {
-      // Fallback default models if offline during bootstrap
-      initialModels = [
-        { id: "auto", name: "auto", enabled: true },
-        { id: "deepseek-v4-flash", name: "deepseek-v4-flash", enabled: true },
-        { id: "claude-opus-5", name: "claude-opus-5", enabled: true },
-        { id: "gpt-5.6", name: "gpt-5.6", enabled: true },
-        { id: "glm-5.1", name: "glm-5.1", enabled: true },
-        { id: "kimi-k2.7-code", name: "kimi-k2.7-code", enabled: true },
-      ];
+      initialModels = [];
     }
 
     db.insert(upstreamKeys)
@@ -240,14 +232,12 @@ export async function ensureBandelBangetProviders(): Promise<{
   }
 
   if (!input) {
-    const defaultModels = [
-      { id: "auto", name: "auto", enabled: true },
-      { id: "deepseek-v4-flash", name: "deepseek-v4-flash", enabled: true },
-      { id: "claude-opus-5", name: "claude-opus-5", enabled: true },
-      { id: "gpt-5.6", name: "gpt-5.6", enabled: true },
-      { id: "glm-5.1", name: "glm-5.1", enabled: true },
-      { id: "kimi-k2.7-code", name: "kimi-k2.7-code", enabled: true },
-    ];
+    let liveModels: BandelBangetModelItem[] = [];
+    try {
+      liveModels = await fetchBandelBangetLiveModels();
+    } catch (e) {
+      liveModels = [];
+    }
 
     db.insert(upstreamKeys)
       .values({
@@ -257,7 +247,7 @@ export async function ensureBandelBangetProviders(): Promise<{
         prefix: "bb",
         apiKey: "",
         apiKeys: JSON.stringify([]),
-        models: JSON.stringify(defaultModels),
+        models: JSON.stringify(liveModels),
         baseUrl: BANDELBANGET_CONFIG.BASE_URL,
         isActive: 1,
         roundRobin: 1,
@@ -288,6 +278,25 @@ export async function ensureBandelBangetProviders(): Promise<{
       input.name = BANDELBANGET_CONFIG.NAME_INPUT;
       input.apiKey = "";
       input.apiKeys = "[]";
+    }
+
+    // Refresh live models if currently empty or outdated
+    let parsedModels: any[] = [];
+    try {
+      parsedModels = JSON.parse(input.models || "[]");
+    } catch (e) {}
+
+    if (parsedModels.length === 0 || parsedModels.length <= 6) {
+      try {
+        const live = await fetchBandelBangetLiveModels();
+        if (live.length > 0) {
+          db.update(upstreamKeys)
+            .set({ models: JSON.stringify(live), updatedAt: now })
+            .where(eq(upstreamKeys.id, input.id))
+            .run();
+          input.models = JSON.stringify(live);
+        }
+      } catch (e) {}
     }
   }
 

@@ -98,7 +98,6 @@ export interface ProviderPreset {
   domainMatch?: string;
   badge?: string;
   description?: string;
-  defaultModels?: Array<{ id: string; name: string; enabled: boolean }>;
 }
 
 export function parseJwtInfo(token: string): { email?: string; exp?: number; isExpired?: boolean } | null {
@@ -129,23 +128,6 @@ const PRESET_PROVIDERS: ProviderPreset[] = [
     badge: "Google OAuth",
     description: "Connect via Google Account OAuth (Antigravity Cloud Code). Store multiple Google accounts with automatic Round-Robin load balancing.",
     domainMatch: "cloudcode-pa.googleapis.com",
-    defaultModels: [
-      { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash High", enabled: true },
-      { id: "gemini-3.8-flash-medium", name: "Gemini 3.8 Flash Medium", enabled: true },
-      { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash Low", enabled: true },
-      { id: "gemini-3.8-flash", name: "Gemini 3.8 Flash", enabled: true },
-      { id: "gemini-3.7-flash-high", name: "Gemini 3.7 Flash High", enabled: true },
-      { id: "gemini-3.7-flash-medium", name: "Gemini 3.7 Flash Medium", enabled: true },
-      { id: "gemini-3.7-flash-low", name: "Gemini 3.7 Flash Low", enabled: true },
-      { id: "gemini-3.6-flash-high", name: "Gemini 3.6 Flash High", enabled: true },
-      { id: "gemini-3.5-flash-high", name: "Gemini 3.5 Flash High", enabled: true },
-      { id: "gemini-3.1-pro-low", name: "Gemini 3.1 Pro Low", enabled: true },
-      { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", enabled: true },
-      { id: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 Thinking", enabled: true },
-      { id: "gpt-oss-120b-medium", name: "GPT OSS 120B Medium", enabled: true },
-      { id: "gemini-3-flash", name: "Gemini 3 Flash", enabled: true },
-      { id: "gemini-3.1-flash-image", name: "Gemini 3.1 Flash Image", enabled: true },
-    ],
   },
   // OAuth Provider: GitHub Copilot
   {
@@ -159,23 +141,6 @@ const PRESET_PROVIDERS: ProviderPreset[] = [
     badge: "OAuth Device Flow",
     description: "Connect via GitHub (OAuth Device Code). Store multiple GitHub Copilot accounts with automatic Round-Robin load balancing.",
     domainMatch: "githubcopilot.com",
-    defaultModels: [
-      { id: "gpt-4o", name: "GPT-4o", enabled: true },
-      { id: "gpt-4o-mini", name: "GPT-4o Mini", enabled: true },
-      { id: "gpt-4.1", name: "GPT-4.1", enabled: true },
-      { id: "gpt-5.2", name: "GPT-5.2", enabled: true },
-      { id: "gpt-5.4", name: "GPT-5.4", enabled: true },
-      { id: "claude-3.5-sonnet", name: "Claude 3.5 Sonnet", enabled: true },
-      { id: "claude-3.7-sonnet", name: "Claude 3.7 Sonnet", enabled: true },
-      { id: "claude-haiku-4.5", name: "Claude Haiku 4.5", enabled: true },
-      { id: "claude-sonnet-4.5", name: "Claude Sonnet 4.5", enabled: true },
-      { id: "claude-opus-4.5", name: "Claude Opus 4.5", enabled: true },
-      { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", enabled: true },
-      { id: "gemini-3-flash-preview", name: "Gemini 3 Flash", enabled: true },
-      { id: "o1", name: "OpenAI o1", enabled: true },
-      { id: "o1-mini", name: "OpenAI o1 Mini", enabled: true },
-      { id: "o3-mini", name: "OpenAI o3 Mini", enabled: true },
-    ],
   },
   // OAuth Provider: OpenAI Codex
   {
@@ -189,20 +154,6 @@ const PRESET_PROVIDERS: ProviderPreset[] = [
     badge: "ChatGPT OAuth",
     description: "Connect via OpenAI OAuth PKCE Flow (ChatGPT Codex CLI). Store multiple ChatGPT accounts with automatic Round-Robin request routing.",
     domainMatch: "chatgpt.com/backend-api/codex",
-    defaultModels: [
-      { id: "gpt-5.4", name: "GPT 5.4", enabled: true },
-      { id: "gpt-5.4-mini", name: "GPT 5.4 Mini", enabled: true },
-      { id: "gpt-5.5", name: "GPT 5.5", enabled: true },
-      { id: "gpt-5.6-sol", name: "GPT 5.6 Sol", enabled: true },
-      { id: "gpt-5.6-terra", name: "GPT 5.6 Terra", enabled: true },
-      { id: "gpt-5.6-luna", name: "GPT 5.6 Luna", enabled: true },
-      { id: "gpt-6-astra", name: "GPT 6.0 Astra", enabled: true },
-      { id: "gpt-5.3-codex-spark", name: "GPT 5.3 Codex Spark", enabled: true },
-      { id: "o3-mini", name: "o3-mini", enabled: true },
-      { id: "o1", name: "o1", enabled: true },
-      { id: "gpt-4o", name: "GPT-4o", enabled: true },
-      { id: "gpt-4o-mini", name: "GPT-4o Mini", enabled: true },
-    ],
   },
   // API Provider Template: BandelBanget (Follow Upstream)
   {
@@ -256,7 +207,6 @@ export const UpstreamKeysTab: React.FC = () => {
   const [roundRobin, setRoundRobin] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isAccountMode, setIsAccountMode] = useState(false);
-  const [presetDefaultModels, setPresetDefaultModels] = useState<Array<{ id: string; name: string; enabled: boolean }>>([]);
   const [checkingConnection, setCheckingConnection] = useState(false);
   const [checkStatus, setCheckStatus] = useState<{ success: boolean; latencyMs?: number; error?: string } | null>(null);
   const [modalError, setModalError] = useState("");
@@ -1001,13 +951,11 @@ export const UpstreamKeysTab: React.FC = () => {
       setAlias("Anthropic Claude");
       setPrefix("claude");
       setBaseUrl("https://api.anthropic.com");
-      setPresetDefaultModels([]);
     } else if (preset === "openai" || !preset) {
       setProvider("openai");
       setAlias("");
       setPrefix("");
       setBaseUrl("https://api.openai.com/v1");
-      setPresetDefaultModels([]);
       handleGenerateAlias();
     } else {
       setProvider(preset.provider || "openai");
@@ -1026,7 +974,6 @@ export const UpstreamKeysTab: React.FC = () => {
           .slice(0, 12)
       );
       setBaseUrl(preset.baseUrl || "");
-      setPresetDefaultModels(preset.defaultModels || []);
     }
 
     setApiType("Chat Completions");
@@ -1061,7 +1008,6 @@ export const UpstreamKeysTab: React.FC = () => {
     setRoundRobin(item.roundRobin !== false);
     setCheckStatus(null);
     setModalError("");
-    setPresetDefaultModels([]);
     const isAcc =
       item.name.toLowerCase().includes("copilot") ||
       item.name.toLowerCase().includes("antigravity") ||
@@ -1296,7 +1242,6 @@ export const UpstreamKeysTab: React.FC = () => {
             baseUrl: baseUrl || undefined,
             weight,
             roundRobin,
-            models: presetDefaultModels.length > 0 ? presetDefaultModels : undefined,
           }),
         });
       }
@@ -2172,10 +2117,33 @@ export const UpstreamKeysTab: React.FC = () => {
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between text-xs">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 font-mono flex items-center space-x-1">
-                          <RotateCw className="w-2.5 h-2.5" />
-                          <span>Round-Robin Default</span>
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 font-mono flex items-center space-x-1">
+                            <RotateCw className="w-2.5 h-2.5" />
+                            <span>Round-Robin</span>
+                          </span>
+                          {isConnected && connected && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openModelsModal(connected);
+                              }}
+                              className="skeuo-btn px-2 py-0.5 rounded text-[10px] font-medium flex items-center space-x-1 cursor-pointer text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/40"
+                              title="Manage & toggle active models"
+                            >
+                              <Cpu className="w-3 h-3 text-indigo-400" />
+                              <span>Models</span>
+                              {connected.totalModelsCount && connected.totalModelsCount > 0 ? (
+                                <span className="font-bold text-emerald-500">
+                                  {connected.enabledModelsCount || 0}/{connected.totalModelsCount}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-400 italic">None</span>
+                              )}
+                            </button>
+                          )}
+                        </div>
                         <span className="text-zinc-900 dark:text-zinc-100 font-semibold group-hover:underline flex items-center space-x-1">
                           <span>
                             {isConnected
@@ -2305,10 +2273,33 @@ export const UpstreamKeysTab: React.FC = () => {
                       </div>
 
                       <div className="mt-4 pt-3 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between text-xs">
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 font-mono flex items-center space-x-1">
-                          {isFollow ? <Radio className="w-2.5 h-2.5 text-purple-400" /> : <RotateCw className="w-2.5 h-2.5" />}
-                          <span>{isFollow ? "Pass-Through Mode" : "Round-Robin Default"}</span>
-                        </span>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 font-mono flex items-center space-x-1">
+                            {isFollow ? <Radio className="w-2.5 h-2.5 text-purple-400" /> : <RotateCw className="w-2.5 h-2.5" />}
+                            <span>{isFollow ? "Pass-Through Mode" : "Round-Robin"}</span>
+                          </span>
+                          {isConnected && !isFollow && connected && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openModelsModal(connected);
+                              }}
+                              className="skeuo-btn px-2 py-0.5 rounded text-[10px] font-medium flex items-center space-x-1 cursor-pointer text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/40"
+                              title="Manage & toggle active models"
+                            >
+                              <Cpu className="w-3 h-3 text-indigo-400" />
+                              <span>Models</span>
+                              {connected.totalModelsCount && connected.totalModelsCount > 0 ? (
+                                <span className="font-bold text-emerald-500">
+                                  {connected.enabledModelsCount || 0}/{connected.totalModelsCount}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-400 italic">None</span>
+                              )}
+                            </button>
+                          )}
+                        </div>
                         <span className="text-zinc-900 dark:text-zinc-100 font-semibold group-hover:underline flex items-center space-x-1">
                           <span>
                             {isConnected
@@ -2388,29 +2379,41 @@ export const UpstreamKeysTab: React.FC = () => {
                           {item.name}
                         </td>
                         <td className="px-5 py-3.5">
-                          <button
-                            onClick={() => openConnectionsModal(item)}
-                            className="skeuo-card-subtle px-2.5 py-1 rounded inline-flex items-center space-x-2 text-[11px] hover:border-indigo-500/40 transition-colors cursor-pointer"
-                            title="Manage connection pool, toggle individual keys, and test connections"
-                          >
-                            <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
-                            <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                              {activeKeys}/{totalKeys} Active
-                            </span>
-                            {isRoundRobin ? (
-                              <span
-                                className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/30 flex items-center space-x-1"
-                                title="Round-robin rotation enabled for active keys"
-                              >
-                                <RotateCw className="w-2.5 h-2.5 inline mr-0.5" />
-                                <span>RR</span>
+                          {item.followUpstream ? (
+                            <button
+                              type="button"
+                              onClick={() => openPassThroughModal(item)}
+                              className="skeuo-card-subtle px-2.5 py-1 rounded inline-flex items-center space-x-1.5 text-[11px] text-purple-600 dark:text-purple-400 border border-purple-500/30 hover:border-purple-500/50 transition-colors cursor-pointer"
+                              title="Pass-Through mode (client-supplied credentials)"
+                            >
+                              <Radio className="w-3.5 h-3.5 text-purple-400" />
+                              <span className="font-semibold">Pass-Through</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => openConnectionsModal(item)}
+                              className="skeuo-card-subtle px-2.5 py-1 rounded inline-flex items-center space-x-2 text-[11px] hover:border-indigo-500/40 transition-colors cursor-pointer"
+                              title="Manage connection pool, toggle individual keys, and test connections"
+                            >
+                              <KeyRound className="w-3.5 h-3.5 text-indigo-500" />
+                              <span className="font-semibold text-zinc-800 dark:text-zinc-200">
+                                {activeKeys}/{totalKeys} Active
                               </span>
-                            ) : (
-                              <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-500/10 text-zinc-400 font-medium border border-zinc-500/20">
-                                Primary
-                              </span>
-                            )}
-                          </button>
+                              {isRoundRobin ? (
+                                <span
+                                  className="text-[9px] px-1.5 py-0.2 rounded bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/30 flex items-center space-x-1"
+                                  title="Round-robin rotation enabled for active keys"
+                                >
+                                  <RotateCw className="w-2.5 h-2.5 inline mr-0.5" />
+                                  <span>RR</span>
+                                </span>
+                              ) : (
+                                <span className="text-[9px] px-1.5 py-0.2 rounded bg-zinc-500/10 text-zinc-400 font-medium border border-zinc-500/20">
+                                  Primary
+                                </span>
+                              )}
+                            </button>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-zinc-500 dark:text-zinc-400">
                           {isAccountItem ? (
@@ -2429,20 +2432,30 @@ export const UpstreamKeysTab: React.FC = () => {
                           {item.weight}x
                         </td>
                         <td className="px-5 py-3.5">
-                          <button
-                            onClick={() => openModelsModal(item)}
-                            className="skeuo-btn px-2.5 py-1 rounded-md inline-flex items-center space-x-1.5 text-[11px] font-medium cursor-pointer"
-                          >
-                            <Cpu className="w-3.5 h-3.5 text-indigo-400" />
-                            <span>Models</span>
-                            {modelsCount > 0 ? (
-                              <span className="ml-1 text-[10px] font-bold text-emerald-500">
-                                {enabledCount}/{modelsCount}
-                              </span>
-                            ) : (
-                              <span className="ml-1 text-[10px] text-zinc-400 italic">Off</span>
-                            )}
-                          </button>
+                          {item.followUpstream ? (
+                            <span
+                              className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium border border-purple-500/20 inline-flex items-center space-x-1"
+                              title="Models dynamically follow upstream endpoint without local caching"
+                            >
+                              <Radio className="w-2.5 h-2.5 text-purple-400" />
+                              <span>Follow Upstream</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => openModelsModal(item)}
+                              className="skeuo-btn px-2.5 py-1 rounded-md inline-flex items-center space-x-1.5 text-[11px] font-medium cursor-pointer"
+                            >
+                              <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>Models</span>
+                              {modelsCount > 0 ? (
+                                <span className="ml-1 text-[10px] font-bold text-emerald-500">
+                                  {enabledCount}/{modelsCount}
+                                </span>
+                              ) : (
+                                <span className="ml-1 text-[10px] text-zinc-400 italic">Off</span>
+                              )}
+                            </button>
+                          )}
                         </td>
                         <td className="px-5 py-3.5">
                           <button
@@ -2477,11 +2490,11 @@ export const UpstreamKeysTab: React.FC = () => {
                               <span>{testingId === item.id ? "Testing..." : "Test"}</span>
                             </button>
                             <button
-                              onClick={() => openConnectionsModal(item)}
+                              onClick={() => item.followUpstream ? openPassThroughModal(item) : openConnectionsModal(item)}
                               className="p-1.5 rounded-md skeuo-btn text-zinc-600 dark:text-zinc-300 hover:text-emerald-600 cursor-pointer"
-                              title="Connections"
+                              title={item.followUpstream ? "Pass-Through Settings" : "Connections"}
                             >
-                              <KeyRound className="w-3.5 h-3.5" />
+                              {item.followUpstream ? <Radio className="w-3.5 h-3.5 text-purple-400" /> : <KeyRound className="w-3.5 h-3.5" />}
                             </button>
                             <button
                               onClick={() => openEditModal(item)}
@@ -3206,6 +3219,16 @@ export const UpstreamKeysTab: React.FC = () => {
                           <span>+ Connect via OpenAI</span>
                         </button>
                       )}
+
+                      <button
+                        type="button"
+                        onClick={() => openModelsModal(activeConnectionsUpstream)}
+                        className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/50"
+                        title="Manage and toggle active models"
+                      >
+                        <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>Models ({activeConnectionsUpstream.totalModelsCount || activeConnectionsUpstream.models?.length || 0})</span>
+                      </button>
 
                       <button
                         type="button"
