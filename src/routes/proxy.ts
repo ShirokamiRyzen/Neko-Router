@@ -206,27 +206,57 @@ export const proxyRoutes = new Elysia()
     return proxyOpenAIChatCompletions(request.headers, body, clientKey, request.signal);
   })
 
-  // OpenAI Models list (tidak perlu SK, publik)
-  .get("/v1/models", async ({ request }) => {
+  // OpenAI Models list (tanpa key: publik semua model; dengan key: saring sesuai key atau pass-through)
+  .get("/v1/models", async ({ request, set }) => {
     const authHeader = request.headers.get("Authorization");
     const xApiKey = request.headers.get("x-api-key");
     const key = authHeader?.startsWith("Bearer ")
       ? authHeader.slice(7).trim()
       : xApiKey?.trim();
 
-    // Jika ada SK yang valid, saring model sesuai allowed providers; jika tanpa SK, tampilkan semua model aktif
-    const clientKey = key ? await validateClientKey(key) : null;
-    return proxyOpenAIModels(clientKey, request.headers);
+    if (key) {
+      const clientKey = await validateClientKey(key);
+      if (!clientKey) {
+        set.status = 401;
+        return {
+          error: {
+            message: "Invalid API key provided",
+            type: "invalid_request_error",
+            param: null,
+            code: "invalid_api_key",
+          },
+        };
+      }
+      return proxyOpenAIModels(clientKey, request.headers);
+    }
+
+    // Tanpa key: tampilkan semua model aktif dari seluruh provider
+    return proxyOpenAIModels(null, request.headers);
   })
-  .get("/models", async ({ request }) => {
+  .get("/models", async ({ request, set }) => {
     const authHeader = request.headers.get("Authorization");
     const xApiKey = request.headers.get("x-api-key");
     const key = authHeader?.startsWith("Bearer ")
       ? authHeader.slice(7).trim()
       : xApiKey?.trim();
 
-    const clientKey = key ? await validateClientKey(key) : null;
-    return proxyOpenAIModels(clientKey, request.headers);
+    if (key) {
+      const clientKey = await validateClientKey(key);
+      if (!clientKey) {
+        set.status = 401;
+        return {
+          error: {
+            message: "Invalid API key provided",
+            type: "invalid_request_error",
+            param: null,
+            code: "invalid_api_key",
+          },
+        };
+      }
+      return proxyOpenAIModels(clientKey, request.headers);
+    }
+
+    return proxyOpenAIModels(null, request.headers);
   })
 
   // Anthropic Messages

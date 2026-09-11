@@ -197,24 +197,6 @@ export async function validateClientKey(
     return keyRecord;
   }
 
-  // If no direct key matched, check if an active Follow Upstream client key exists.
-  // In Follow Upstream mode, the router forwards requests directly to BB using default BB key or valid BB key.
-  const followKeyRecord = db
-    .select()
-    .from(clientKeys)
-    .where(eq(clientKeys.isFollowUpstream, 1))
-    .get();
-
-  if (followKeyRecord && followKeyRecord.isActive) {
-    try {
-      db.update(clientKeys)
-        .set({ lastUsedAt: Date.now() })
-        .where(eq(clientKeys.id, followKeyRecord.id))
-        .run();
-    } catch (e) {}
-    return followKeyRecord;
-  }
-
   return null;
 }
 
