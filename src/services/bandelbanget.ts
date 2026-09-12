@@ -37,6 +37,9 @@ export interface BandelBangetModelItem {
     input?: string[];
     output?: string[];
   };
+  created?: number;
+  object?: string;
+  owned_by?: string;
 }
 
 /**
@@ -64,6 +67,9 @@ export async function fetchBandelBangetLiveModels(): Promise<BandelBangetModelIt
     return data.data.map((m) => ({
       id: m.id,
       name: m.id,
+      object: m.object || "model",
+      created: m.created,
+      owned_by: m.owned_by,
       // Active models strictly follow BB's enabled flag!
       enabled: Boolean(m.enabled),
       vision: Boolean(m.vision),
@@ -210,6 +216,25 @@ export async function ensureBandelBangetProviders(): Promise<{
     follow.name = BANDELBANGET_CONFIG.NAME_FOLLOW;
     follow.apiKey = "";
     follow.apiKeys = "[]";
+
+    // Refresh live models if currently empty
+    let parsedFollowModels: any[] = [];
+    try {
+      parsedFollowModels = JSON.parse(follow.models || "[]");
+    } catch (e) {}
+
+    if (parsedFollowModels.length === 0) {
+      try {
+        const live = await fetchBandelBangetLiveModels();
+        if (live.length > 0) {
+          db.update(upstreamKeys)
+            .set({ models: JSON.stringify(live), updatedAt: now })
+            .where(eq(upstreamKeys.id, follow.id))
+            .run();
+          follow.models = JSON.stringify(live);
+        }
+      } catch (e) {}
+    }
   }
 
   // 2. Input Key provider

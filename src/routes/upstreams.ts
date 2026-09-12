@@ -492,11 +492,11 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         let models = parseUpstreamModels(item.models);
 
         // Fetch live models dynamically from BandelBanget upstream if empty
-        if (models.length === 0 && !isFollow && (item.baseUrl?.includes("bandelbanget.xyz") || item.name.toLowerCase().includes("bandelbanget") || item.id === "up_bandelbanget_input")) {
+        if (models.length === 0 && (item.baseUrl?.includes("bandelbanget.xyz") || item.name.toLowerCase().includes("bandelbanget") || item.id === "up_bandelbanget_input" || isFollow)) {
           try {
             const live = await fetchBandelBangetLiveModels();
             if (live.length > 0) {
-              models = live.map((m) => ({ id: m.id, name: m.name || m.id, enabled: true }));
+              models = live.map((m) => ({ id: m.id, name: m.name || m.id, enabled: Boolean(m.enabled) }));
               try {
                 db.update(upstreamKeys)
                   .set({ models: JSON.stringify(models) })
@@ -926,6 +926,7 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
       existingEnabledMap.set(m.id, m.enabled);
     }
 
+    const upstreamEnabledMap = new Map<string, boolean>();
     let fetchedModelIds: string[] = [];
 
     try {
@@ -940,14 +941,24 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           if (res.ok) {
             const data = (await res.json()) as any;
             if (Array.isArray(data?.data)) {
-              fetchedModelIds = data.data.map((m: any) => m.id).filter(Boolean);
+              for (const m of data.data) {
+                if (m?.id) {
+                  fetchedModelIds.push(m.id);
+                  if (m.enabled !== undefined) {
+                    upstreamEnabledMap.set(m.id, Boolean(m.enabled));
+                  }
+                }
+              }
             }
           }
         } catch (e) {}
         if (fetchedModelIds.length === 0) {
           try {
             const liveModels = await fetchBandelBangetLiveModels();
-            fetchedModelIds = liveModels.map((m: any) => m.id);
+            for (const m of liveModels) {
+              fetchedModelIds.push(m.id);
+              upstreamEnabledMap.set(m.id, Boolean(m.enabled));
+            }
           } catch (e) {
             fetchedModelIds = [];
           }
@@ -1063,7 +1074,9 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
     // All newly fetched models default to enabled: false!
     const newModels = uniqueIds.map((modelId) => ({
       id: modelId,
-      enabled: isFollow ? true : (existingEnabledMap.get(modelId) ?? false),
+      enabled: isFollow
+        ? (upstreamEnabledMap.get(modelId) ?? true)
+        : (existingEnabledMap.get(modelId) ?? false),
     }));
 
     db.update(upstreamKeys)

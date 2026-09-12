@@ -2278,7 +2278,7 @@ export const UpstreamKeysTab: React.FC = () => {
                             {isFollow ? <Radio className="w-2.5 h-2.5 text-purple-400" /> : <RotateCw className="w-2.5 h-2.5" />}
                             <span>{isFollow ? "Pass-Through Mode" : "Round-Robin"}</span>
                           </span>
-                          {isConnected && !isFollow && connected && (
+                          {isConnected && connected && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2286,7 +2286,7 @@ export const UpstreamKeysTab: React.FC = () => {
                                 openModelsModal(connected);
                               }}
                               className="skeuo-btn px-2 py-0.5 rounded text-[10px] font-medium flex items-center space-x-1 cursor-pointer text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/40"
-                              title="Manage & toggle active models"
+                              title="Manage & view models"
                             >
                               <Cpu className="w-3 h-3 text-indigo-400" />
                               <span>Models</span>
@@ -2433,13 +2433,28 @@ export const UpstreamKeysTab: React.FC = () => {
                         </td>
                         <td className="px-5 py-3.5">
                           {item.followUpstream ? (
-                            <span
-                              className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium border border-purple-500/20 inline-flex items-center space-x-1"
-                              title="Models dynamically follow upstream endpoint without local caching"
-                            >
-                              <Radio className="w-2.5 h-2.5 text-purple-400" />
-                              <span>Follow Upstream</span>
-                            </span>
+                            <div className="flex items-center space-x-1.5">
+                              <span
+                                className="text-[10px] px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium border border-purple-500/20 inline-flex items-center space-x-1"
+                                title="Models dynamically follow upstream endpoint"
+                              >
+                                <Radio className="w-2.5 h-2.5 text-purple-400" />
+                                <span>Pass-Through</span>
+                              </span>
+                              <button
+                                onClick={() => openModelsModal(item)}
+                                className="skeuo-btn px-2 py-0.5 rounded-md inline-flex items-center space-x-1 text-[10px] font-medium cursor-pointer"
+                                title="View Upstream Models"
+                              >
+                                <Cpu className="w-3 h-3 text-purple-400" />
+                                <span>Models</span>
+                                {modelsCount > 0 ? (
+                                  <span className="ml-0.5 text-[10px] font-bold text-emerald-500">
+                                    {enabledCount}/{modelsCount}
+                                  </span>
+                                ) : null}
+                              </button>
+                            </div>
                           ) : (
                             <button
                               onClick={() => openModelsModal(item)}

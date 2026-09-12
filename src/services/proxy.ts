@@ -1246,10 +1246,9 @@ function enrichModel(prefix: string, m: any, defaultCreated?: number) {
     parent: null,
   };
 
-  // Copy any extra metadata from original, preserving owned_by as NekoRouter and omitting enabled
+  // Copy any extra metadata from original, preserving owned_by as NekoRouter
   for (const [key, val] of Object.entries(m)) {
     if (
-      key !== "enabled" &&
       key !== "owned_by" &&
       key !== "id" &&
       key !== "object" &&
@@ -1387,7 +1386,7 @@ export async function proxyOpenAIModels(
           const { fetchBandelBangetLiveModels } = await import("./bandelbanget");
           const liveModels = await fetchBandelBangetLiveModels();
           for (const lm of liveModels) {
-            if (lm.enabled !== false && !enabledModelMap.has(lm.id)) {
+            if (!enabledModelMap.has(lm.id)) {
               const enriched = enrichModel("", { ...lm, owned_by: "NekoRouter" });
               enabledModelMap.set(lm.id, enriched);
             }
@@ -1434,7 +1433,7 @@ export async function proxyOpenAIModels(
       const { fetchBandelBangetLiveModels } = await import("./bandelbanget");
       const liveModels = await fetchBandelBangetLiveModels();
       for (const lm of liveModels) {
-        if (lm.enabled !== false && !enabledModelMap.has(lm.id)) {
+        if (!enabledModelMap.has(lm.id)) {
           const enriched = enrichModel("", { ...lm, owned_by: "NekoRouter" });
           enabledModelMap.set(lm.id, enriched);
         }

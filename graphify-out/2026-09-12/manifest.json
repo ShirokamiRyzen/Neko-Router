@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "src/routes/upstreams.ts": {
-    "mtime": 1789187019.4729698,
-    "ast_hash": "859541f997b876134a2d72cbf08b1c9e",
+    "mtime": 1789141831.5631006,
+    "ast_hash": "12437d1d6fb4d65de0e5c5783a692dd7",
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
-    "mtime": 1789186984.4224942,
-    "ast_hash": "2349bdd9c38ca157b9c2e01cf017e3fc",
+    "mtime": 1789143754.6059701,
+    "ast_hash": "f821400f76ba8308697bc56107564369",
     "semantic_hash": ""
   },
   "src/services/router.ts": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/UpstreamKeysTab.tsx": {
-    "mtime": 1789187041.0756712,
-    "ast_hash": "ba8f9f787150f4146e9758393364a4e0",
+    "mtime": 1789141732.7568069,
+    "ast_hash": "4303b3e7542eb152462c253a167a5f52",
     "semantic_hash": ""
   },
   "frontend/src/hooks/useTheme.ts": {
@@ -310,8 +310,8 @@
     "semantic_hash": ""
   },
   "src/services/bandelbanget.ts": {
-    "mtime": 1789186965.1921518,
-    "ast_hash": "3ee33abb0ca2b1c613194ada5fb89eee",
+    "mtime": 1789141748.6253834,
+    "ast_hash": "db9cf6af07e00f16c0133cf9a60f38e9",
     "semantic_hash": ""
   }
 }
