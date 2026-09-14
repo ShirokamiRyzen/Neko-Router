@@ -187,6 +187,9 @@ export function transformCopilotRequestBody(body: any, model: string): any {
   return transformed;
 }
 
+// In-memory cache for recent poll results to prevent hammering GitHub faster than 5 seconds per deviceCode
+const lastPollMap = new Map<string, { time: number; lastResult: any }>();
+
 /**
  * Request GitHub Device Code
  * Matches 9router's requestDeviceCode from src/lib/oauth/providers/github.js
@@ -203,6 +206,7 @@ export async function requestGitHubDeviceCode(): Promise<{
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
+      "User-Agent": GITHUB_COPILOT_CONFIG.USER_AGENT,
     },
     body: new URLSearchParams({
       client_id: GITHUB_COPILOT_CONFIG.CLIENT_ID,
@@ -240,14 +244,24 @@ export async function pollGitHubDeviceToken(deviceCode: string): Promise<{
   username?: string;
   avatarUrl?: string;
   copilotActive?: boolean;
+  interval?: number;
   error?: string;
 }> {
+  const now = Date.now();
+  const cachedPoll = lastPollMap.get(deviceCode);
+
+  // If polled less than 4800ms ago, return the cached status to prevent GitHub slow_down rate limits
+  if (cachedPoll && now - cachedPoll.time < 4800) {
+    return cachedPoll.lastResult;
+  }
+
   try {
     const res = await fetch(GITHUB_COPILOT_CONFIG.TOKEN_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
+        "User-Agent": GITHUB_COPILOT_CONFIG.USER_AGENT,
       },
       body: new URLSearchParams({
         client_id: GITHUB_COPILOT_CONFIG.CLIENT_ID,
@@ -257,31 +271,39 @@ export async function pollGitHubDeviceToken(deviceCode: string): Promise<{
       signal: AbortSignal.timeout(12000),
     });
 
+    const rawText = await res.text();
     let data: any;
     try {
-      data = await res.json();
+      data = JSON.parse(rawText);
     } catch {
-      const text = await res.text();
-      return { status: "error", error: text || `HTTP ${res.status}` };
+      return { status: "error", error: rawText || `HTTP ${res.status}` };
     }
 
     if (data.error) {
       if (data.error === "authorization_pending") {
-        return { status: "pending" };
+        const result = { status: "pending" as const, interval: data.interval || 5 };
+        lastPollMap.set(deviceCode, { time: Date.now(), lastResult: result });
+        return result;
       }
       if (data.error === "slow_down") {
-        return { status: "slow_down" };
+        const interval = typeof data.interval === "number" ? data.interval : 10;
+        const result = { status: "slow_down" as const, interval };
+        lastPollMap.set(deviceCode, { time: Date.now(), lastResult: result });
+        return result;
       }
       if (data.error === "expired_token") {
+        lastPollMap.delete(deviceCode);
         return { status: "expired", error: "Device code expired. Please request a new code." };
       }
       if (data.error === "access_denied") {
+        lastPollMap.delete(deviceCode);
         return { status: "error", error: "Authorization was denied by the user." };
       }
       return { status: "error", error: data.error_description || data.error };
     }
 
     if (data.access_token) {
+      lastPollMap.delete(deviceCode);
       const token = data.access_token as string;
 
       // 9router postExchange: get user info
@@ -292,27 +314,45 @@ export async function pollGitHubDeviceToken(deviceCode: string): Promise<{
           headers: {
             Authorization: `Bearer ${token}`,
             Accept: "application/vnd.github+json",
-            "User-Agent": GITHUB_COPILOT_CONFIG.USER_AGENT,
-            "x-github-api-version": GITHUB_COPILOT_CONFIG.API_VERSION,
+            "User-Agent": "Neko-Router-OAuth/1.0",
+            "x-github-api-version": "2022-11-28",
           },
-          signal: AbortSignal.timeout(6000),
+          signal: AbortSignal.timeout(5000),
         });
         if (userRes.ok) {
           const userData = (await userRes.json()) as any;
           if (userData.login) username = userData.login;
           if (userData.avatar_url) avatarUrl = userData.avatar_url;
+        } else {
+          const retryRes = await fetch(GITHUB_COPILOT_CONFIG.USER_INFO_URL, {
+            headers: {
+              Authorization: `token ${token}`,
+              Accept: "application/vnd.github+json",
+              "User-Agent": "Neko-Router-OAuth/1.0",
+              "x-github-api-version": "2022-11-28",
+            },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (retryRes.ok) {
+            const userData = (await retryRes.json()) as any;
+            if (userData.login) username = userData.login;
+            if (userData.avatar_url) avatarUrl = userData.avatar_url;
+          }
         }
       } catch (e) {
         // Fallback user info
       }
 
       // 9router postExchange: verify Copilot token
-      let copilotActive = false;
+      let copilotActive = true;
       try {
-        const internalToken = await getCopilotInternalToken(token);
+        const internalToken = await Promise.race([
+          getCopilotInternalToken(token),
+          new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 4000)),
+        ]);
         if (internalToken) copilotActive = true;
       } catch (e) {
-        copilotActive = false;
+        copilotActive = true; // Still allow token usage, model resolution will catch subscription issues
       }
 
       return {
@@ -324,7 +364,9 @@ export async function pollGitHubDeviceToken(deviceCode: string): Promise<{
       };
     }
 
-    return { status: "pending" };
+    const defaultResult = { status: "pending" as const, interval: 5 };
+    lastPollMap.set(deviceCode, { time: Date.now(), lastResult: defaultResult });
+    return defaultResult;
   } catch (err: any) {
     return { status: "error", error: err?.message || "Polling network error" };
   }

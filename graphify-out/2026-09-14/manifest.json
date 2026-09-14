@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/UpstreamKeysTab.tsx": {
-    "mtime": 1789355805.1746523,
-    "ast_hash": "d0c15970d665962239d78a997867146a",
+    "mtime": 1789355109.9539418,
+    "ast_hash": "a939b5be403fb3c2dcb68bae61ece3d6",
     "semantic_hash": ""
   },
   "frontend/src/hooks/useTheme.ts": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "src/services/copilot.ts": {
-    "mtime": 1789355283.53007,
-    "ast_hash": "4153134b7b54ac158a6aa6b5b97ae5c7",
+    "mtime": 1789354561.8640919,
+    "ast_hash": "ef1a21ec26566b7d74a82f0d59185962",
     "semantic_hash": ""
   },
   "src/services/antigravity.ts": {

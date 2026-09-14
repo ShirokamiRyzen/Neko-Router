@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Layers,
   Plus,
@@ -29,6 +29,7 @@ import {
   Rocket,
   Sparkles,
   Radio,
+  X,
 } from "lucide-react";
 import {
   apiRequest,
@@ -232,6 +233,10 @@ export const UpstreamKeysTab: React.FC = () => {
   const [newConnKey, setNewConnKey] = useState("");
   const [newConnActive, setNewConnActive] = useState(true);
   const [addingConnError, setAddingConnError] = useState("");
+  const [editingKeyId, setEditingKeyId] = useState<string | null>(null);
+  const [editingKeyName, setEditingKeyName] = useState("");
+  const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+  const [revealedKeyIds, setRevealedKeyIds] = useState<Record<string, boolean>>({});
 
   // Dedicated Mass Import in Connections Modal
   const [isMassImportOpen, setIsMassImportOpen] = useState(false);
@@ -257,11 +262,18 @@ export const UpstreamKeysTab: React.FC = () => {
     expires_in: number;
   } | null>(null);
   const [copilotLoading, setCopilotLoading] = useState(false);
+  const [copilotChecking, setCopilotChecking] = useState(false);
   const [copilotStatus, setCopilotStatus] = useState<"idle" | "polling" | "success" | "error">("idle");
   const [copilotStatusText, setCopilotStatusText] = useState("");
   const [copilotError, setCopilotError] = useState("");
   const [copilotCopied, setCopilotCopied] = useState(false);
   const [copilotTargetUpstream, setCopilotTargetUpstream] = useState<UpstreamKeyItem | null>(null);
+
+  const copilotPollTimeoutRef = useRef<any>(null);
+  const copilotPollingActiveRef = useRef<boolean>(false);
+  const copilotDeviceInfoRef = useRef<typeof copilotDeviceInfo>(null);
+  const copilotTargetUpstreamRef = useRef<UpstreamKeyItem | null>(null);
+  const copilotIntervalSecRef = useRef<number>(6);
 
   // Antigravity Google OAuth Flow State
   const [antigravityModalOpen, setAntigravityModalOpen] = useState(false);
@@ -350,14 +362,209 @@ export const UpstreamKeysTab: React.FC = () => {
 
   useEffect(() => {
     loadUpstreams();
+    return () => {
+      copilotPollingActiveRef.current = false;
+      if (copilotPollTimeoutRef.current) {
+        clearTimeout(copilotPollTimeoutRef.current);
+        copilotPollTimeoutRef.current = null;
+      }
+    };
   }, []);
 
+  const closeCopilotModal = () => {
+    copilotPollingActiveRef.current = false;
+    if (copilotPollTimeoutRef.current) {
+      clearTimeout(copilotPollTimeoutRef.current);
+      copilotPollTimeoutRef.current = null;
+    }
+    setCopilotModalOpen(false);
+    setCopilotChecking(false);
+  };
+
+  const applyCopilotAccount = async (
+    token: string,
+    accountLabel: string,
+    target?: UpstreamKeyItem | null
+  ) => {
+    const effectiveTarget = target || (activeConnectionsUpstream ? activeConnectionsUpstream : null);
+
+    if (effectiveTarget) {
+      const newEntry = {
+        name: accountLabel,
+        key: token,
+        isActive: true,
+      };
+      const updatedEntries = [
+        ...(effectiveTarget.keyEntries || []).map((k) => ({
+          id: k.id,
+          name: k.name,
+          key: k.key,
+          isActive: k.isActive,
+        })),
+        newEntry,
+      ];
+
+      await apiRequest(`/api/upstreams/${effectiveTarget.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          keyEntries: updatedEntries,
+        }),
+      });
+
+      if (activeConnectionsUpstream && activeConnectionsUpstream.id === effectiveTarget.id) {
+        setActiveConnectionsUpstream((prev) =>
+          prev ? { ...prev, keyEntries: updatedEntries as any } : prev
+        );
+        setConnectionsList((prev) => [
+          ...prev,
+          {
+            id: `k_${Date.now()}`,
+            name: accountLabel,
+            maskedKey: token.slice(0, 6) + "..." + token.slice(-4),
+            isActive: true,
+          },
+        ]);
+      }
+
+      await loadUpstreams();
+    } else if (isModalOpen) {
+      setFormKeys((prev) => {
+        const filtered = prev.filter((k) => k.key.trim().length > 0);
+        return [
+          ...filtered,
+          {
+            id: `k_${Date.now()}`,
+            name: accountLabel,
+            key: token,
+            isActive: true,
+            showSecret: false,
+          },
+        ];
+      });
+    } else {
+      const existing = upstreams.find(
+        (u) =>
+          u.baseUrl?.includes("githubcopilot.com") ||
+          u.name.toLowerCase().includes("copilot")
+      );
+      if (existing) {
+        const newEntry = {
+          name: accountLabel,
+          key: token,
+          isActive: true,
+        };
+        const updatedEntries = [
+          ...(existing.keyEntries || []).map((k) => ({
+            id: k.id,
+            name: k.name,
+            key: k.key,
+            isActive: k.isActive,
+          })),
+          newEntry,
+        ];
+        await apiRequest(`/api/upstreams/${existing.id}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            keyEntries: updatedEntries,
+          }),
+        });
+        await loadUpstreams();
+      } else {
+        const preset = PRESET_PROVIDERS.find((p) => p.id === "github-copilot");
+        openCreateModal(preset);
+        setFormKeys([
+          {
+            id: `k_${Date.now()}`,
+            name: accountLabel,
+            key: token,
+            isActive: true,
+            showSecret: false,
+          },
+        ]);
+      }
+    }
+  };
+
+  const checkCopilotToken = async (manual = false) => {
+    const devInfo = copilotDeviceInfoRef.current;
+    if (!devInfo?.device_code) return;
+    if (manual) setCopilotChecking(true);
+
+    try {
+      const pollRes = await apiRequest<{
+        status: "pending" | "slow_down" | "expired" | "success" | "error";
+        accessToken?: string;
+        username?: string;
+        avatarUrl?: string;
+        copilotActive?: boolean;
+        interval?: number;
+        error?: string;
+      }>("/api/upstreams/copilot/poll-token", {
+        method: "POST",
+        body: JSON.stringify({ deviceCode: devInfo.device_code }),
+      });
+
+      if (!copilotPollingActiveRef.current) return;
+
+      if (pollRes.status === "success" && pollRes.accessToken) {
+        copilotPollingActiveRef.current = false;
+        if (copilotPollTimeoutRef.current) {
+          clearTimeout(copilotPollTimeoutRef.current);
+          copilotPollTimeoutRef.current = null;
+        }
+        setCopilotStatus("success");
+        const accountLabel = `@${pollRes.username || "github-user"}`;
+        setCopilotStatusText(`Successfully connected as ${accountLabel}!`);
+
+        await applyCopilotAccount(pollRes.accessToken, accountLabel, copilotTargetUpstreamRef.current);
+
+        setTimeout(() => {
+          closeCopilotModal();
+        }, 1800);
+        return;
+      }
+
+      if (pollRes.status === "slow_down") {
+        copilotIntervalSecRef.current = Math.max(copilotIntervalSecRef.current + 5, pollRes.interval || 10);
+        setCopilotStatusText(`Waiting for authorization on GitHub (pacing: ${copilotIntervalSecRef.current}s)...`);
+      } else if (pollRes.status === "pending") {
+        setCopilotStatus("polling");
+        setCopilotStatusText("Waiting for authorization on GitHub...");
+      } else if (pollRes.status === "expired" || pollRes.status === "error") {
+        copilotPollingActiveRef.current = false;
+        setCopilotStatus("error");
+        setCopilotError(pollRes.error || "Authorization expired or was denied.");
+        return;
+      }
+    } catch (e: any) {
+      console.warn("Copilot poll request error:", e);
+    } finally {
+      if (manual) setCopilotChecking(false);
+    }
+
+    if (copilotPollingActiveRef.current) {
+      copilotPollTimeoutRef.current = setTimeout(() => {
+        checkCopilotToken(false);
+      }, copilotIntervalSecRef.current * 1000);
+    }
+  };
+
   const startCopilotOAuth = async (targetUpstream?: UpstreamKeyItem | null) => {
-    setCopilotTargetUpstream(targetUpstream || null);
+    // Clear any previous active polling
+    copilotPollingActiveRef.current = false;
+    if (copilotPollTimeoutRef.current) {
+      clearTimeout(copilotPollTimeoutRef.current);
+      copilotPollTimeoutRef.current = null;
+    }
+
+    const effectiveTarget = targetUpstream || (activeConnectionsUpstream ? activeConnectionsUpstream : null);
+    setCopilotTargetUpstream(effectiveTarget);
+    copilotTargetUpstreamRef.current = effectiveTarget;
+
     setCopilotLoading(true);
     setCopilotError("");
     setCopilotStatus("idle");
-    setCopilotStatusText("Initializing GitHub Device Code...");
+    setCopilotStatusText("Requesting GitHub verification code...");
     setCopilotCopied(false);
     setCopilotModalOpen(true);
 
@@ -377,130 +584,26 @@ export const UpstreamKeysTab: React.FC = () => {
       }
 
       setCopilotDeviceInfo(res);
+      copilotDeviceInfoRef.current = res;
       setCopilotLoading(false);
       setCopilotStatus("polling");
       setCopilotStatusText("Waiting for authorization on GitHub...");
 
-      // Auto-copy code
+      // Auto-copy code to clipboard
       try {
         await navigator.clipboard.writeText(res.user_code);
         setCopilotCopied(true);
       } catch (e) { }
 
-      const intervalSec = Math.max(5, res.interval || 5);
-      const pollTimer = setInterval(async () => {
-        try {
-          const pollRes = await apiRequest<{
-            status: "pending" | "slow_down" | "expired" | "success" | "error";
-            accessToken?: string;
-            username?: string;
-            avatarUrl?: string;
-            copilotActive?: boolean;
-            error?: string;
-          }>("/api/upstreams/copilot/poll-token", {
-            method: "POST",
-            body: JSON.stringify({ deviceCode: res.device_code }),
-          });
+      // Safe pacing interval (minimum 6 seconds to avoid GitHub's tight rate limiter)
+      const baseInterval = Math.max(6, (res.interval || 5) + 1);
+      copilotIntervalSecRef.current = baseInterval;
+      copilotPollingActiveRef.current = true;
 
-          if (pollRes.status === "success" && pollRes.accessToken) {
-            clearInterval(pollTimer);
-            setCopilotStatus("success");
-            const accountLabel = `@${pollRes.username || "github-user"}`;
-            setCopilotStatusText(`Successfully connected as ${accountLabel}!`);
-
-            if (targetUpstream) {
-              const newEntry = {
-                name: accountLabel,
-                key: pollRes.accessToken,
-                isActive: true,
-              };
-              await apiRequest(`/api/upstreams/${targetUpstream.id}`, {
-                method: "PUT",
-                body: JSON.stringify({
-                  keyEntries: [
-                    ...(targetUpstream.keyEntries || []).map((k) => ({
-                      id: k.id,
-                      name: k.name,
-                      key: k.key,
-                      isActive: k.isActive,
-                    })),
-                    newEntry,
-                  ],
-                }),
-              });
-              await loadUpstreams();
-            } else if (isModalOpen) {
-              setFormKeys((prev) => {
-                const filtered = prev.filter((k) => k.key.trim().length > 0);
-                return [
-                  ...filtered,
-                  {
-                    id: `k_${Date.now()}`,
-                    name: accountLabel,
-                    key: pollRes.accessToken!,
-                    isActive: true,
-                    showSecret: false,
-                  },
-                ];
-              });
-            } else {
-              const existing = upstreams.find(
-                (u) =>
-                  u.baseUrl?.includes("githubcopilot.com") ||
-                  u.name.toLowerCase().includes("copilot")
-              );
-              if (existing) {
-                const newEntry = {
-                  name: accountLabel,
-                  key: pollRes.accessToken,
-                  isActive: true,
-                };
-                await apiRequest(`/api/upstreams/${existing.id}`, {
-                  method: "PUT",
-                  body: JSON.stringify({
-                    keyEntries: [
-                      ...(existing.keyEntries || []).map((k) => ({
-                        id: k.id,
-                        name: k.name,
-                        key: k.key,
-                        isActive: k.isActive,
-                      })),
-                      newEntry,
-                    ],
-                  }),
-                });
-                await loadUpstreams();
-              } else {
-                const preset = PRESET_PROVIDERS.find((p) => p.id === "github-copilot");
-                openCreateModal(preset);
-                setFormKeys([
-                  {
-                    id: `k_${Date.now()}`,
-                    name: accountLabel,
-                    key: pollRes.accessToken,
-                    isActive: true,
-                    showSecret: false,
-                  },
-                ]);
-              }
-            }
-
-            setTimeout(() => {
-              setCopilotModalOpen(false);
-            }, 2000);
-          } else if (pollRes.status === "expired" || pollRes.status === "error") {
-            clearInterval(pollTimer);
-            setCopilotStatus("error");
-            setCopilotError(pollRes.error || "Authorization expired or was denied.");
-          }
-        } catch (e: any) {
-          // network retry
-        }
-      }, intervalSec * 1000);
-
-      setTimeout(() => {
-        clearInterval(pollTimer);
-      }, 15 * 60 * 1000);
+      // Start recursive polling loop
+      copilotPollTimeoutRef.current = setTimeout(() => {
+        checkCopilotToken(false);
+      }, baseInterval * 1000);
     } catch (err: any) {
       setCopilotLoading(false);
       setCopilotStatus("error");
@@ -582,23 +685,41 @@ export const UpstreamKeysTab: React.FC = () => {
         isActive: true,
       };
 
-      if (antigravityTargetUpstream) {
-        await apiRequest(`/api/upstreams/${antigravityTargetUpstream.id}`, {
+      const effectiveTarget = antigravityTargetUpstream || (activeConnectionsUpstream ? activeConnectionsUpstream : null);
+      if (effectiveTarget) {
+        const updatedEntries = [
+          ...(effectiveTarget.keyEntries || []).map((k) => ({
+            id: k.id,
+            name: k.name,
+            key: k.key,
+            refreshToken: k.refreshToken,
+            expiresAt: k.expiresAt,
+            isActive: k.isActive,
+          })),
+          newEntry,
+        ];
+        await apiRequest(`/api/upstreams/${effectiveTarget.id}`, {
           method: "PUT",
           body: JSON.stringify({
-            keyEntries: [
-              ...(antigravityTargetUpstream.keyEntries || []).map((k) => ({
-                id: k.id,
-                name: k.name,
-                key: k.key,
-                refreshToken: k.refreshToken,
-                expiresAt: k.expiresAt,
-                isActive: k.isActive,
-              })),
-              newEntry,
-            ],
+            keyEntries: updatedEntries,
           }),
         });
+
+        if (activeConnectionsUpstream && activeConnectionsUpstream.id === effectiveTarget.id) {
+          setActiveConnectionsUpstream((prev) =>
+            prev ? { ...prev, keyEntries: updatedEntries as any } : prev
+          );
+          setConnectionsList((prev) => [
+            ...prev,
+            {
+              id: `k_${Date.now()}`,
+              name: accountLabel,
+              maskedKey: res.accessToken.slice(0, 6) + "..." + res.accessToken.slice(-4),
+              isActive: true,
+            },
+          ]);
+        }
+
         await loadUpstreams();
       } else if (isModalOpen) {
         setFormKeys((prev) => {
@@ -669,23 +790,41 @@ export const UpstreamKeysTab: React.FC = () => {
   };
 
   const applyCodexAccount = async (newEntry: any, targetUpstream?: UpstreamKeyItem | null) => {
-    if (targetUpstream) {
-      await apiRequest(`/api/upstreams/${targetUpstream.id}`, {
+    const effectiveTarget = targetUpstream || (activeConnectionsUpstream ? activeConnectionsUpstream : null);
+    if (effectiveTarget) {
+      const updatedEntries = [
+        ...(effectiveTarget.keyEntries || []).map((k) => ({
+          id: k.id,
+          name: k.name,
+          key: k.key,
+          refreshToken: k.refreshToken,
+          expiresAt: k.expiresAt,
+          isActive: k.isActive,
+        })),
+        newEntry,
+      ];
+      await apiRequest(`/api/upstreams/${effectiveTarget.id}`, {
         method: "PUT",
         body: JSON.stringify({
-          keyEntries: [
-            ...(targetUpstream.keyEntries || []).map((k) => ({
-              id: k.id,
-              name: k.name,
-              key: k.key,
-              refreshToken: k.refreshToken,
-              expiresAt: k.expiresAt,
-              isActive: k.isActive,
-            })),
-            newEntry,
-          ],
+          keyEntries: updatedEntries,
         }),
       });
+
+      if (activeConnectionsUpstream && activeConnectionsUpstream.id === effectiveTarget.id) {
+        setActiveConnectionsUpstream((prev) =>
+          prev ? { ...prev, keyEntries: updatedEntries as any } : prev
+        );
+        setConnectionsList((prev) => [
+          ...prev,
+          {
+            id: `k_${Date.now()}`,
+            name: newEntry.name,
+            maskedKey: newEntry.key.slice(0, 6) + "..." + newEntry.key.slice(-4),
+            isActive: true,
+          },
+        ]);
+      }
+
       await loadUpstreams();
     } else if (isModalOpen) {
       setFormKeys((prev) => {
@@ -1215,6 +1354,33 @@ export const UpstreamKeysTab: React.FC = () => {
       return;
     }
 
+    const resolvedName = isAccountMode
+      ? (alias?.trim() ||
+          (activePreset?.id === "antigravity"
+            ? "Antigravity Pool"
+            : activePreset?.id === "openai-codex"
+              ? "OpenAI Codex Pool"
+              : "GitHub Copilot Pool"))
+      : alias.trim();
+
+    const resolvedPrefix = isAccountMode
+      ? (prefix?.trim() ||
+          (activePreset?.id === "antigravity"
+            ? "antigravity"
+            : activePreset?.id === "openai-codex"
+              ? "codex"
+              : "copilot"))
+      : (prefix ? prefix.trim() : null);
+
+    const resolvedBaseUrl = isAccountMode
+      ? (baseUrl ||
+          (activePreset?.id === "antigravity"
+            ? "https://daily-cloudcode-pa.googleapis.com"
+            : activePreset?.id === "openai-codex"
+              ? "https://chatgpt.com/backend-api/codex/responses"
+              : "https://api.githubcopilot.com"))
+      : (baseUrl || undefined);
+
     setSaving(true);
     try {
       if (editingUpstream) {
@@ -1222,10 +1388,10 @@ export const UpstreamKeysTab: React.FC = () => {
           method: "PATCH",
           body: JSON.stringify({
             provider,
-            name: alias,
-            prefix: prefix ? prefix.trim() : null,
+            name: resolvedName,
+            prefix: resolvedPrefix,
             keyEntries: cleanKeys,
-            baseUrl: baseUrl || null,
+            baseUrl: resolvedBaseUrl || null,
             weight,
             roundRobin,
           }),
@@ -1236,10 +1402,10 @@ export const UpstreamKeysTab: React.FC = () => {
           body: JSON.stringify({
             id: activePreset?.id === "bandelbanget-input" ? "up_bandelbanget_input" : undefined,
             provider,
-            name: alias,
-            prefix: prefix ? prefix.trim() : null,
+            name: resolvedName,
+            prefix: resolvedPrefix,
             keyEntries: cleanKeys,
-            baseUrl: baseUrl || undefined,
+            baseUrl: resolvedBaseUrl,
             weight,
             roundRobin,
           }),
@@ -1541,6 +1707,52 @@ export const UpstreamKeysTab: React.FC = () => {
     }
   };
 
+  const handleStartRenameKey = (keyId: string, currentName: string) => {
+    setEditingKeyId(keyId);
+    setEditingKeyName(currentName);
+  };
+
+  const handleSaveRenameKey = async (keyId: string) => {
+    if (!activeConnectionsUpstream) return;
+    const newName = editingKeyName.trim();
+    if (!newName) {
+      setEditingKeyId(null);
+      return;
+    }
+    const updated = connectionsList.map((k) => (k.id === keyId ? { ...k, name: newName } : k));
+    setConnectionsList(updated);
+    setEditingKeyId(null);
+
+    try {
+      await apiRequest(`/api/upstreams/${activeConnectionsUpstream.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          keyEntries: updated.map((k) => ({
+            id: k.id,
+            name: k.name,
+            key: k.key,
+            isActive: k.isActive,
+          })),
+        }),
+      });
+      await loadUpstreams();
+    } catch (e) {
+      console.error(e);
+      await loadUpstreams();
+    }
+  };
+
+  const handleCopyKey = (keyId: string, keyVal?: string) => {
+    if (!keyVal) return;
+    navigator.clipboard.writeText(keyVal);
+    setCopiedKeyId(keyId);
+    setTimeout(() => setCopiedKeyId(null), 1800);
+  };
+
+  const toggleRevealKey = (keyId: string) => {
+    setRevealedKeyIds((prev) => ({ ...prev, [keyId]: !prev[keyId] }));
+  };
+
   const detectedKeysCount = useMemo(() => {
     if (!massImportText || !massImportText.trim()) return 0;
     const lines = massImportText.split(/\r?\n/);
@@ -1756,10 +1968,44 @@ export const UpstreamKeysTab: React.FC = () => {
     );
   };
 
-  // Matched Custom Upstreams (excluding BandelBanget so they appear exclusively in Section 3)
+  // Helper to identify OAuth preset upstreams (Antigravity, GitHub Copilot, OpenAI Codex)
+  const isOAuthUpstream = (u: UpstreamKeyItem) => {
+    const name = (u.name || "").toLowerCase();
+    const url = (u.baseUrl || "").toLowerCase();
+    const id = (u.id || "").toLowerCase();
+    return (
+      name.includes("copilot") ||
+      url.includes("githubcopilot.com") ||
+      id.includes("copilot") ||
+      name.includes("antigravity") ||
+      url.includes("cloudcode-pa.googleapis.com") ||
+      id.includes("antigravity") ||
+      name.includes("codex") ||
+      url.includes("chatgpt.com/backend-api/codex") ||
+      id.includes("codex")
+    );
+  };
+
+  // Helper flags for active modal preset
+  const isCurrentCopilotPreset =
+    activePreset?.id === "github-copilot" ||
+    alias.toLowerCase().includes("copilot") ||
+    Boolean(baseUrl && baseUrl.includes("githubcopilot.com"));
+
+  const isCurrentAntigravityPreset =
+    activePreset?.id === "antigravity" ||
+    alias.toLowerCase().includes("antigravity") ||
+    Boolean(baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"));
+
+  const isCurrentCodexPreset =
+    activePreset?.id === "openai-codex" ||
+    alias.toLowerCase().includes("codex") ||
+    Boolean(baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"));
+
+  // Matched Custom Upstreams (excluding BandelBanget and OAuth providers so they appear exclusively in Section 2 & 3)
   const filteredCustomUpstreams = useMemo(() => {
     return upstreams.filter((u) => {
-      if (isBandelBanget(u)) return false;
+      if (isBandelBanget(u) || isOAuthUpstream(u)) return false;
       if (!query) return true;
       return (
         u.name.toLowerCase().includes(query) ||
@@ -1767,6 +2013,16 @@ export const UpstreamKeysTab: React.FC = () => {
         (u.baseUrl && u.baseUrl.toLowerCase().includes(query))
       );
     });
+  }, [upstreams, query]);
+
+  // Filtered Upstreams for Table View based on Search Query
+  const filteredTableUpstreams = useMemo(() => {
+    if (!query) return upstreams;
+    return upstreams.filter((u) =>
+      u.name.toLowerCase().includes(query) ||
+      u.provider.toLowerCase().includes(query) ||
+      (u.baseUrl && u.baseUrl.toLowerCase().includes(query))
+    );
   }, [upstreams, query]);
 
   // Preset lookup helper
@@ -2278,7 +2534,7 @@ export const UpstreamKeysTab: React.FC = () => {
                             {isFollow ? <Radio className="w-2.5 h-2.5 text-purple-400" /> : <RotateCw className="w-2.5 h-2.5" />}
                             <span>{isFollow ? "Pass-Through Mode" : "Round-Robin"}</span>
                           </span>
-                          {isConnected && connected && (
+                          {isConnected && connected && !isFollow && (
                             <button
                               type="button"
                               onClick={(e) => {
@@ -2337,7 +2593,7 @@ export const UpstreamKeysTab: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50 text-zinc-700 dark:text-zinc-300">
-                {upstreams.length === 0 ? (
+                {filteredTableUpstreams.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-5 py-12 text-center text-zinc-500 dark:text-zinc-400">
                       <Layers className="w-8 h-8 mx-auto mb-2 opacity-40" />
@@ -2348,20 +2604,13 @@ export const UpstreamKeysTab: React.FC = () => {
                     </td>
                   </tr>
                 ) : (
-                  upstreams.map((item) => {
+                  filteredTableUpstreams.map((item) => {
                     const totalKeys = item.totalKeysCount || item.keyEntries?.length || (item.apiKeys?.length || (item.apiKey ? 1 : 0));
                     const activeKeys = item.activeKeysCount ?? (item.keyEntries ? item.keyEntries.filter((k) => k.isActive).length : totalKeys);
                     const isRoundRobin = item.roundRobin !== false;
                     const modelsCount = item.totalModelsCount || 0;
                     const enabledCount = item.enabledModelsCount || 0;
-                    const isAccountItem =
-                      item.name.toLowerCase().includes("copilot") ||
-                      item.name.toLowerCase().includes("antigravity") ||
-                      Boolean(
-                        item.baseUrl &&
-                        (item.baseUrl.includes("githubcopilot.com") ||
-                          item.baseUrl.includes("cloudcode-pa.googleapis.com"))
-                      );
+                    const isAccountItem = isOAuthUpstream(item);
 
                     return (
                       <tr key={item.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
@@ -2565,17 +2814,19 @@ export const UpstreamKeysTab: React.FC = () => {
                     ? `Edit ${activePreset.name}`
                     : `Setup ${activePreset.name}`
                   : isAccountMode
-                  ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
+                  ? isCurrentAntigravityPreset
                     ? editingUpstream
                       ? "Edit Antigravity"
                       : "Setup Antigravity"
-                    : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
+                    : isCurrentCodexPreset
                       ? editingUpstream
                         ? "Edit OpenAI Codex"
                         : "Setup OpenAI Codex"
-                      : editingUpstream
-                        ? "Edit GitHub Copilot"
-                        : "Setup GitHub Copilot"
+                      : isCurrentCopilotPreset
+                        ? editingUpstream
+                          ? "Edit GitHub Copilot"
+                          : "Setup GitHub Copilot"
+                        : "Setup OAuth Provider"
                   : editingUpstream
                     ? `Edit ${provider === "openai" ? "OpenAI" : "Anthropic"} Compatible`
                     : `Add ${provider === "openai" ? "OpenAI" : "Anthropic"} Compatible`}
@@ -2585,7 +2836,7 @@ export const UpstreamKeysTab: React.FC = () => {
             {/* Antigravity / Codex / Copilot OAuth Mode Guide Banner */}
             {isAccountMode && (
               <div className="mb-4 p-3 rounded-lg border border-zinc-700/60 bg-zinc-900/40 text-zinc-200 text-xs space-y-2">
-                {alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com")) ? (
+                {isCurrentAntigravityPreset ? (
                   <>
                     <div className="flex items-center justify-between">
                       <div className="font-semibold flex items-center space-x-1.5 text-zinc-100">
@@ -2611,7 +2862,7 @@ export const UpstreamKeysTab: React.FC = () => {
                       <div>3. You can also manually paste existing active Google access tokens (<code>ya29...</code>) below.</div>
                     </div>
                   </>
-                ) : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex")) ? (
+                ) : isCurrentCodexPreset ? (
                   <>
                     <div className="flex items-center justify-between">
                       <div className="font-semibold flex items-center space-x-1.5 text-zinc-100">
@@ -2637,7 +2888,7 @@ export const UpstreamKeysTab: React.FC = () => {
                       <div>3. You can also manually paste existing ChatGPT access tokens (<code>eyJ...</code>) or the callback URL into the prompt below.</div>
                     </div>
                   </>
-                ) : (
+                ) : isCurrentCopilotPreset ? (
                   <>
                     <div className="flex items-center justify-between">
                       <div className="font-semibold flex items-center space-x-1.5 text-zinc-100">
@@ -2663,7 +2914,7 @@ export const UpstreamKeysTab: React.FC = () => {
                       <div>3. The account will automatically be added to the list below. You can also manually paste existing <code>ghu_...</code> tokens.</div>
                     </div>
                   </>
-                )}
+                ) : null}
               </div>
             )}
 
@@ -2701,12 +2952,12 @@ export const UpstreamKeysTab: React.FC = () => {
                     Template Preconfigured
                   </span>
                 </div>
-              ) : (
+              ) : !isAccountMode ? (
                 <>
                   {/* Name */}
                   <div>
                     <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                      {isAccountMode ? "Provider / Pool Name *" : "Name *"}
+                      Name *
                     </label>
                     <input
                       type="text"
@@ -2714,20 +2965,14 @@ export const UpstreamKeysTab: React.FC = () => {
                       value={alias}
                       onChange={(e) => setAlias(e.target.value)}
                       placeholder={
-                        isAccountMode
-                          ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
-                            ? "Antigravity Pool"
-                            : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
-                              ? "OpenAI Codex Pool"
-                              : "GitHub Copilot Pool"
-                          : provider === "openai"
-                            ? "OpenAI Compatible (Prod)"
-                            : "Anthropic Compatible"
+                        provider === "openai"
+                          ? "OpenAI Compatible (Prod)"
+                          : "Anthropic Compatible"
                       }
                       className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
                     />
                     <p className="mt-1 text-[10px] text-zinc-400">
-                      {isAccountMode ? "Identifier name for this OAuth account pool." : "Required. A friendly label for this node."}
+                      Required. A friendly label for this node.
                     </p>
                   </div>
 
@@ -2740,15 +2985,7 @@ export const UpstreamKeysTab: React.FC = () => {
                       type="text"
                       value={prefix}
                       onChange={(e) => setPrefix(e.target.value)}
-                      placeholder={
-                        isAccountMode
-                          ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
-                            ? "antigravity"
-                            : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
-                              ? "codex"
-                              : "copilot"
-                          : "e.g. oc-prod"
-                      }
+                      placeholder="e.g. oc-prod"
                       className="w-full px-3 py-2 rounded-md skeuo-inset font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
                     />
                     <p className="mt-1 text-[10px] text-zinc-400">
@@ -2772,27 +3009,25 @@ export const UpstreamKeysTab: React.FC = () => {
                     </select>
                   </div>
 
-                  {/* Base URL - Hidden for OAuth providers */}
-                  {!isAccountMode && (
-                    <div>
-                      <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                        Base URL *
-                      </label>
-                      <input
-                        type="url"
-                        required
-                        value={baseUrl}
-                        onChange={(e) => setBaseUrl(e.target.value)}
-                        placeholder={provider === "openai" ? "https://api.openai.com/v1" : "https://api.anthropic.com"}
-                        className="w-full px-3 py-2 rounded-md skeuo-inset font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
-                      />
-                      <p className="mt-1 text-[10px] text-zinc-400">
-                        Use the base URL (ending in /v1 for OpenAI compatible).
-                      </p>
-                    </div>
-                  )}
+                  {/* Base URL */}
+                  <div>
+                    <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                      Base URL *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      value={baseUrl}
+                      onChange={(e) => setBaseUrl(e.target.value)}
+                      placeholder={provider === "openai" ? "https://api.openai.com/v1" : "https://api.anthropic.com"}
+                      className="w-full px-3 py-2 rounded-md skeuo-inset font-mono text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                    />
+                    <p className="mt-1 text-[10px] text-zinc-400">
+                      Use the base URL (ending in /v1 for OpenAI compatible).
+                    </p>
+                  </div>
                 </>
-              )}
+              ) : null}
 
               {/* Multi-Key Pool / Account Pool & Round Robin */}
               <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
@@ -2800,9 +3035,9 @@ export const UpstreamKeysTab: React.FC = () => {
                   <div>
                     <label className="font-semibold text-zinc-800 dark:text-zinc-200 text-xs flex items-center space-x-1.5">
                       {isAccountMode ? (
-                        alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com")) ? (
+                        isCurrentAntigravityPreset ? (
                           <Rocket className="w-3.5 h-3.5 text-indigo-400" />
-                        ) : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex")) ? (
+                        ) : isCurrentCodexPreset ? (
                           <OpenAIIcon className="w-3.5 h-3.5 text-emerald-400" />
                         ) : (
                           <GithubIcon className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
@@ -2812,9 +3047,9 @@ export const UpstreamKeysTab: React.FC = () => {
                       )}
                       <span>
                         {isAccountMode
-                          ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
+                          ? isCurrentAntigravityPreset
                             ? `Antigravity Google Account Pool (${formKeys.length} accounts) *`
-                            : alias.toLowerCase().includes("codex") || (baseUrl && baseUrl.includes("chatgpt.com/backend-api/codex"))
+                            : isCurrentCodexPreset
                               ? `OpenAI Codex Account Pool (${formKeys.length} accounts) *`
                               : `GitHub Copilot Account Pool (${formKeys.length} accounts) *`
                           : `API Key Pool (${formKeys.length} keys) *`}
@@ -2861,7 +3096,15 @@ export const UpstreamKeysTab: React.FC = () => {
                           type="text"
                           value={k.name}
                           onChange={(e) => handleKeyNameChange(idx, e.target.value)}
-                          placeholder={isAccountMode ? `@github-account-${idx + 1}` : `Key #${idx + 1}`}
+                          placeholder={
+                            isAccountMode
+                              ? isCurrentAntigravityPreset
+                                ? `@google-account-${idx + 1}`
+                                : isCurrentCodexPreset
+                                  ? `@openai-account-${idx + 1}`
+                                  : `@github-account-${idx + 1}`
+                              : `Key #${idx + 1}`
+                          }
                           className="text-xs font-semibold px-2 py-0.5 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 flex-1 max-w-[200px]"
                         />
 
@@ -2899,7 +3142,13 @@ export const UpstreamKeysTab: React.FC = () => {
                           onChange={(e) => handleKeyValChange(idx, e.target.value)}
                           placeholder={
                             isAccountMode
-                              ? "Paste GitHub Token (ghu_...) or login via GitHub above"
+                              ? isCurrentAntigravityPreset
+                                ? "Paste Google Token (ya29...) or login via Google above"
+                                : isCurrentCodexPreset
+                                  ? "Paste ChatGPT Access Token (eyJ...) or login via OpenAI above"
+                                  : isCurrentCopilotPreset
+                                    ? "Paste GitHub Token (ghu_...) or login via GitHub above"
+                                    : "Paste OAuth Token / Credential..."
                               : provider === "openai"
                                 ? "sk-proj-... (or paste multiple keys)"
                                 : "sk-ant-..."
@@ -2907,7 +3156,15 @@ export const UpstreamKeysTab: React.FC = () => {
                           className="w-full px-3 py-1.5 pr-8 pl-7 rounded-md skeuo-inset font-mono text-xs text-zinc-900 dark:text-zinc-100"
                         />
                         {isAccountMode ? (
-                          <GithubIcon className="w-3.5 h-3.5 text-zinc-400 absolute left-2 top-2" />
+                          isCurrentAntigravityPreset ? (
+                            <Rocket className="w-3.5 h-3.5 text-indigo-400 absolute left-2 top-2" />
+                          ) : isCurrentCodexPreset ? (
+                            <OpenAIIcon className="w-3.5 h-3.5 text-emerald-400 absolute left-2 top-2" />
+                          ) : isCurrentCopilotPreset ? (
+                            <GithubIcon className="w-3.5 h-3.5 text-zinc-400 absolute left-2 top-2" />
+                          ) : (
+                            <KeyRound className="w-3.5 h-3.5 text-zinc-400 absolute left-2 top-2" />
+                          )
                         ) : (
                           <KeyRound className="w-3.5 h-3.5 text-zinc-400 absolute left-2 top-2" />
                         )}
@@ -2926,7 +3183,7 @@ export const UpstreamKeysTab: React.FC = () => {
                 <div className="flex items-center justify-between mt-2 flex-wrap gap-2">
                   <div className="flex items-center space-x-3">
                     {isAccountMode && (
-                      alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com")) ? (
+                      isCurrentAntigravityPreset ? (
                         <button
                           type="button"
                           onClick={() => startAntigravityOAuth()}
@@ -2935,7 +3192,16 @@ export const UpstreamKeysTab: React.FC = () => {
                           <GoogleIcon className="w-3 h-3" />
                           <span>+ Login via Google</span>
                         </button>
-                      ) : (
+                      ) : isCurrentCodexPreset ? (
+                        <button
+                          type="button"
+                          onClick={() => startCodexOAuth()}
+                          className="inline-flex items-center space-x-1 text-[11px] font-semibold text-white bg-emerald-600 px-2.5 py-0.5 rounded hover:bg-emerald-500 cursor-pointer shadow-xs"
+                        >
+                          <OpenAIIcon className="w-3 h-3" />
+                          <span>+ Login via OpenAI</span>
+                        </button>
+                      ) : isCurrentCopilotPreset ? (
                         <button
                           type="button"
                           onClick={() => startCopilotOAuth()}
@@ -2944,7 +3210,7 @@ export const UpstreamKeysTab: React.FC = () => {
                           <GithubIcon className="w-3 h-3" />
                           <span>+ Login via GitHub</span>
                         </button>
-                      )
+                      ) : null
                     )}
                     <button
                       type="button"
@@ -2965,9 +3231,11 @@ export const UpstreamKeysTab: React.FC = () => {
                   </div>
                   <span className="text-[10px] text-zinc-400 italic">
                     {isAccountMode
-                      ? alias.toLowerCase().includes("antigravity") || (baseUrl && baseUrl.includes("cloudcode-pa.googleapis.com"))
+                      ? isCurrentAntigravityPreset
                         ? "Format: @email:ya29... or one token/code per line"
-                        : "Format: @username:ghu_... or one token per line"
+                        : isCurrentCodexPreset
+                          ? "Format: @email:eyJ... or one token per line"
+                          : "Format: @username:ghu_... or one token per line"
                       : "Paste multiple keys to auto-split"}
                   </span>
                 </div>
@@ -2993,7 +3261,11 @@ export const UpstreamKeysTab: React.FC = () => {
                       onChange={(e) => setBulkPasteText(e.target.value)}
                       placeholder={
                         isAccountMode
-                          ? "@user1:ghu_xxxx...\n@user2:ghu_yyyy...\nor paste tokens directly one per line..."
+                          ? isCurrentAntigravityPreset
+                            ? "@user1:ya29.xxxx...\n@user2:ya29.yyyy...\nor paste tokens directly one per line..."
+                            : isCurrentCodexPreset
+                              ? "@account1:eyJxxxx...\n@account2:eyJyyyy...\nor paste ChatGPT tokens directly one per line..."
+                              : "@user1:ghu_xxxx...\n@user2:ghu_yyyy...\nor paste tokens directly one per line..."
                           : "Paste keys here (one per line, comma separated, or Label: Key)..."
                       }
                       className="w-full px-2.5 py-1.5 rounded bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-mono text-zinc-900 dark:text-zinc-100"
@@ -3100,7 +3372,7 @@ export const UpstreamKeysTab: React.FC = () => {
           onClick={() => setActiveConnectionsUpstream(null)}
         >
           <div
-            className="w-full max-w-2xl skeuo-card p-6 flex flex-col max-h-[88vh]"
+            className="w-full max-w-3xl skeuo-card p-5 sm:p-6 flex flex-col max-h-[88vh] shadow-2xl rounded-2xl border border-zinc-200/80 dark:border-zinc-800"
             onClick={(e) => e.stopPropagation()}
           >
             {(() => {
@@ -3120,131 +3392,132 @@ export const UpstreamKeysTab: React.FC = () => {
 
               return (
                 <>
-                  <div className="flex items-center space-x-3 pb-3 border-b border-zinc-200 dark:border-zinc-800">
-                    <div className="flex items-center space-x-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setActiveConnectionsUpstream(null)}
-                        className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors inline-block cursor-pointer"
-                        title="Close"
-                      />
-                      <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-                      <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                          {isAntigravityProvider
-                            ? `Manage Antigravity Accounts: ${activeConnectionsUpstream.name}`
-                            : isCopilotProvider
-                              ? `Manage GitHub Copilot Accounts: ${activeConnectionsUpstream.name}`
-                              : isCodexProvider
-                                ? `Manage OpenAI Codex Accounts: ${activeConnectionsUpstream.name}`
-                                : `Connections: ${activeConnectionsUpstream.name}`}
-                        </h3>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isAntigravityProvider
-                            ? "bg-indigo-600 text-white border border-indigo-500"
-                            : isCopilotProvider
-                              ? "bg-zinc-800 text-white border border-zinc-700"
-                              : isCodexProvider
-                                ? "bg-emerald-600 text-white border border-emerald-500"
-                                : activeConnectionsUpstream.provider === "openai"
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                            }`}
-                        >
-                          {isAntigravityProvider
-                            ? "OAuth Antigravity"
-                            : isCopilotProvider
-                              ? "OAuth Copilot"
-                              : isCodexProvider
-                                ? "OAuth Codex"
-                                : activeConnectionsUpstream.provider}
-                        </span>
+                  {/* Clean Header with Logo, Title, Badge & Close Button */}
+                  <div className="flex items-start justify-between pb-3.5 border-b border-zinc-200 dark:border-zinc-800">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${
+                          isCopilotProvider
+                            ? "bg-zinc-900 border-zinc-700 text-white"
+                            : isAntigravityProvider
+                            ? "bg-indigo-950/60 border-indigo-700/60 text-white"
+                            : isCodexProvider
+                            ? "bg-emerald-950/60 border-emerald-700/60 text-white"
+                            : "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200"
+                        }`}
+                      >
+                        {isCopilotProvider ? (
+                          <GithubIcon className="w-5 h-5 text-white" />
+                        ) : isAntigravityProvider ? (
+                          <Rocket className="w-5 h-5 text-indigo-400" />
+                        ) : isCodexProvider ? (
+                          <OpenAIIcon className="w-5 h-5 text-emerald-400" />
+                        ) : (
+                          <KeyRound className="w-5 h-5 text-indigo-500" />
+                        )}
                       </div>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        {connectionsList.filter((k) => k.isActive).length} of {connectionsList.length} {isAccountProvider ? "active accounts" : "connections active"}
-                        {!isAccountProvider && activeConnectionsUpstream.baseUrl ? ` · ${activeConnectionsUpstream.baseUrl}` : ""}
-                      </p>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            {isCopilotProvider
+                              ? "GitHub Copilot Accounts"
+                              : isAntigravityProvider
+                              ? "Antigravity Google Accounts"
+                              : isCodexProvider
+                              ? "OpenAI Codex Accounts"
+                              : `${activeConnectionsUpstream.name} Keys`}
+                          </h3>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider shrink-0 ${
+                              isCopilotProvider
+                                ? "bg-zinc-800 text-zinc-200 border border-zinc-700"
+                                : isAntigravityProvider
+                                ? "bg-indigo-500/15 text-indigo-400 border border-indigo-500/30"
+                                : isCodexProvider
+                                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                                : "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
+                            }`}
+                          >
+                            {isCopilotProvider
+                              ? "OAuth Device Flow"
+                              : isAntigravityProvider
+                              ? "Google OAuth"
+                              : isCodexProvider
+                              ? "ChatGPT OAuth"
+                              : activeConnectionsUpstream.provider}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-2 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                          <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                            {activeConnectionsUpstream.name}
+                          </span>
+                          <span>•</span>
+                          <span className="inline-flex items-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
+                            {connectionsList.filter((k) => k.isActive).length} of {connectionsList.length} {isAccountProvider ? "accounts active" : "keys active"}
+                          </span>
+                          {!isAccountProvider && activeConnectionsUpstream.baseUrl && (
+                            <>
+                              <span>•</span>
+                              <span className="font-mono text-[11px] truncate max-w-[200px]">{activeConnectionsUpstream.baseUrl}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveConnectionsUpstream(null)}
+                      className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      title="Close"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
                   </div>
 
-                  {/* Action Bar: Test One-by-One, Round Robin switch, + Add Key/Account */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 my-3">
-                    <div className="flex items-center space-x-2">
+                  {/* Balanced Toolbar: Pool Controls on Left, Account Actions on Right */}
+                  <div className="flex flex-wrap items-center justify-between gap-2.5 py-3 border-b border-zinc-100 dark:border-zinc-800/60">
+                    <div className="flex items-center space-x-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleToggleRoundRobinInConnections}
+                        className={`h-8 px-2.5 rounded-lg text-xs font-medium inline-flex items-center space-x-1.5 cursor-pointer transition-all border whitespace-nowrap shadow-xs ${
+                          activeConnectionsUpstream.roundRobin !== false
+                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15"
+                            : "bg-zinc-100 dark:bg-zinc-800/80 border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400"
+                        }`}
+                        title="Toggle round-robin load balancing across active keys"
+                      >
+                        <RotateCw className="w-3 h-3" />
+                        <span>Round-Robin: {activeConnectionsUpstream.roundRobin !== false ? "ON" : "OFF"}</span>
+                        <span className={`w-1.5 h-1.5 rounded-full ${activeConnectionsUpstream.roundRobin !== false ? "bg-emerald-500 shadow-xs shadow-emerald-500/50" : "bg-zinc-400"}`} />
+                      </button>
+
                       <button
                         type="button"
                         onClick={handleTestOneByOne}
                         disabled={testingOneByOne || connectionsList.length === 0}
-                        className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-medium flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                        className="skeuo-btn h-8 px-2.5 rounded-lg text-xs font-medium inline-flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 whitespace-nowrap shadow-xs"
                         title="Sequentially ping and verify every key/account in this pool"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${testingOneByOne ? "animate-spin text-indigo-500" : ""}`} />
-                        <span>{testingOneByOne ? "Testing..." : isAccountProvider ? "Test Accounts One-by-One" : "Test Connection One-by-One"}</span>
+                        <span>{testingOneByOne ? "Testing..." : "Test All"}</span>
                       </button>
-
-                      {/* Round Robin Switch */}
-                      <button
-                        type="button"
-                        onClick={handleToggleRoundRobinInConnections}
-                        className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-medium flex items-center space-x-2 cursor-pointer"
-                        title="Toggle round-robin rotation between active keys/accounts"
-                      >
-                        <span className="text-zinc-700 dark:text-zinc-300">Round Robin</span>
-                        {activeConnectionsUpstream.roundRobin !== false ? (
-                          <ToggleRight className="w-5 h-5 text-emerald-500" />
-                        ) : (
-                          <ToggleLeft className="w-5 h-5 text-zinc-400" />
-                        )}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center space-x-2 flex-wrap">
-                      {isAntigravityProvider && (
-                        <button
-                          type="button"
-                          onClick={() => startAntigravityOAuth(activeConnectionsUpstream)}
-                          className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer bg-indigo-600 text-white hover:bg-indigo-500 shadow-xs"
-                          title="Connect a new Google account via OAuth"
-                        >
-                          <Rocket className="w-3.5 h-3.5" />
-                          <span>+ Connect via Google</span>
-                        </button>
-                      )}
-                      {isCopilotProvider && (
-                        <button
-                          type="button"
-                          onClick={() => startCopilotOAuth(activeConnectionsUpstream)}
-                          className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-                          title="Connect a new GitHub account via OAuth Device Code"
-                        >
-                          <GithubIcon className="w-3.5 h-3.5" />
-                          <span>+ Connect via GitHub</span>
-                        </button>
-                      )}
-                      {isCodexProvider && (
-                        <button
-                          type="button"
-                          onClick={() => startCodexOAuth(activeConnectionsUpstream)}
-                          className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer bg-emerald-600 text-white hover:bg-emerald-500 shadow-xs"
-                          title="Connect a new OpenAI Codex account via OAuth"
-                        >
-                          <OpenAIIcon className="w-3.5 h-3.5" />
-                          <span>+ Connect via OpenAI</span>
-                        </button>
-                      )}
 
                       <button
                         type="button"
                         onClick={() => openModelsModal(activeConnectionsUpstream)}
-                        className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/50"
-                        title="Manage and toggle active models"
+                        className="skeuo-btn h-8 px-2.5 rounded-lg text-xs font-medium inline-flex items-center space-x-1.5 cursor-pointer text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/50 whitespace-nowrap shadow-xs"
+                        title="Manage models for this provider"
                       >
                         <Cpu className="w-3.5 h-3.5 text-indigo-400" />
                         <span>Models ({activeConnectionsUpstream.totalModelsCount || activeConnectionsUpstream.models?.length || 0})</span>
                       </button>
+                    </div>
 
+                    <div className="flex items-center space-x-2 shrink-0">
                       <button
                         type="button"
                         onClick={() => {
@@ -3253,11 +3526,13 @@ export const UpstreamKeysTab: React.FC = () => {
                           setMassImportError("");
                           setMassImportSuccess("");
                         }}
-                        className="skeuo-btn px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer text-indigo-600 dark:text-indigo-400 hover:border-indigo-500/50"
-                        title="Import accounts in bulk"
+                        className={`skeuo-btn h-8 px-2.5 rounded-lg text-xs font-medium inline-flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shadow-xs ${
+                          isMassImportOpen ? "border-indigo-500 text-indigo-500" : "text-zinc-600 dark:text-zinc-400"
+                        }`}
+                        title="Import multiple credentials in bulk"
                       >
                         <UploadCloud className="w-3.5 h-3.5" />
-                        <span>{isAccountProvider ? "Bulk Import Accounts" : "Mass Import Keys"}</span>
+                        <span>Bulk Import</span>
                       </button>
 
                       <button
@@ -3266,11 +3541,48 @@ export const UpstreamKeysTab: React.FC = () => {
                           setIsAddingConnection(!isAddingConnection);
                           setIsMassImportOpen(false);
                         }}
-                        className="skeuo-btn-primary px-3 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer"
+                        className={`skeuo-btn h-8 px-2.5 rounded-lg text-xs font-medium inline-flex items-center space-x-1.5 cursor-pointer whitespace-nowrap shadow-xs ${
+                          isAddingConnection ? "border-indigo-500 text-indigo-500" : "text-zinc-600 dark:text-zinc-400"
+                        }`}
+                        title="Add account token or key manually"
                       >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>{isAccountProvider ? "Add Token" : "Add API Key"}</span>
+                        <span>{isAccountProvider ? "Manual Token" : "Add Key"}</span>
                       </button>
+
+                      {isCopilotProvider && (
+                        <button
+                          type="button"
+                          onClick={() => startCopilotOAuth(activeConnectionsUpstream)}
+                          className="h-8 px-3 rounded-lg text-xs font-bold inline-flex items-center space-x-1.5 cursor-pointer bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 shadow-xs whitespace-nowrap transition-transform active:scale-95"
+                          title="Connect a GitHub account via OAuth Device Flow"
+                        >
+                          <GithubIcon className="w-3.5 h-3.5" />
+                          <span>+ Connect GitHub</span>
+                        </button>
+                      )}
+                      {isAntigravityProvider && (
+                        <button
+                          type="button"
+                          onClick={() => startAntigravityOAuth(activeConnectionsUpstream)}
+                          className="h-8 px-3 rounded-lg text-xs font-bold inline-flex items-center space-x-1.5 cursor-pointer bg-indigo-600 text-white hover:bg-indigo-500 shadow-xs whitespace-nowrap transition-transform active:scale-95"
+                          title="Connect a Google account via OAuth"
+                        >
+                          <Rocket className="w-3.5 h-3.5" />
+                          <span>+ Connect Google</span>
+                        </button>
+                      )}
+                      {isCodexProvider && (
+                        <button
+                          type="button"
+                          onClick={() => startCodexOAuth(activeConnectionsUpstream)}
+                          className="h-8 px-3 rounded-lg text-xs font-bold inline-flex items-center space-x-1.5 cursor-pointer bg-emerald-600 text-white hover:bg-emerald-500 shadow-xs whitespace-nowrap transition-transform active:scale-95"
+                          title="Connect an OpenAI account via OAuth"
+                        >
+                          <OpenAIIcon className="w-3.5 h-3.5" />
+                          <span>+ Connect OpenAI</span>
+                        </button>
+                      )}
                     </div>
                   </div>
                 </>
@@ -3281,7 +3593,7 @@ export const UpstreamKeysTab: React.FC = () => {
             {isMassImportOpen && (
               <form
                 onSubmit={handleMassImportKeys}
-                className="mb-3 p-3.5 rounded-lg border border-indigo-500/40 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-3"
+                className="my-3 p-3.5 rounded-xl border border-indigo-500/40 bg-indigo-500/5 dark:bg-indigo-950/20 space-y-3"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -3355,8 +3667,11 @@ export const UpstreamKeysTab: React.FC = () => {
                         onChange={(e) => setMassImportActive(e.target.checked)}
                         className="rounded"
                       />
-                      <span>Active immediately</span>
+                      <span>Active by default</span>
                     </label>
+                  </div>
+
+                  <div className="flex items-center space-x-3 pt-2 sm:pt-4">
                     <label className="flex items-center space-x-1.5 text-xs text-zinc-700 dark:text-zinc-300 cursor-pointer">
                       <input
                         type="checkbox"
@@ -3367,33 +3682,33 @@ export const UpstreamKeysTab: React.FC = () => {
                       <span>Skip duplicates</span>
                     </label>
                   </div>
+                </div>
 
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="submit"
-                      disabled={massImportLoading || detectedKeysCount === 0}
-                      className="skeuo-btn-primary px-4 py-1.5 rounded-md text-xs font-medium cursor-pointer flex items-center space-x-1.5 disabled:opacity-50"
-                    >
-                      {massImportLoading ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Importing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <UploadCloud className="w-3.5 h-3.5" />
-                          <span>Import {detectedKeysCount} {activeConnectionsUpstream.name.toLowerCase().includes("copilot") ? "Accounts" : "Keys"}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="submit"
+                    disabled={massImportLoading || detectedKeysCount === 0}
+                    className="skeuo-btn-primary px-4 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {massImportLoading ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Importing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        <span>Import {detectedKeysCount} {activeConnectionsUpstream.name.toLowerCase().includes("copilot") ? "Accounts" : "Keys"}</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </form>
             )}
 
             {/* Inline Add Key Box */}
             {isAddingConnection && (
-              <form onSubmit={handleSaveNewConnection} className="mb-3 p-3 rounded-lg border border-indigo-500/30 bg-indigo-500/5 space-y-2">
+              <form onSubmit={handleSaveNewConnection} className="my-3 p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-500/5 space-y-2.5">
                 <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
                   <span>
                     {activeConnectionsUpstream.name.toLowerCase().includes("copilot")
@@ -3462,16 +3777,19 @@ export const UpstreamKeysTab: React.FC = () => {
             )}
 
             {/* Connections Cards List */}
-            <div className="flex-1 overflow-y-auto min-h-[220px] max-h-[380px] border border-zinc-200 dark:border-zinc-800 rounded-lg p-2 space-y-2">
+            <div className="flex-1 overflow-y-auto min-h-[220px] max-h-[380px] border border-zinc-200 dark:border-zinc-800 rounded-xl p-2.5 space-y-2 mt-2">
               {loadingConnections ? (
                 <div className="py-12 text-center text-xs text-zinc-400 flex items-center justify-center space-x-2">
                   <Loader2 className="w-4 h-4 animate-spin text-indigo-500" />
                   <span>Loading connections...</span>
                 </div>
               ) : connectionsList.length === 0 ? (
-                <div className="py-10 text-center text-xs text-zinc-400">
+                <div className="py-12 text-center text-xs text-zinc-400">
                   <KeyRound className="w-7 h-7 mx-auto mb-2 opacity-30" />
-                  <p>No accounts or keys stored yet.</p>
+                  <p className="font-semibold text-zinc-600 dark:text-zinc-300">No credentials configured yet.</p>
+                  <p className="text-[11px] text-zinc-400 mt-1">
+                    Connect your account via OAuth or add a token/key above to activate this provider.
+                  </p>
                 </div>
               ) : (
                 connectionsList.map((conn, idx) => {
@@ -3485,22 +3803,28 @@ export const UpstreamKeysTab: React.FC = () => {
                   const isCdx =
                     activeConnectionsUpstream.name.toLowerCase().includes("codex") ||
                     Boolean(activeConnectionsUpstream.baseUrl && activeConnectionsUpstream.baseUrl.includes("chatgpt.com/backend-api/codex"));
+                  const isAcc = isCop || isAnti || isCdx;
 
                   return (
                     <div
                       key={conn.id}
-                      className={`p-3 rounded-lg border transition-all ${conn.isActive
-                        ? "skeuo-card-subtle border-zinc-200/90 dark:border-zinc-800"
+                      className={`p-3 rounded-xl border transition-all ${conn.isActive
+                        ? "skeuo-card-subtle border-zinc-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900/60 shadow-xs"
                         : "bg-zinc-100/60 dark:bg-zinc-900/30 border-dashed border-zinc-300 dark:border-zinc-800/80 opacity-60"
                         }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center space-x-3 min-w-0 flex-1">
                           <div
-                            className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${conn.isActive
-                              ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
-                              : "bg-zinc-500/10 text-zinc-400 border border-zinc-500/20"
-                              }`}
+                            className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border shadow-xs ${
+                              isCop
+                                ? "bg-zinc-800 text-white border-zinc-700"
+                                : isAnti
+                                ? "bg-indigo-950/40 text-indigo-400 border-indigo-800/40"
+                                : isCdx
+                                ? "bg-emerald-950/40 text-emerald-400 border-emerald-800/40"
+                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 border-zinc-200 dark:border-zinc-700"
+                            }`}
                           >
                             {isCop ? (
                               <GithubIcon className="w-4 h-4" />
@@ -3514,43 +3838,101 @@ export const UpstreamKeysTab: React.FC = () => {
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100 truncate">
-                                {conn.name ||
-                                  (isAnti
-                                    ? `Antigravity Account #${idx + 1}`
-                                    : isCop
-                                      ? `Copilot Account #${idx + 1}`
-                                      : isCdx
-                                        ? `Codex Account #${idx + 1}`
-                                        : `API Key #${idx + 1}`)}
-                              </span>
-                              <span
-                                className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold ${conn.isActive
-                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                                  : "bg-zinc-500/15 text-zinc-500 dark:text-zinc-400 border border-zinc-500/30"
-                                  }`}
-                              >
-                                <span
-                                  className={`w-1.5 h-1.5 rounded-full mr-1 ${conn.isActive ? "bg-emerald-500" : "bg-zinc-400"
-                                    }`}
+                            {editingKeyId === conn.id ? (
+                              <div className="flex items-center space-x-1.5 py-0.5">
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingKeyName}
+                                  onChange={(e) => setEditingKeyName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") handleSaveRenameKey(conn.id);
+                                    if (e.key === "Escape") setEditingKeyId(null);
+                                  }}
+                                  className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 border border-indigo-500 text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-none"
                                 />
-                                {conn.isActive ? "active" : "disabled"}
-                              </span>
-                            </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveRenameKey(conn.id)}
+                                  className="p-1 rounded text-emerald-500 hover:bg-emerald-500/10 cursor-pointer"
+                                  title="Save Name"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingKeyId(null)}
+                                  className="p-1 rounded text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center space-x-1.5">
+                                <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100 truncate">
+                                  {conn.name ||
+                                    (isAnti
+                                      ? `Antigravity Account #${idx + 1}`
+                                      : isCop
+                                        ? `Copilot Account #${idx + 1}`
+                                        : isCdx
+                                          ? `Codex Account #${idx + 1}`
+                                          : `API Key #${idx + 1}`)}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartRenameKey(conn.id, conn.name || "")}
+                                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer opacity-70 hover:opacity-100"
+                                  title="Rename account label"
+                                >
+                                  <Edit3 className="w-3 h-3" />
+                                </button>
+                                <span
+                                  className={`inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold ${conn.isActive
+                                    ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                    : "bg-zinc-500/15 text-zinc-500 dark:text-zinc-400 border border-zinc-500/30"
+                                    }`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full mr-1 ${conn.isActive ? "bg-emerald-500 animate-pulse" : "bg-zinc-400"
+                                      }`}
+                                  />
+                                  {conn.isActive ? "active" : "disabled"}
+                                </span>
+                              </div>
+                            )}
 
                             <div className="flex items-center space-x-2 mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-400 font-mono">
-                              <span>
-                                {isAnti
-                                  ? `Account #${idx + 1}`
-                                  : isCop
-                                    ? `Account #${idx + 1}`
-                                    : isCdx
-                                      ? `Account #${idx + 1}`
-                                      : `API Key #${idx + 1}`}
+                              <span className="text-[10px] text-zinc-400">
+                                {isAcc ? `Account #${idx + 1}` : `API Key #${idx + 1}`}
                               </span>
-                              <span>·</span>
-                              <span>{conn.maskedKey || "******"}</span>
+                              <span>•</span>
+                              <span className="select-all">
+                                {revealedKeyIds[conn.id] && conn.key
+                                  ? conn.key
+                                  : conn.maskedKey || (conn.key ? `${conn.key.slice(0, 6)}••••••••${conn.key.slice(-4)}` : "••••••••••••")}
+                              </span>
+                              {conn.key && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleRevealKey(conn.id)}
+                                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                                  title={revealedKeyIds[conn.id] ? "Hide Secret" : "Reveal Secret"}
+                                >
+                                  {revealedKeyIds[conn.id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                                </button>
+                              )}
+                              {conn.key && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyKey(conn.id, conn.key)}
+                                  className="p-0.5 rounded text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                                  title="Copy Token"
+                                >
+                                  {copiedKeyId === conn.id ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -3582,7 +3964,7 @@ export const UpstreamKeysTab: React.FC = () => {
                             type="button"
                             onClick={() => handleTestKeyInConnections(conn.id)}
                             disabled={testInfo?.testing}
-                            className="skeuo-btn px-2 py-1 rounded text-[11px] font-medium flex items-center space-x-1 cursor-pointer"
+                            className="skeuo-btn px-2.5 py-1 rounded-md text-[11px] font-medium flex items-center space-x-1 cursor-pointer"
                             title="Test this single connection"
                           >
                             <Wifi className={`w-3 h-3 ${testInfo?.testing ? "animate-pulse text-indigo-500" : ""}`} />
@@ -3593,8 +3975,8 @@ export const UpstreamKeysTab: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleDeleteConnectionKey(conn.id)}
-                              className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
-                              title="Delete this connection key"
+                              className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer transition-colors"
+                              title="Delete this connection"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -3605,14 +3987,17 @@ export const UpstreamKeysTab: React.FC = () => {
                             role="switch"
                             aria-checked={conn.isActive}
                             onClick={() => handleToggleConnectionKey(conn.id, conn.isActive)}
-                            className="p-1 cursor-pointer"
-                            title={conn.isActive ? "Disable this key" : "Enable this key"}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                              conn.isActive ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-700"
+                            }`}
+                            title={conn.isActive ? "Disable this account" : "Enable this account"}
                           >
-                            {conn.isActive ? (
-                              <ToggleRight className="w-6 h-6 text-emerald-500" />
-                            ) : (
-                              <ToggleLeft className="w-6 h-6 text-zinc-400" />
-                            )}
+                            <span
+                              aria-hidden="true"
+                              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                conn.isActive ? "translate-x-4" : "translate-x-0"
+                              }`}
+                            />
                           </button>
                         </div>
                       </div>
@@ -3622,6 +4007,7 @@ export const UpstreamKeysTab: React.FC = () => {
               )}
             </div>
 
+            {/* Footer with Delete Provider and Done */}
             <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs">
               <button
                 type="button"
@@ -3827,7 +4213,7 @@ export const UpstreamKeysTab: React.FC = () => {
       {copilotModalOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-          onClick={() => setCopilotModalOpen(false)}
+          onClick={closeCopilotModal}
         >
           <div
             className="skeuo-card max-w-md w-full p-6 rounded-2xl border border-zinc-300 dark:border-zinc-700 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150"
@@ -3839,17 +4225,20 @@ export const UpstreamKeysTab: React.FC = () => {
                   <GithubIcon className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                    Connect GitHub Copilot
+                  <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center space-x-1.5">
+                    <span>Connect GitHub Copilot</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-300 font-semibold border border-zinc-700">
+                      OAuth 2.0
+                    </span>
                   </h3>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                    OAuth Device Code Flow
+                    Device Code Authorization Flow
                   </p>
                 </div>
               </div>
               <button
                 type="button"
-                onClick={() => setCopilotModalOpen(false)}
+                onClick={closeCopilotModal}
                 className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-colors inline-block cursor-pointer"
                 title="Close"
               />
@@ -3866,13 +4255,22 @@ export const UpstreamKeysTab: React.FC = () => {
               <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs space-y-3 text-center">
                 <AlertCircle className="w-6 h-6 mx-auto text-red-500" />
                 <p className="font-semibold">{copilotError}</p>
-                <button
-                  type="button"
-                  onClick={() => startCopilotOAuth(copilotTargetUpstream)}
-                  className="skeuo-btn px-4 py-1.5 rounded-md text-xs font-semibold cursor-pointer"
-                >
-                  Try Again
-                </button>
+                <div className="flex items-center justify-center space-x-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => startCopilotOAuth(copilotTargetUpstream)}
+                    className="skeuo-btn px-4 py-1.5 rounded-md text-xs font-semibold cursor-pointer"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeCopilotModal}
+                    className="px-3 py-1.5 rounded-md text-xs text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             ) : copilotDeviceInfo ? (
               <div className="space-y-4">
@@ -3893,10 +4291,11 @@ export const UpstreamKeysTab: React.FC = () => {
                         setTimeout(() => setCopilotCopied(false), 3000);
                       } catch (e) { }
                     }}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer transition-colors ${copilotCopied
-                      ? "bg-emerald-500 text-white"
-                      : "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-700"
-                      }`}
+                    className={`px-3.5 py-1.5 rounded-md text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer transition-colors shadow-xs ${
+                      copilotCopied
+                        ? "bg-emerald-500 text-white"
+                        : "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 hover:bg-zinc-300 dark:hover:bg-zinc-700 border border-zinc-300/60 dark:border-zinc-700"
+                    }`}
                   >
                     {copilotCopied ? (
                       <>
@@ -3921,6 +4320,12 @@ export const UpstreamKeysTab: React.FC = () => {
                     href={copilotDeviceInfo.verification_uri || "https://github.com/login/device"}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(copilotDeviceInfo.user_code);
+                        setCopilotCopied(true);
+                      } catch (e) { }
+                    }}
                     className="w-full py-2.5 px-4 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-bold text-xs flex items-center justify-center space-x-2 shadow-sm cursor-pointer transition-all"
                   >
                     <GithubIcon className="w-4 h-4" />
@@ -3929,17 +4334,29 @@ export const UpstreamKeysTab: React.FC = () => {
                   </a>
                 </div>
 
-                {/* Step 3: Polling Status indicator */}
-                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 text-center">
+                {/* Step 3: Polling Status & Manual Check */}
+                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800 space-y-2.5 text-center">
                   {copilotStatus === "polling" && (
-                    <div className="flex items-center justify-center space-x-2 text-xs text-zinc-500 dark:text-zinc-400">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      <span className="text-[11px]">{copilotStatusText}</span>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center space-x-2 text-xs text-zinc-500 dark:text-zinc-400">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        <span className="text-[11px]">{copilotStatusText}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => checkCopilotToken(true)}
+                        disabled={copilotChecking}
+                        className="skeuo-btn px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center space-x-1.5 cursor-pointer disabled:opacity-50 shadow-xs"
+                        title="Click to check right away if you just approved on GitHub"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${copilotChecking ? "animate-spin text-emerald-500" : ""}`} />
+                        <span>{copilotChecking ? "Checking authorization..." : "Check Authorization Now"}</span>
+                      </button>
                     </div>
                   )}
                   {copilotStatus === "success" && (
-                    <div className="flex items-center justify-center space-x-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold animate-in fade-in">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                    <div className="flex items-center justify-center space-x-2 text-xs text-emerald-600 dark:text-emerald-400 font-bold animate-in fade-in py-1">
+                      <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500" />
                       <span>{copilotStatusText}</span>
                     </div>
                   )}
@@ -3950,7 +4367,7 @@ export const UpstreamKeysTab: React.FC = () => {
             <div className="flex justify-end pt-2">
               <button
                 type="button"
-                onClick={() => setCopilotModalOpen(false)}
+                onClick={closeCopilotModal}
                 className="skeuo-btn px-4 py-1.5 rounded-md text-xs font-semibold cursor-pointer"
               >
                 Close
