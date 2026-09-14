@@ -749,13 +749,6 @@ export const DashboardTab: React.FC = () => {
               {/* Dynamic SVG Curves: connects center node (0,0) to active upstream nodes */}
               {providerPositions.length > 0 && (
                 <svg className="absolute left-0 top-0 overflow-visible pointer-events-none z-0">
-                  <defs>
-                    <linearGradient id="curveGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#f97316" stopOpacity="0.9" />
-                      <stop offset="100%" stopColor="#f97316" stopOpacity="0.3" />
-                    </linearGradient>
-                  </defs>
-
                   {providerPositions.map((node) => {
                     // Strictly only connect to the node if a request is actively routing through it
                     const isNodeActive = activeUpstreamIds.includes(node.id);
@@ -781,7 +774,7 @@ export const DashboardTab: React.FC = () => {
                         <path
                           d={d}
                           fill="none"
-                          stroke="url(#curveGradient)"
+                          stroke="#f97316"
                           strokeWidth="2.5"
                           className="router-flow-active"
                         />

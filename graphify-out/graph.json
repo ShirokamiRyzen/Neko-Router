@@ -7245,7 +7245,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L946",
+      "source_location": "L939",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -7269,7 +7269,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/DashboardTab.tsx",
-      "source_location": "L851",
+      "source_location": "L844",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_dashboardtab_dashboardtab",
@@ -16619,5 +16619,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "8929446df70c594c12254cb2919b8905d0c7d856"
+  "built_at_commit": "9f866594f6cb21ecb66944f0a8f99453769850da"
 }
