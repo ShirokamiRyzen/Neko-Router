@@ -54,6 +54,10 @@ export const ClientKeysTab: React.FC = () => {
   const [upstreams, setUpstreams] = useState<UpstreamKeyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [selectedSecretIds, setSelectedSecretIds] = useState<Set<string>>(new Set());
+  const [selectedRouterKeyIds, setSelectedRouterKeyIds] = useState<Set<string>>(new Set());
+  const [deletingSecretBatch, setDeletingSecretBatch] = useState(false);
+  const [deletingRouterBatch, setDeletingRouterBatch] = useState(false);
 
   // Modal State: Create Secret Key (AI Proxy)
   const [isSecretModalOpen, setIsSecretModalOpen] = useState(false);
@@ -238,9 +242,33 @@ export const ClientKeysTab: React.FC = () => {
     if (!confirm("Are you sure you want to revoke and delete this secret key?")) return;
     try {
       await apiRequest(`/api/keys/${id}`, { method: "DELETE" });
+      setSelectedSecretIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       await loadData();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleDeleteSelectedSecrets = async () => {
+    if (selectedSecretIds.size === 0) return;
+    const count = selectedSecretIds.size;
+    if (!confirm(`Are you sure you want to revoke and delete ${count} selected secret key(s)?`)) return;
+    setDeletingSecretBatch(true);
+    try {
+      await apiRequest("/api/keys/batch-delete", {
+        method: "POST",
+        body: JSON.stringify({ ids: Array.from(selectedSecretIds) }),
+      });
+      setSelectedSecretIds(new Set());
+      await loadData();
+    } catch (e: any) {
+      alert(e.message || "Failed to delete selected secret keys");
+    } finally {
+      setDeletingSecretBatch(false);
     }
   };
 
@@ -462,9 +490,35 @@ export const ClientKeysTab: React.FC = () => {
     }
     try {
       await apiRequest(`/api/router-keys/${id}`, { method: "DELETE" });
+      setSelectedRouterKeyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
       await loadData();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleDeleteSelectedRouterKeys = async () => {
+    if (selectedRouterKeyIds.size === 0) return;
+    const count = selectedRouterKeyIds.size;
+    if (!confirm(`Are you sure you want to revoke and delete ${count} selected router API key(s)? Owned secret keys will remain but will be unassigned.`)) {
+      return;
+    }
+    setDeletingRouterBatch(true);
+    try {
+      await apiRequest("/api/router-keys/batch-delete", {
+        method: "POST",
+        body: JSON.stringify({ ids: Array.from(selectedRouterKeyIds) }),
+      });
+      setSelectedRouterKeyIds(new Set());
+      await loadData();
+    } catch (e: any) {
+      alert(e.message || "Failed to delete selected router API keys");
+    } finally {
+      setDeletingRouterBatch(false);
     }
   };
 
@@ -660,11 +714,52 @@ export const ClientKeysTab: React.FC = () => {
             </button>
           </div>
 
+          {/* Bulk Action Bar for Secret Keys */}
+          {selectedSecretIds.size > 0 && (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs">
+              <span className="font-bold text-red-600 dark:text-red-400">
+                {selectedSecretIds.size} secret key(s) selected
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={handleDeleteSelectedSecrets}
+                  disabled={deletingSecretBatch}
+                  className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold flex items-center space-x-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Selected ({selectedSecretIds.size})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSecretIds(new Set())}
+                  className="px-2.5 py-1 rounded-lg skeuo-btn text-xs font-medium cursor-pointer"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="skeuo-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 font-medium">
                   <tr>
+                    <th className="w-10 pl-4 pr-1 py-3">
+                      <input
+                        type="checkbox"
+                        checked={secretKeys.length > 0 && selectedSecretIds.size === secretKeys.length}
+                        ref={(el) => {
+                          if (el) el.indeterminate = selectedSecretIds.size > 0 && selectedSecretIds.size < secretKeys.length;
+                        }}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedSecretIds(new Set(secretKeys.map((k) => k.id)));
+                          else setSelectedSecretIds(new Set());
+                        }}
+                        className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </th>
                     <th className="px-5 py-3">Label / Name</th>
                     <th className="px-5 py-3">Secret Key</th>
                     <th className="px-5 py-3">Parent API Key</th>
@@ -679,7 +774,7 @@ export const ClientKeysTab: React.FC = () => {
                 <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50 text-zinc-700 dark:text-zinc-300">
                   {secretKeys.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-5 py-12 text-center text-zinc-500 dark:text-zinc-400">
+                      <td colSpan={10} className="px-5 py-12 text-center text-zinc-500 dark:text-zinc-400">
                         <Key className="w-8 h-8 mx-auto mb-2 opacity-40" />
                         <p className="font-medium">No secret keys configured yet</p>
                         <p className="text-[11px] mt-1">
@@ -717,6 +812,22 @@ export const ClientKeysTab: React.FC = () => {
 
                       return (
                         <tr key={k.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
+                          <td className="pl-4 pr-1 py-3.5">
+                            <input
+                              type="checkbox"
+                              checked={selectedSecretIds.has(k.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setSelectedSecretIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(k.id)) next.delete(k.id);
+                                  else next.add(k.id);
+                                  return next;
+                                });
+                              }}
+                              className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
                           <td className="px-5 py-3.5 font-semibold text-zinc-900 dark:text-zinc-100">
                             <div className="flex items-center space-x-2">
                               <span>{k.name}</span>
@@ -960,11 +1071,52 @@ export const ClientKeysTab: React.FC = () => {
             </button>
           </div>
 
+          {/* Bulk Action Bar for Router API Keys */}
+          {selectedRouterKeyIds.size > 0 && (
+            <div className="flex items-center justify-between p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-xs">
+              <span className="font-bold text-red-600 dark:text-red-400">
+                {selectedRouterKeyIds.size} router API key(s) selected
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={handleDeleteSelectedRouterKeys}
+                  disabled={deletingRouterBatch}
+                  className="px-3 py-1 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold flex items-center space-x-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Delete Selected ({selectedRouterKeyIds.size})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedRouterKeyIds(new Set())}
+                  className="px-2.5 py-1 rounded-lg skeuo-btn text-xs font-medium cursor-pointer"
+                >
+                  Deselect All
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="skeuo-card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 font-medium">
                   <tr>
+                    <th className="w-10 pl-4 pr-1 py-3">
+                      <input
+                        type="checkbox"
+                        checked={routerApiKeys.length > 0 && selectedRouterKeyIds.size === routerApiKeys.length}
+                        ref={(el) => {
+                          if (el) el.indeterminate = selectedRouterKeyIds.size > 0 && selectedRouterKeyIds.size < routerApiKeys.length;
+                        }}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedRouterKeyIds(new Set(routerApiKeys.map((k) => k.id)));
+                          else setSelectedRouterKeyIds(new Set());
+                        }}
+                        className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                    </th>
                     <th className="px-5 py-3">Key Name</th>
                     <th className="px-5 py-3">Integration API Key</th>
                     <th className="px-5 py-3">Description</th>
@@ -978,7 +1130,7 @@ export const ClientKeysTab: React.FC = () => {
                 <tbody className="divide-y divide-zinc-200/50 dark:divide-zinc-800/50 text-zinc-700 dark:text-zinc-300">
                   {routerApiKeys.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-5 py-12 text-center text-zinc-500 dark:text-zinc-400">
+                      <td colSpan={9} className="px-5 py-12 text-center text-zinc-500 dark:text-zinc-400">
                         <Terminal className="w-8 h-8 mx-auto mb-2 opacity-40" />
                         <p className="font-medium">No router integration API keys found</p>
                         <p className="text-[11px] mt-1">
@@ -991,6 +1143,22 @@ export const ClientKeysTab: React.FC = () => {
                       const isCopied = copiedId === ak.id;
                       return (
                         <tr key={ak.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
+                          <td className="pl-4 pr-1 py-3.5">
+                            <input
+                              type="checkbox"
+                              checked={selectedRouterKeyIds.has(ak.id)}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setSelectedRouterKeyIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(ak.id)) next.delete(ak.id);
+                                  else next.add(ak.id);
+                                  return next;
+                                });
+                              }}
+                              className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            />
+                          </td>
                           <td className="px-5 py-3.5 font-semibold text-zinc-900 dark:text-zinc-100">
                             {ak.name}
                           </td>

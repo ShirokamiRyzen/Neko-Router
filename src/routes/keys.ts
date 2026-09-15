@@ -570,6 +570,25 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
       }),
     }
   )
+  .post(
+    "/batch-delete",
+    ({ body, set }) => {
+      const { ids } = body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        set.status = 400;
+        return { error: "No key IDs provided" };
+      }
+      for (const id of ids) {
+        db.delete(clientKeys).where(eq(clientKeys.id, id)).run();
+      }
+      return { success: true, deletedCount: ids.length };
+    },
+    {
+      body: t.Object({
+        ids: t.Array(t.String()),
+      }),
+    }
+  )
   .delete("/:id", ({ params: { id }, set }) => {
     const existing = db
       .select()

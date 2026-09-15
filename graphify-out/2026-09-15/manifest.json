@@ -65,8 +65,8 @@
     "semantic_hash": ""
   },
   "src/routes/keys.ts": {
-    "mtime": 1789438068.5137186,
-    "ast_hash": "7fb13378541096b3e132da3dc55af4df",
+    "mtime": 1789142158.1069782,
+    "ast_hash": "b84f15c89905747df76dfbec9dc59661",
     "semantic_hash": ""
   },
   "src/routes/proxy.ts": {
@@ -80,8 +80,8 @@
     "semantic_hash": ""
   },
   "src/routes/upstreams.ts": {
-    "mtime": 1789438062.9852717,
-    "ast_hash": "9f40afec09f36c141815726577a7ac25",
+    "mtime": 1789187019.4729698,
+    "ast_hash": "859541f997b876134a2d72cbf08b1c9e",
     "semantic_hash": ""
   },
   "src/services/auth.ts": {
@@ -140,8 +140,8 @@
     "semantic_hash": ""
   },
   "src/routes/api-keys.ts": {
-    "mtime": 1789438074.9222662,
-    "ast_hash": "e380f9baa019486fb2d25e44d1264d13",
+    "mtime": 1788829943.9665048,
+    "ast_hash": "29ac85be8433061503524114fa634ed6",
     "semantic_hash": ""
   },
   "frontend/.oxlintrc.json": {
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/ClientKeysTab.tsx": {
-    "mtime": 1789438260.3673012,
-    "ast_hash": "7abf0e2c65e528a0c7149be8f32249a0",
+    "mtime": 1789142182.4779737,
+    "ast_hash": "32f18b511fd715293dfaa543422e3fe2",
     "semantic_hash": ""
   },
   "frontend/src/components/CodeSnippetViewer.tsx": {
@@ -205,8 +205,8 @@
     "semantic_hash": ""
   },
   "frontend/src/components/UpstreamKeysTab.tsx": {
-    "mtime": 1789438191.439681,
-    "ast_hash": "14a028af3acfb42567d4492f8e1d4017",
+    "mtime": 1789355805.1746523,
+    "ast_hash": "d0c15970d665962239d78a997867146a",
     "semantic_hash": ""
   },
   "frontend/src/hooks/useTheme.ts": {

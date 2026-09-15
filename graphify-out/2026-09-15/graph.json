@@ -7036,7 +7036,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/ClientKeysTab.tsx",
-      "source_location": "L124",
+      "source_location": "L120",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_clientkeystab_clientkeystab",
@@ -7845,7 +7845,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "frontend/src/components/UpstreamKeysTab.tsx",
-      "source_location": "L1176",
+      "source_location": "L1173",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_upstreamkeystab_upstreamkeystab",
@@ -7858,7 +7858,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/UpstreamKeysTab.tsx",
-      "source_location": "L476",
+      "source_location": "L473",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_upstreamkeystab_upstreamkeystab",
@@ -7870,7 +7870,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "frontend/src/components/UpstreamKeysTab.tsx",
-      "source_location": "L330",
+      "source_location": "L327",
       "weight": 1.0,
       "_origin": "ast",
       "source": "frontend_src_components_upstreamkeystab_upstreamkeystab",
@@ -16619,5 +16619,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "c974fcab138fd0cc4a04b0f1be9dfa4ad28b1c7f"
+  "built_at_commit": "9f866594f6cb21ecb66944f0a8f99453769850da"
 }

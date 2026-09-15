@@ -237,6 +237,9 @@ export const UpstreamKeysTab: React.FC = () => {
   const [editingKeyName, setEditingKeyName] = useState("");
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
   const [revealedKeyIds, setRevealedKeyIds] = useState<Record<string, boolean>>({});
+  const [selectedConnKeyIds, setSelectedConnKeyIds] = useState<Set<string>>(new Set());
+  const [deletingBatch, setDeletingBatch] = useState(false);
+  const [expandedCardKeyIds, setExpandedCardKeyIds] = useState<Record<string, boolean>>({});
 
   // Dedicated Mass Import in Connections Modal
   const [isMassImportOpen, setIsMassImportOpen] = useState(false);
@@ -1432,13 +1435,25 @@ export const UpstreamKeysTab: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this upstream provider?")) return;
+  const handleDelete = async (id: string, name?: string) => {
+    if (!confirm(`Are you sure you want to completely remove the provider ${name ? `"${name}"` : ""}? All its configured keys, models, and settings will be deleted.\n\n(Tip: If you only want to delete specific keys, click the "Keys" button instead).`)) return;
     try {
       await apiRequest(`/api/upstreams/${id}`, { method: "DELETE" });
       await loadUpstreams();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleDeleteKeyDirect = async (upstreamId: string, keyId: string, keyName?: string) => {
+    if (!confirm(`Are you sure you want to delete ${keyName ? `"${keyName}"` : "this key"}?`)) return;
+    try {
+      await apiRequest(`/api/upstreams/${upstreamId}/keys/${keyId}`, {
+        method: "DELETE",
+      });
+      await loadUpstreams();
+    } catch (e: any) {
+      alert(e.message || "Failed to delete key");
     }
   };
 
@@ -1522,6 +1537,8 @@ export const UpstreamKeysTab: React.FC = () => {
     setNewConnKey("");
     setNewConnActive(true);
     setAddingConnError("");
+    setSelectedConnKeyIds(new Set());
+    setDeletingBatch(false);
     setLoadingConnections(true);
 
     try {
@@ -1680,14 +1697,10 @@ export const UpstreamKeysTab: React.FC = () => {
     }
   };
 
-  const handleDeleteConnectionKey = async (keyId: string) => {
+  const handleDeleteConnectionKey = async (keyId: string, name?: string) => {
     if (!activeConnectionsUpstream) return;
-    if (connectionsList.length <= 1) {
-      alert("Provider must keep at least one API key configured.");
-      return;
-    }
 
-    if (!confirm("Are you sure you want to remove this connection key?")) return;
+    if (!confirm(`Are you sure you want to remove ${name ? `"${name}"` : "this connection key"}?`)) return;
 
     try {
       const res = await apiRequest<{
@@ -1699,11 +1712,47 @@ export const UpstreamKeysTab: React.FC = () => {
 
       if (res.keyEntries) {
         setConnectionsList(res.keyEntries);
+      } else {
+        setConnectionsList((prev) => prev.filter((k) => k.id !== keyId));
       }
+      setSelectedConnKeyIds((prev) => {
+        const next = new Set(prev);
+        next.delete(keyId);
+        return next;
+      });
       await loadUpstreams();
     } catch (e: any) {
       alert(e.message || "Failed to delete connection key");
       await loadUpstreams();
+    }
+  };
+
+  const handleDeleteSelectedConnectionKeys = async () => {
+    if (!activeConnectionsUpstream || selectedConnKeyIds.size === 0) return;
+    const count = selectedConnKeyIds.size;
+    if (!confirm(`Are you sure you want to delete ${count} selected key(s)?`)) return;
+
+    setDeletingBatch(true);
+    try {
+      const res = await apiRequest<{
+        success: boolean;
+        keyEntries: UpstreamKeyEntryItem[];
+      }>(`/api/upstreams/${activeConnectionsUpstream.id}/keys/delete-batch`, {
+        method: "POST",
+        body: JSON.stringify({ keyIds: Array.from(selectedConnKeyIds) }),
+      });
+
+      if (res.keyEntries) {
+        setConnectionsList(res.keyEntries);
+      } else {
+        setConnectionsList((prev) => prev.filter((k) => !selectedConnKeyIds.has(k.id)));
+      }
+      setSelectedConnKeyIds(new Set());
+      await loadUpstreams();
+    } catch (e: any) {
+      alert(e.message || "Failed to delete selected keys");
+    } finally {
+      setDeletingBatch(false);
     }
   };
 
@@ -2184,10 +2233,15 @@ export const UpstreamKeysTab: React.FC = () => {
                                 {item.name}
                               </h4>
                               <div className="flex items-center space-x-1.5 mt-0.5">
-                                <span className="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                <button
+                                  type="button"
+                                  onClick={() => openConnectionsModal(item)}
+                                  className="inline-flex items-center space-x-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                                  title="Manage or delete individual keys in pool"
+                                >
                                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                  <span>{activeKeys} Connected</span>
-                                </span>
+                                  <span>{activeKeys}/{totalKeys} Keys</span>
+                                </button>
                                 <span className="text-zinc-300 dark:text-zinc-700">·</span>
                                 <span className="text-[10px] uppercase font-bold text-zinc-400">
                                   {item.provider}
@@ -2200,8 +2254,8 @@ export const UpstreamKeysTab: React.FC = () => {
                           <div className="flex items-center space-x-1 shrink-0">
                             <button
                               onClick={() => openConnectionsModal(item)}
-                              className="p-1.5 rounded-md skeuo-btn text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 cursor-pointer"
-                              title="Manage Keys & Connections (like 9Router)"
+                              className="p-1.5 rounded-md skeuo-btn text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer"
+                              title="Manage & Delete Keys"
                             >
                               <KeyRound className="w-3.5 h-3.5" />
                             </button>
@@ -2213,9 +2267,9 @@ export const UpstreamKeysTab: React.FC = () => {
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => handleDelete(item.id)}
+                              onClick={() => handleDelete(item.id, item.name)}
                               className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
-                              title="Delete Provider"
+                              title="Delete Entire Provider (All Keys & Settings)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -2226,6 +2280,65 @@ export const UpstreamKeysTab: React.FC = () => {
                         <div className="mt-2.5 text-[11px] font-mono text-zinc-500 dark:text-zinc-400 truncate bg-zinc-100/70 dark:bg-zinc-900/60 px-2 py-1 rounded">
                           {item.baseUrl || (item.provider === "openai" ? "https://api.openai.com/v1" : "https://api.anthropic.com")}
                         </div>
+
+                        {/* Quick Keys Preview & Per-Key Delete */}
+                        {item.keyEntries && item.keyEntries.length > 0 && (
+                          <div className="mt-2">
+                            <div className="flex items-center justify-between text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedCardKeyIds((prev) => ({
+                                    ...prev,
+                                    [item.id]: !prev[item.id],
+                                  }))
+                                }
+                                className="text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer font-medium flex items-center space-x-1"
+                              >
+                                <span>{expandedCardKeyIds[item.id] ? "▾ Hide Key List" : `▸ Quick Keys (${item.keyEntries.length})`}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openConnectionsModal(item)}
+                                className="text-zinc-400 hover:text-indigo-500 hover:underline cursor-pointer text-[10px]"
+                              >
+                                Batch Delete
+                              </button>
+                            </div>
+
+                            {expandedCardKeyIds[item.id] && (
+                              <div className="mt-1.5 p-1.5 rounded-lg bg-zinc-100/70 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 space-y-1 max-h-32 overflow-y-auto">
+                                {item.keyEntries.map((ke, idx) => (
+                                  <div
+                                    key={ke.id || idx}
+                                    className="flex items-center justify-between px-1.5 py-1 rounded bg-white dark:bg-zinc-800/80 border border-zinc-200/50 dark:border-zinc-700/50 text-[11px]"
+                                  >
+                                    <div className="min-w-0 flex-1 flex items-center space-x-1.5 mr-2">
+                                      <span className={`w-1.5 h-1.5 rounded-full ${ke.isActive ? "bg-emerald-500" : "bg-zinc-400"}`} />
+                                      <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate">
+                                        {ke.name || `Key #${idx + 1}`}
+                                      </span>
+                                      <span className="font-mono text-[10px] text-zinc-400 truncate">
+                                        {ke.maskedKey || (ke.key ? `${ke.key.slice(0, 6)}...${ke.key.slice(-4)}` : "")}
+                                      </span>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteKeyDirect(item.id, ke.id, ke.name);
+                                      }}
+                                      className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer shrink-0 transition-colors"
+                                      title={`Delete "${ke.name || "this key"}"`}
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* Bottom Footer Details */}
@@ -2756,21 +2869,21 @@ export const UpstreamKeysTab: React.FC = () => {
                             <button
                               onClick={() => item.followUpstream ? openPassThroughModal(item) : openConnectionsModal(item)}
                               className="p-1.5 rounded-md skeuo-btn text-zinc-600 dark:text-zinc-300 hover:text-emerald-600 cursor-pointer"
-                              title={item.followUpstream ? "Pass-Through Settings" : "Connections"}
+                              title={item.followUpstream ? "Pass-Through Settings" : "Manage & Delete Keys"}
                             >
                               {item.followUpstream ? <Radio className="w-3.5 h-3.5 text-purple-400" /> : <KeyRound className="w-3.5 h-3.5" />}
                             </button>
                             <button
                               onClick={() => openEditModal(item)}
                               className="p-1.5 rounded-md skeuo-btn text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 cursor-pointer"
-                              title="Edit"
+                              title="Edit Provider Settings"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
-                              onClick={() => handleDelete(item.id)}
+                              onClick={() => handleDelete(item.id, item.name)}
                               className="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
-                              title="Delete"
+                              title="Delete Entire Provider (All Keys & Settings)"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -3121,16 +3234,14 @@ export const UpstreamKeysTab: React.FC = () => {
                               <ToggleLeft className="w-5 h-5 text-zinc-400" />
                             )}
                           </button>
-                          {formKeys.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveKey(idx)}
-                              className="p-1 text-zinc-400 hover:text-red-500 cursor-pointer"
-                              title="Delete account"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveKey(idx)}
+                            className="p-1 text-zinc-400 hover:text-red-500 cursor-pointer transition-colors"
+                            title={formKeys.length > 1 ? "Remove this key" : "Clear this key"}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
 
@@ -3776,6 +3887,62 @@ export const UpstreamKeysTab: React.FC = () => {
               </form>
             )}
 
+            {/* Multi-Key Selection Toolbar */}
+            {connectionsList.length > 0 && (
+              <div className="flex items-center justify-between px-3 py-2 bg-zinc-100/80 dark:bg-zinc-900/60 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 text-xs mt-2">
+                <div className="flex items-center space-x-2.5">
+                  <label className="flex items-center space-x-2 cursor-pointer font-medium text-zinc-700 dark:text-zinc-300 select-none">
+                    <input
+                      type="checkbox"
+                      checked={connectionsList.length > 0 && selectedConnKeyIds.size === connectionsList.length}
+                      ref={(el) => {
+                        if (el) {
+                          el.indeterminate = selectedConnKeyIds.size > 0 && selectedConnKeyIds.size < connectionsList.length;
+                        }
+                      }}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedConnKeyIds(new Set(connectionsList.map((c) => c.id)));
+                        } else {
+                          setSelectedConnKeyIds(new Set());
+                        }
+                      }}
+                      className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                    <span>Select All</span>
+                  </label>
+                  {selectedConnKeyIds.size > 0 && (
+                    <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                      {selectedConnKeyIds.size} of {connectionsList.length} selected
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {selectedConnKeyIds.size > 0 ? (
+                    <button
+                      type="button"
+                      onClick={handleDeleteSelectedConnectionKeys}
+                      disabled={deletingBatch}
+                      className="px-3 py-1 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30 text-xs font-bold flex items-center space-x-1.5 cursor-pointer transition-all shadow-xs disabled:opacity-50"
+                      title="Delete all selected keys in one go"
+                    >
+                      {deletingBatch ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      <span>Delete Selected ({selectedConnKeyIds.size})</span>
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-zinc-400">
+                      {connectionsList.length} connection{connectionsList.length > 1 ? "s" : ""}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Connections Cards List */}
             <div className="flex-1 overflow-y-auto min-h-[220px] max-h-[380px] border border-zinc-200 dark:border-zinc-800 rounded-xl p-2.5 space-y-2 mt-2">
               {loadingConnections ? (
@@ -3814,7 +3981,24 @@ export const UpstreamKeysTab: React.FC = () => {
                         }`}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <div className="flex items-center space-x-2.5 min-w-0 flex-1">
+                          <input
+                            type="checkbox"
+                            checked={selectedConnKeyIds.has(conn.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setSelectedConnKeyIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(conn.id)) {
+                                  next.delete(conn.id);
+                                } else {
+                                  next.add(conn.id);
+                                }
+                                return next;
+                              });
+                            }}
+                            className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer shrink-0"
+                          />
                           <div
                             className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border shadow-xs ${
                               isCop
@@ -3971,16 +4155,14 @@ export const UpstreamKeysTab: React.FC = () => {
                             <span>{testInfo?.testing ? "Testing..." : "Test"}</span>
                           </button>
 
-                          {connectionsList.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteConnectionKey(conn.id)}
-                              className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer transition-colors"
-                              title="Delete this connection"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteConnectionKey(conn.id, conn.name)}
+                            className="p-1 rounded text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer transition-colors"
+                            title="Delete this key"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
 
                           <button
                             type="button"

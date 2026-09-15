@@ -267,6 +267,26 @@ export const routerApiKeysRoutes = new Elysia({ prefix: "/api/router-keys" })
       ),
     }
   )
+  .post(
+    "/batch-delete",
+    ({ body, set }) => {
+      const { ids } = body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        set.status = 400;
+        return { error: "No key IDs provided" };
+      }
+      for (const id of ids) {
+        sqlite.run("UPDATE client_keys SET api_key_id = NULL WHERE api_key_id = ?", [id]);
+        db.delete(apiKeys).where(eq(apiKeys.id, id)).run();
+      }
+      return { success: true, deletedCount: ids.length };
+    },
+    {
+      body: t.Object({
+        ids: t.Array(t.String()),
+      }),
+    }
+  )
   .delete("/:id", ({ params: { id }, set }) => {
     const existing = db
       .select()

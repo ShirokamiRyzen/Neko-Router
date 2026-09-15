@@ -1480,17 +1480,12 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
         return { success: false, error: "Key not found in pool" };
       }
 
-      if (entries.length <= 1) {
-        set.status = 400;
-        return { success: false, error: "Cannot delete the last key in the connection pool" };
-      }
-
       const remaining = entries.filter((e) => e.id !== keyId);
       const firstActive = remaining.find((e) => e.isActive);
 
       db.update(upstreamKeys)
         .set({
-          apiKey: firstActive ? firstActive.key : remaining[0]!.key,
+          apiKey: firstActive ? firstActive.key : (remaining[0]?.key || ""),
           apiKeys: JSON.stringify(remaining),
           updatedAt: Date.now(),
         })
@@ -1510,6 +1505,61 @@ export const upstreamRoutes = new Elysia({ prefix: "/api/upstreams" })
           createdAt: e.createdAt,
         })),
       };
+    }
+  )
+  .post(
+    "/:id/keys/delete-batch",
+    ({ params: { id }, body, set }) => {
+      const upstream = db
+        .select()
+        .from(upstreamKeys)
+        .where(eq(upstreamKeys.id, id))
+        .get();
+
+      if (!upstream) {
+        set.status = 404;
+        return { success: false, error: "Upstream not found" };
+      }
+
+      const keyIdsToDelete = new Set(Array.isArray(body.keyIds) ? body.keyIds : []);
+      if (keyIdsToDelete.size === 0) {
+        set.status = 400;
+        return { success: false, error: "No key IDs specified for deletion" };
+      }
+
+      const entries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+      const remaining = entries.filter((e) => !keyIdsToDelete.has(e.id));
+      const deletedCount = entries.length - remaining.length;
+      const firstActive = remaining.find((e) => e.isActive);
+
+      db.update(upstreamKeys)
+        .set({
+          apiKey: firstActive ? firstActive.key : (remaining[0]?.key || ""),
+          apiKeys: JSON.stringify(remaining),
+          updatedAt: Date.now(),
+        })
+        .where(eq(upstreamKeys.id, id))
+        .run();
+
+      return {
+        success: true,
+        deletedCount,
+        message: `Successfully deleted ${deletedCount} key(s)`,
+        totalKeysCount: remaining.length,
+        activeKeysCount: remaining.filter((e) => e.isActive).length,
+        keyEntries: remaining.map((e) => ({
+          id: e.id,
+          name: e.name,
+          maskedKey: maskKey(e.key),
+          isActive: e.isActive,
+          createdAt: e.createdAt,
+        })),
+      };
+    },
+    {
+      body: t.Object({
+        keyIds: t.Array(t.String()),
+      }),
     }
   )
   .post(
