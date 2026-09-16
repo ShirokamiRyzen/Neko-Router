@@ -10,11 +10,30 @@ import { telemetryRoutes } from "./routes/telemetry";
 import { adminRoutes } from "./routes/admin";
 import { proxyRoutes } from "./routes/proxy";
 import { apiProvidersRoutes } from "./routes/api-providers";
-import { existsSync, statSync } from "fs";
+import { existsSync, watch } from "fs";
 import { join } from "path";
+import { webHandler, htmlTemplate, bundleFrontend } from "./web/handler";
 
 // Initialize database schema and default PIN
 await initDatabase();
+
+// Pre-bundle frontend in memory on startup (background)
+bundleFrontend().catch((err) => console.error("[Frontend] Bundle preheat error:", err));
+
+// Watch .env for changes in both development and production
+const envPath = join(process.cwd(), ".env");
+if (existsSync(envPath)) {
+  let debounceTimer: any = null;
+  watch(envPath, (eventType) => {
+    if (eventType === "change" || eventType === "rename") {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        console.log("\x1b[33m%s\x1b[0m", "⚙️  [.env] Configuration change detected! Reloading process...");
+        process.exit(0);
+      }, 300);
+    }
+  });
+}
 
 const port = parseInt(process.env.PORT || "3000", 10);
 const host = process.env.HOST || "0.0.0.0";
@@ -60,60 +79,14 @@ const app = new Elysia()
   .use(apiProvidersRoutes)
   .use(telemetryRoutes)
   .use(adminRoutes)
-  .use(proxyRoutes);
-
-// Serve frontend: Vite Dev Server proxy in development, static dist/public in production
-const isDev = process.env.NODE_ENV !== "production";
-const staticDir = existsSync(join(import.meta.dir, "../dist/public"))
-  ? join(import.meta.dir, "../dist/public")
-  : null;
-
-app.get("*", async ({ request }) => {
-  const url = new URL(request.url);
-  const pathname = url.pathname;
-
-  // In development, attempt to proxy non-API requests to Vite Dev Server (port 5173) for instant HMR
-  if (isDev) {
-    try {
-      const viteUrl = `http://localhost:5173${pathname}${url.search}`;
-      const viteRes = await fetch(viteUrl, {
-        method: request.method,
-        headers: request.headers,
-      });
-      if (viteRes.status < 500) {
-        return new Response(viteRes.body, {
-          status: viteRes.status,
-          headers: viteRes.headers,
-        });
-      }
-    } catch (e) {
-      // Vite dev server not currently reachable, fallback to static files below
-    }
-  }
-
-  // Static files with correct MIME types & SPA fallback
-  if (staticDir) {
-    if (pathname !== "/") {
-      const filePath = join(staticDir, pathname);
-      if (existsSync(filePath)) {
-        try {
-          if (!statSync(filePath).isDirectory()) {
-            return Bun.file(filePath);
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-    }
-
-    const indexPath = join(staticDir, "index.html");
-    if (existsSync(indexPath)) {
-      return Bun.file(indexPath);
-    }
-  }
-
-  return "Neko-Router backend is running. Run `bun run dev` or `bun run build` to view frontend.";
-});
+  .use(proxyRoutes)
+  // Dynamic Web Frontend Handler
+  .use(webHandler)
+  // Catch-all SPA route: serves dynamic HTML template (no dist needed)
+  .get("*", ({ set }) => {
+    set.headers["Content-Type"] = "text/html; charset=utf-8";
+    return htmlTemplate;
+  });
 
 app.listen({ port, hostname: host }, () => {
   console.log(`🐱 Neko-Router AI Gateway is running at http://${host}:${port}`);

@@ -5,13 +5,10 @@
   "private": true,
   "scripts": {
     "dev": "bun scripts/dev.ts",
-    "dev:server": "bun --watch src/index.ts",
-    "dev:client": "vite",
-    "build": "vite build",
-    "start": "bun src/index.ts",
-    "preview": "vite preview"
+    "start": "bun --watch src/index.ts"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "@types/bun": "latest",
     "@types/node": "^24.13.3",

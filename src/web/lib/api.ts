@@ -1,8 +1,20 @@
+import { treaty } from "@elysiajs/eden";
+import type { App } from "../../index";
+
+// Initialize Eden Treaty client pointing to origin (window.location.origin)
+export const edenClient = treaty<App>(
+  typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+);
+
 export async function apiRequest<T = any>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const res = await fetch(path, {
+  const url = path.startsWith("http")
+    ? path
+    : `${typeof window !== "undefined" ? window.location.origin : ""}${path}`;
+
+  const res = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
