@@ -895,10 +895,21 @@
       "norm_label": "src/index.ts"
     },
     {
+      "label": "envPath",
+      "file_type": "code",
+      "source_file": "src/index.ts",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "src_index_envpath",
+      "community": 2,
+      "community_name": "schema.ts",
+      "norm_label": "envpath"
+    },
+    {
       "label": "port",
       "file_type": "code",
       "source_file": "src/index.ts",
-      "source_location": "L23",
+      "source_location": "L38",
       "_origin": "ast",
       "id": "src_index_port",
       "community": 2,
@@ -909,11 +920,11 @@
       "label": "App",
       "file_type": "code",
       "source_file": "src/index.ts",
-      "source_location": "L81",
+      "source_location": "L96",
       "_origin": "ast",
       "id": "src_index_app",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 7,
+      "community_name": "App.tsx",
       "norm_label": "app"
     },
     {
@@ -3098,7 +3109,7 @@
       "label": "AuthStatus",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L44",
+      "source_location": "L43",
       "_origin": "ast",
       "id": "src_web_lib_api_authstatus",
       "community": 7,
@@ -3109,7 +3120,7 @@
       "label": "ApiKeyItem",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L51",
+      "source_location": "L50",
       "_origin": "ast",
       "id": "src_web_lib_api_apikeyitem",
       "community": 7,
@@ -3120,7 +3131,7 @@
       "label": "ClientKeyItem",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L63",
+      "source_location": "L62",
       "_origin": "ast",
       "id": "src_web_lib_api_clientkeyitem",
       "community": 7,
@@ -3131,7 +3142,7 @@
       "label": "UpstreamModelItem",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L83",
+      "source_location": "L82",
       "_origin": "ast",
       "id": "src_web_lib_api_upstreammodelitem",
       "community": 7,
@@ -3142,7 +3153,7 @@
       "label": "UpstreamKeyEntryItem",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L95",
+      "source_location": "L94",
       "_origin": "ast",
       "id": "src_web_lib_api_upstreamkeyentryitem",
       "community": 7,
@@ -3153,7 +3164,7 @@
       "label": "UpstreamKeyItem",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L106",
+      "source_location": "L105",
       "_origin": "ast",
       "id": "src_web_lib_api_upstreamkeyitem",
       "community": 7,
@@ -3164,7 +3175,7 @@
       "label": "BandelBangetCardInfo",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L130",
+      "source_location": "L129",
       "_origin": "ast",
       "id": "src_web_lib_api_bandelbangetcardinfo",
       "community": 7,
@@ -3175,7 +3186,7 @@
       "label": "BandelBangetStatusResponse",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L146",
+      "source_location": "L145",
       "_origin": "ast",
       "id": "src_web_lib_api_bandelbangetstatusresponse",
       "community": 7,
@@ -3186,7 +3197,7 @@
       "label": "TelemetryStats",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L154",
+      "source_location": "L153",
       "_origin": "ast",
       "id": "src_web_lib_api_telemetrystats",
       "community": 7,
@@ -3197,7 +3208,7 @@
       "label": "TelemetryLogItem",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L177",
+      "source_location": "L176",
       "_origin": "ast",
       "id": "src_web_lib_api_telemetrylogitem",
       "community": 7,
@@ -3208,7 +3219,7 @@
       "label": "OptimizationSettings",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L196",
+      "source_location": "L195",
       "_origin": "ast",
       "id": "src_web_lib_api_optimizationsettings",
       "community": 7,
@@ -3219,7 +3230,7 @@
       "label": "SystemInfo",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L206",
+      "source_location": "L205",
       "_origin": "ast",
       "id": "src_web_lib_api_systeminfo",
       "community": 7,
@@ -3230,7 +3241,7 @@
       "label": "calculateTokenCost()",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L218",
+      "source_location": "L217",
       "_origin": "ast",
       "id": "src_web_lib_api_calculatetokencost",
       "community": 7,
@@ -3241,7 +3252,7 @@
       "label": "formatCost()",
       "file_type": "code",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L324",
+      "source_location": "L323",
       "_origin": "ast",
       "id": "src_web_lib_api_formatcost",
       "community": 7,
@@ -3302,6 +3313,28 @@
       "community": 0,
       "community_name": "compilerOptions",
       "norm_label": "esnext"
+    },
+    {
+      "label": "DOM",
+      "file_type": "concept",
+      "source_file": "tsconfig.json",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "ref_dom",
+      "community": 0,
+      "community_name": "compilerOptions",
+      "norm_label": "dom"
+    },
+    {
+      "label": "DOM.Iterable",
+      "file_type": "concept",
+      "source_file": "tsconfig.json",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "ref_dom_iterable",
+      "community": 0,
+      "community_name": "compilerOptions",
+      "norm_label": "dom.iterable"
     },
     {
       "label": "target",
@@ -4927,8 +4960,8 @@
       "source_location": "L357",
       "_origin": "ast",
       "id": "api_docs_a_authentication_pin_endpoints",
-      "community": 27,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "a. authentication & pin endpoints"
     },
     {
@@ -4938,8 +4971,8 @@
       "source_location": "L359",
       "_origin": "ast",
       "id": "api_docs_1_check_authentication_status",
-      "community": 27,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. check authentication status"
     },
     {
@@ -4949,8 +4982,8 @@
       "source_location": "L369",
       "_origin": "ast",
       "id": "api_docs_2_login_with_6_digit_master_pin",
-      "community": 27,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. login with 6-digit master pin"
     },
     {
@@ -4960,8 +4993,8 @@
       "source_location": "L381",
       "_origin": "ast",
       "id": "api_docs_3_change_6_digit_master_pin",
-      "community": 27,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. change 6-digit master pin"
     },
     {
@@ -4971,8 +5004,8 @@
       "source_location": "L393",
       "_origin": "ast",
       "id": "api_docs_4_logout",
-      "community": 27,
-      "community_name": "A. Authentication & PIN Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. logout"
     },
     {
@@ -4982,8 +5015,8 @@
       "source_location": "L399",
       "_origin": "ast",
       "id": "api_docs_b_client_keys_endpoints",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "b. client keys endpoints"
     },
     {
@@ -4993,8 +5026,8 @@
       "source_location": "L401",
       "_origin": "ast",
       "id": "api_docs_1_list_client_keys",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. list client keys"
     },
     {
@@ -5004,8 +5037,8 @@
       "source_location": "L425",
       "_origin": "ast",
       "id": "api_docs_2_create_client_key",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. create client key"
     },
     {
@@ -5015,8 +5048,8 @@
       "source_location": "L437",
       "_origin": "ast",
       "id": "api_docs_3_update_client_key_status_limits",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. update client key status / limits"
     },
     {
@@ -5026,8 +5059,8 @@
       "source_location": "L463",
       "_origin": "ast",
       "id": "api_docs_4_rotate_regenerate_secret_key",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. rotate / regenerate secret key"
     },
     {
@@ -5037,8 +5070,8 @@
       "source_location": "L482",
       "_origin": "ast",
       "id": "api_docs_5_quick_adjust_token_quota_limits",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "5. quick adjust token quota & limits"
     },
     {
@@ -5048,8 +5081,8 @@
       "source_location": "L496",
       "_origin": "ast",
       "id": "api_docs_6_reset_used_token_quota",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "6. reset used token quota"
     },
     {
@@ -5059,8 +5092,8 @@
       "source_location": "L500",
       "_origin": "ast",
       "id": "api_docs_7_revoke_delete_client_key",
-      "community": 25,
-      "community_name": "B. Client Keys Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "7. revoke / delete client key"
     },
     {
@@ -5070,8 +5103,8 @@
       "source_location": "L506",
       "_origin": "ast",
       "id": "api_docs_b_2_router_integration_api_keys_api_router_keys",
-      "community": 26,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "b.2 router integration api keys (`/api/router-keys`)"
     },
     {
@@ -5081,8 +5114,8 @@
       "source_location": "L509",
       "_origin": "ast",
       "id": "api_docs_1_list_router_api_keys",
-      "community": 26,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. list router api keys"
     },
     {
@@ -5092,8 +5125,8 @@
       "source_location": "L512",
       "_origin": "ast",
       "id": "api_docs_2_create_router_api_key",
-      "community": 26,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. create router api key"
     },
     {
@@ -5103,8 +5136,8 @@
       "source_location": "L516",
       "_origin": "ast",
       "id": "api_docs_3_update_router_api_key_details",
-      "community": 26,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. update router api key details"
     },
     {
@@ -5114,8 +5147,8 @@
       "source_location": "L520",
       "_origin": "ast",
       "id": "api_docs_4_rotate_regenerate_router_api_key",
-      "community": 26,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. rotate / regenerate router api key"
     },
     {
@@ -5125,8 +5158,8 @@
       "source_location": "L524",
       "_origin": "ast",
       "id": "api_docs_5_delete_router_api_key",
-      "community": 26,
-      "community_name": "B.2 Router Integration API Keys (`/api/router-keys`)",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "5. delete router api key"
     },
     {
@@ -5290,8 +5323,8 @@
       "source_location": "L713",
       "_origin": "ast",
       "id": "api_docs_e_upstream_router_providers_multi_key_pool",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "e. upstream router providers & multi-key pool"
     },
     {
@@ -5301,8 +5334,8 @@
       "source_location": "L717",
       "_origin": "ast",
       "id": "api_docs_1_list_all_upstream_providers",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. list all upstream providers"
     },
     {
@@ -5312,8 +5345,8 @@
       "source_location": "L747",
       "_origin": "ast",
       "id": "api_docs_2_create_upstream_provider_with_multi_key_pool",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. create upstream provider with multi-key pool"
     },
     {
@@ -5323,8 +5356,8 @@
       "source_location": "L763",
       "_origin": "ast",
       "id": "api_docs_3_edit_upstream_provider",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. edit upstream provider"
     },
     {
@@ -5334,8 +5367,8 @@
       "source_location": "L780",
       "_origin": "ast",
       "id": "api_docs_4_fetch_models_from_upstream_provider_default_off",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. fetch models from upstream provider (default off)"
     },
     {
@@ -5345,8 +5378,8 @@
       "source_location": "L798",
       "_origin": "ast",
       "id": "api_docs_5_toggle_model_status_for_upstream",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "5. toggle model status for upstream"
     },
     {
@@ -5356,8 +5389,8 @@
       "source_location": "L821",
       "_origin": "ast",
       "id": "api_docs_6_test_upstream_connectivity",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "6. test upstream connectivity"
     },
     {
@@ -5367,8 +5400,8 @@
       "source_location": "L826",
       "_origin": "ast",
       "id": "api_docs_7_delete_upstream_provider",
-      "community": 24,
-      "community_name": "E. Upstream Router Providers & Multi-Key Pool",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "7. delete upstream provider"
     },
     {
@@ -5378,8 +5411,8 @@
       "source_location": "L832",
       "_origin": "ast",
       "id": "api_docs_f_database_system_endpoints",
-      "community": 29,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "f. database & system endpoints"
     },
     {
@@ -5389,8 +5422,8 @@
       "source_location": "L834",
       "_origin": "ast",
       "id": "api_docs_1_export_sqlite_database",
-      "community": 29,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "1. export sqlite database"
     },
     {
@@ -5400,8 +5433,8 @@
       "source_location": "L839",
       "_origin": "ast",
       "id": "api_docs_2_import_sqlite_database",
-      "community": 29,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "2. import sqlite database"
     },
     {
@@ -5411,8 +5444,8 @@
       "source_location": "L845",
       "_origin": "ast",
       "id": "api_docs_3_runtime_engine_diagnostics",
-      "community": 29,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "3. runtime engine diagnostics"
     },
     {
@@ -5422,8 +5455,8 @@
       "source_location": "L862",
       "_origin": "ast",
       "id": "api_docs_4_health_check",
-      "community": 29,
-      "community_name": "F. Database & System Endpoints",
+      "community": 21,
+      "community_name": "5. Router Management APIs",
       "norm_label": "4. health check"
     },
     {
@@ -7401,7 +7434,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/index.ts",
-      "source_location": "L81",
+      "source_location": "L96",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_index",
@@ -7412,7 +7445,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/index.ts",
-      "source_location": "L23",
+      "source_location": "L24",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_index",
+      "target": "src_index_envpath",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/index.ts",
+      "source_location": "L38",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_index",
@@ -12757,7 +12801,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L51",
+      "source_location": "L50",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12779,7 +12823,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L44",
+      "source_location": "L43",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12790,7 +12834,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L130",
+      "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12801,7 +12845,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L146",
+      "source_location": "L145",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12812,7 +12856,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L218",
+      "source_location": "L217",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12823,7 +12867,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L63",
+      "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12845,7 +12889,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L324",
+      "source_location": "L323",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12856,7 +12900,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L196",
+      "source_location": "L195",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12867,7 +12911,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L206",
+      "source_location": "L205",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12878,7 +12922,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L177",
+      "source_location": "L176",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12889,7 +12933,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L154",
+      "source_location": "L153",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12900,7 +12944,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L95",
+      "source_location": "L94",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12911,7 +12955,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L106",
+      "source_location": "L105",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -12922,7 +12966,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/web/lib/api.ts",
-      "source_location": "L83",
+      "source_location": "L82",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_web_lib_api",
@@ -13169,6 +13213,30 @@
       "_origin": "ast",
       "source": "tsconfig_compileroptions",
       "target": "tsconfig_compileroptions_verbatimmodulesyntax",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L4",
+      "weight": 1.0,
+      "context": "import",
+      "_origin": "ast",
+      "source": "tsconfig_compileroptions_lib",
+      "target": "ref_dom",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": "tsconfig.json",
+      "source_location": "L4",
+      "weight": 1.0,
+      "context": "import",
+      "_origin": "ast",
+      "source": "tsconfig_compileroptions_lib",
+      "target": "ref_dom_iterable",
       "confidence_score": 1.0
     },
     {

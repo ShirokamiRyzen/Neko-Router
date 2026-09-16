@@ -5,8 +5,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1789542601.1012547,
-    "ast_hash": "5edda12d6da8413cea6b6a5c45f83903",
+    "mtime": 1789542766.0891397,
+    "ast_hash": "8f9fbb2a638898916e1518abd9d57d4b",
     "semantic_hash": ""
   },
   "tsconfig.json": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   ".github/workflows/deploy.yml": {
-    "mtime": 1788831235.8634973,
-    "ast_hash": "fc9d2edd5c3cb3454800ad73c287f7bd",
+    "mtime": 1789542761.560035,
+    "ast_hash": "5a50d77f5897f6a9b398de46924eb657",
     "semantic_hash": ""
   },
   "src/services/copilot.ts": {

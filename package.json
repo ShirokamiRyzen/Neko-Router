@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun scripts/dev.ts",
+    "build": "echo \"No build required (in-memory dynamic frontend)\"",
     "start": "bun --watch src/index.ts"
   },
   "devDependencies": {
