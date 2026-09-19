@@ -200,6 +200,7 @@ export interface OptimizationSettings {
   cacheTtlSeconds: number;
   httpsOnly: boolean;
   requestTimeoutSeconds: number;
+  modelPrefixEnabled: boolean;
 }
 
 export interface SystemInfo {

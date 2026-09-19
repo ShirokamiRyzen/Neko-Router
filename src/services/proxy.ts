@@ -1468,6 +1468,7 @@ export async function proxyOpenAIModels(
   clientKey: ClientKey | null,
   headers?: Headers
 ): Promise<Response> {
+  const opt = getOptimizationSettings();
   const authHeader = headers?.get("Authorization");
   const xApiKey = headers?.get("x-api-key");
   const passedKey = authHeader?.startsWith("Bearer ")
@@ -1597,7 +1598,7 @@ export async function proxyOpenAIModels(
         continue;
       }
 
-      const rawPrefix = upstream.prefix ? upstream.prefix.trim() : "";
+      const rawPrefix = opt.modelPrefixEnabled && upstream.prefix ? upstream.prefix.trim() : "";
       const models = parseUpstreamModels(upstream.models);
       for (const m of models) {
         // HANYA model yang diaktifkan (enabled === true)
@@ -1619,7 +1620,7 @@ export async function proxyOpenAIModels(
   for (const upstream of allActive) {
     if (Boolean((upstream as any).followUpstream)) continue;
 
-    const rawPrefix = upstream.prefix ? upstream.prefix.trim() : "";
+    const rawPrefix = opt.modelPrefixEnabled && upstream.prefix ? upstream.prefix.trim() : "";
     const models = parseUpstreamModels(upstream.models);
     for (const m of models) {
       if (m.enabled) {

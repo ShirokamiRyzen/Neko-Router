@@ -55,8 +55,8 @@
     "semantic_hash": ""
   },
   "src/routes/admin.ts": {
-    "mtime": 1789137821.8903956,
-    "ast_hash": "14da45352354758cebfa47e503324057",
+    "mtime": 1789824126.5725055,
+    "ast_hash": "e00f3598b97cef354eb056614433064c",
     "semantic_hash": ""
   },
   "src/routes/auth.ts": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
-    "mtime": 1789823994.1949973,
-    "ast_hash": "e5d5876b2253c00b549e1c3487025b06",
+    "mtime": 1789824136.2830744,
+    "ast_hash": "2ccf8dd0e44f118d851ab5fa8ba0d007",
     "semantic_hash": ""
   },
   "src/services/router.ts": {
@@ -135,8 +135,8 @@
     "semantic_hash": ""
   },
   "src/services/optimizer.ts": {
-    "mtime": 1788785518.1326146,
-    "ast_hash": "8bfc6e5004cf989ee1e3fe46795d7b78",
+    "mtime": 1789824121.490035,
+    "ast_hash": "d43b0524abfb0e0a65381bf40cc7b367",
     "semantic_hash": ""
   },
   "src/routes/api-keys.ts": {
@@ -200,8 +200,8 @@
     "semantic_hash": ""
   },
   "src/web/components/DatabaseSettingsTab.tsx": {
-    "mtime": 1788951837.5868306,
-    "ast_hash": "4c4d03b6bc3b32483e352897a5648cdb",
+    "mtime": 1789824165.3686454,
+    "ast_hash": "34baaf6b803bb6b4aef7c98cc9462d7b",
     "semantic_hash": ""
   },
   "src/web/components/Header.tsx": {
@@ -250,8 +250,8 @@
     "semantic_hash": ""
   },
   "src/web/lib/api.ts": {
-    "mtime": 1789542405.7383606,
-    "ast_hash": "e60fd8f34d2f6854c9c456537bda453f",
+    "mtime": 1789824142.1469126,
+    "ast_hash": "f790ccc81589796cb81aa16295e4363e",
     "semantic_hash": ""
   },
   "src/web/main.tsx": {

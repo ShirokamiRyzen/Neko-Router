@@ -747,8 +747,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_db_index",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "db/index.ts"
     },
     {
@@ -758,8 +758,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_db_index_sqlite",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "sqlite"
     },
     {
@@ -769,8 +769,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "src_db_index_inittablessync",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "inittablessync()"
     },
     {
@@ -780,8 +780,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_db_index_db",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "db"
     },
     {
@@ -791,8 +791,8 @@
       "source_location": "L159",
       "_origin": "ast",
       "id": "src_db_index_initdatabase",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "initdatabase()"
     },
     {
@@ -802,8 +802,8 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "src_db_index_reloaddatabase",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "reloaddatabase()"
     },
     {
@@ -813,8 +813,8 @@
       "source_location": "L216",
       "_origin": "ast",
       "id": "src_db_index_checkpointwal",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "checkpointwal()"
     },
     {
@@ -868,8 +868,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_db_schema_upstreamkeys",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "upstreamkeys"
     },
     {
@@ -956,8 +956,8 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "src_db_schema_upstreamkey",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "upstreamkey"
     },
     {
@@ -978,8 +978,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_index",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "src/index.ts"
     },
     {
@@ -989,8 +989,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "src_index_envpath",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "envpath"
     },
     {
@@ -1000,8 +1000,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "src_index_port",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "port"
     },
     {
@@ -1011,8 +1011,8 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "src_index_app",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "app"
     },
     {
@@ -1044,8 +1044,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_routes_admin",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "admin.ts"
     },
     {
@@ -1055,8 +1055,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_routes_admin_adminroutes",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "adminroutes"
     },
     {
@@ -1099,8 +1099,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_routes_api_providers",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "api-providers.ts"
     },
     {
@@ -1110,8 +1110,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "src_routes_api_providers_apiprovidersroutes",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "apiprovidersroutes"
     },
     {
@@ -1132,8 +1132,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_routes_auth_authroutes",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "authroutes"
     },
     {
@@ -1187,8 +1187,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_routes_proxy",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "routes/proxy.ts"
     },
     {
@@ -1198,8 +1198,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "src_routes_proxy_motivational_quotes",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "motivational_quotes"
     },
     {
@@ -1209,8 +1209,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "src_routes_proxy_formatbytes",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "formatbytes()"
     },
     {
@@ -1220,8 +1220,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "src_routes_proxy_formatuptime",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "formatuptime()"
     },
     {
@@ -1231,8 +1231,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_routes_proxy_available_endpoints",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "available_endpoints"
     },
     {
@@ -1242,8 +1242,8 @@
       "source_location": "L106",
       "_origin": "ast",
       "id": "src_routes_proxy_getv1directory",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "getv1directory()"
     },
     {
@@ -1253,8 +1253,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "src_routes_proxy_proxyroutes",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "proxyroutes"
     },
     {
@@ -1363,8 +1363,8 @@
       "source_location": "L269",
       "_origin": "ast",
       "id": "src_routes_upstreams_upstreamroutes",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "upstreamroutes"
     },
     {
@@ -1583,8 +1583,8 @@
       "source_location": "L179",
       "_origin": "ast",
       "id": "src_services_auth_validateclientkey",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "validateclientkey()"
     },
     {
@@ -1627,8 +1627,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_bandelbanget",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "bandelbanget.ts"
     },
     {
@@ -1638,8 +1638,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "src_services_bandelbanget_bandelbanget_config",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "bandelbanget_config"
     },
     {
@@ -1649,8 +1649,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "src_services_bandelbanget_bandelbangetrawmodel",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "bandelbangetrawmodel"
     },
     {
@@ -1660,8 +1660,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "src_services_bandelbanget_bandelbangetmodelitem",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "bandelbangetmodelitem"
     },
     {
@@ -1671,8 +1671,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "src_services_bandelbanget_fetchbandelbangetlivemodels",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "fetchbandelbangetlivemodels()"
     },
     {
@@ -1682,8 +1682,8 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "src_services_bandelbanget_testbandelbangetconnection",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "testbandelbangetconnection()"
     },
     {
@@ -1693,8 +1693,8 @@
       "source_location": "L144",
       "_origin": "ast",
       "id": "src_services_bandelbanget_ensurebandelbangetproviders",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "ensurebandelbangetproviders()"
     },
     {
@@ -1704,8 +1704,8 @@
       "source_location": "L334",
       "_origin": "ast",
       "id": "src_services_bandelbanget_syncbandelbangetfollowupstreammodels",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "syncbandelbangetfollowupstreammodels()"
     },
     {
@@ -1913,8 +1913,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_copilot",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "copilot.ts"
     },
     {
@@ -1924,8 +1924,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_services_copilot_github_copilot_config",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "github_copilot_config"
     },
     {
@@ -1935,8 +1935,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_services_copilot_copilot_default_models",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "copilot_default_models"
     },
     {
@@ -1946,8 +1946,8 @@
       "source_location": "L53",
       "_origin": "ast",
       "id": "src_services_copilot_cachedcopilottoken",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "cachedcopilottoken"
     },
     {
@@ -1957,8 +1957,8 @@
       "source_location": "L59",
       "_origin": "ast",
       "id": "src_services_copilot_copilottokencache",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "copilottokencache"
     },
     {
@@ -1968,8 +1968,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "src_services_copilot_getcopilotinternaltoken",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "getcopilotinternaltoken()"
     },
     {
@@ -1990,8 +1990,8 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "src_services_copilot_sanitizemessagesforchatcompletions",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "sanitizemessagesforchatcompletions()"
     },
     {
@@ -2001,8 +2001,8 @@
       "source_location": "L173",
       "_origin": "ast",
       "id": "src_services_copilot_transformcopilotrequestbody",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "transformcopilotrequestbody()"
     },
     {
@@ -2012,8 +2012,8 @@
       "source_location": "L191",
       "_origin": "ast",
       "id": "src_services_copilot_lastpollmap",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "lastpollmap"
     },
     {
@@ -2023,8 +2023,8 @@
       "source_location": "L197",
       "_origin": "ast",
       "id": "src_services_copilot_requestgithubdevicecode",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "requestgithubdevicecode()"
     },
     {
@@ -2034,8 +2034,8 @@
       "source_location": "L241",
       "_origin": "ast",
       "id": "src_services_copilot_pollgithubdevicetoken",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "pollgithubdevicetoken()"
     },
     {
@@ -2045,8 +2045,8 @@
       "source_location": "L379",
       "_origin": "ast",
       "id": "src_services_copilot_fetchcopilotlivemodels",
-      "community": 27,
-      "community_name": "copilot.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "fetchcopilotlivemodels()"
     },
     {
@@ -2056,8 +2056,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_optimizer",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "optimizer.ts"
     },
     {
@@ -2067,8 +2067,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "src_services_optimizer_optimizationsettings",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "optimizationsettings"
     },
     {
@@ -2078,8 +2078,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "src_services_optimizer_getoptimizationsettings",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "getoptimizationsettings()"
     },
     {
@@ -2089,8 +2089,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "src_services_optimizer_ishttpsrequest",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "ishttpsrequest()"
     },
     {
@@ -2100,8 +2100,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "src_services_optimizer_checkhttpsrequirement",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "checkhttpsrequirement()"
     },
     {
@@ -2111,8 +2111,8 @@
       "source_location": "L84",
       "_origin": "ast",
       "id": "src_services_optimizer_updateoptimizationsettings",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "updateoptimizationsettings()"
     },
     {
@@ -2122,8 +2122,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "src_services_optimizer_applyrtkcompression",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "applyrtkcompression()"
     },
     {
@@ -2133,8 +2133,8 @@
       "source_location": "L164",
       "_origin": "ast",
       "id": "src_services_optimizer_minifycontent",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "minifycontent()"
     },
     {
@@ -2144,8 +2144,8 @@
       "source_location": "L176",
       "_origin": "ast",
       "id": "src_services_optimizer_optimizerequestbody",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "optimizerequestbody()"
     },
     {
@@ -2188,8 +2188,8 @@
       "source_location": "L314",
       "_origin": "ast",
       "id": "src_services_optimizer_clearresponsecache",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "clearresponsecache()"
     },
     {
@@ -2218,7 +2218,7 @@
       "label": "RETRYABLE_UPSTREAM_STATUSES",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L49",
+      "source_location": "L52",
       "_origin": "ast",
       "id": "src_services_proxy_retryable_upstream_statuses",
       "community": 23,
@@ -2229,7 +2229,7 @@
       "label": "isRetryableStatus()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L54",
+      "source_location": "L57",
       "_origin": "ast",
       "id": "src_services_proxy_isretryablestatus",
       "community": 23,
@@ -2240,7 +2240,7 @@
       "label": "buildFailoverKeyCandidates()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L60",
+      "source_location": "L63",
       "_origin": "ast",
       "id": "src_services_proxy_buildfailoverkeycandidates",
       "community": 23,
@@ -2251,7 +2251,7 @@
       "label": "proxyOpenAIChatCompletions()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L98",
+      "source_location": "L101",
       "_origin": "ast",
       "id": "src_services_proxy_proxyopenaichatcompletions",
       "community": 23,
@@ -2262,7 +2262,7 @@
       "label": "proxyAnthropicMessages()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L777",
+      "source_location": "L821",
       "_origin": "ast",
       "id": "src_services_proxy_proxyanthropicmessages",
       "community": 23,
@@ -2273,7 +2273,7 @@
       "label": "getModelCapabilities()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1259",
+      "source_location": "L1339",
       "_origin": "ast",
       "id": "src_services_proxy_getmodelcapabilities",
       "community": 23,
@@ -2284,7 +2284,7 @@
       "label": "getModelContextWindow()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1296",
+      "source_location": "L1376",
       "_origin": "ast",
       "id": "src_services_proxy_getmodelcontextwindow",
       "community": 23,
@@ -2295,7 +2295,7 @@
       "label": "getModelMaxTokens()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1310",
+      "source_location": "L1390",
       "_origin": "ast",
       "id": "src_services_proxy_getmodelmaxtokens",
       "community": 23,
@@ -2306,7 +2306,7 @@
       "label": "enrichModel()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1322",
+      "source_location": "L1402",
       "_origin": "ast",
       "id": "src_services_proxy_enrichmodel",
       "community": 23,
@@ -2317,11 +2317,11 @@
       "label": "proxyOpenAIModels()",
       "file_type": "code",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1387",
+      "source_location": "L1467",
       "_origin": "ast",
       "id": "src_services_proxy_proxyopenaimodels",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "proxyopenaimodels()"
     },
     {
@@ -2331,8 +2331,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_services_router",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "router.ts"
     },
     {
@@ -2342,8 +2342,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "src_services_router_roundrobinindex",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "roundrobinindex"
     },
     {
@@ -2353,8 +2353,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_services_router_keyrotationindex",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "keyrotationindex"
     },
     {
@@ -2364,8 +2364,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "src_services_router_modelconfig",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "modelconfig"
     },
     {
@@ -2375,8 +2375,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "src_services_router_parseupstreammodels",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "parseupstreammodels()"
     },
     {
@@ -2408,8 +2408,8 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "src_services_router_parseupstreamkeys",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "parseupstreamkeys()"
     },
     {
@@ -2441,8 +2441,8 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "src_services_router_getactiveupstreamkeys",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "getactiveupstreamkeys()"
     },
     {
@@ -2452,8 +2452,8 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "src_services_router_parseallowedproviders",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "parseallowedproviders()"
     },
     {
@@ -2463,8 +2463,8 @@
       "source_location": "L169",
       "_origin": "ast",
       "id": "src_services_router_providermodelrotationindex",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "providermodelrotationindex"
     },
     {
@@ -2474,26 +2474,48 @@
       "source_location": "L171",
       "_origin": "ast",
       "id": "src_services_router_upstreamselectionresult",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "upstreamselectionresult"
+    },
+    {
+      "label": "UpstreamCandidatesResult",
+      "file_type": "code",
+      "source_file": "src/services/router.ts",
+      "source_location": "L177",
+      "_origin": "ast",
+      "id": "src_services_router_upstreamcandidatesresult",
+      "community": 23,
+      "community_name": "services/proxy.ts",
+      "norm_label": "upstreamcandidatesresult"
+    },
+    {
+      "label": "selectUpstreamCandidates()",
+      "file_type": "code",
+      "source_file": "src/services/router.ts",
+      "source_location": "L186",
+      "_origin": "ast",
+      "id": "src_services_router_selectupstreamcandidates",
+      "community": 23,
+      "community_name": "services/proxy.ts",
+      "norm_label": "selectupstreamcandidates()"
     },
     {
       "label": "selectUpstreamKey()",
       "file_type": "code",
       "source_file": "src/services/router.ts",
-      "source_location": "L177",
+      "source_location": "L317",
       "_origin": "ast",
       "id": "src_services_router_selectupstreamkey",
-      "community": 9,
-      "community_name": "upstreams.ts",
+      "community": 23,
+      "community_name": "services/proxy.ts",
       "norm_label": "selectupstreamkey()"
     },
     {
       "label": "getBaseUrl()",
       "file_type": "code",
       "source_file": "src/services/router.ts",
-      "source_location": "L289",
+      "source_location": "L330",
       "_origin": "ast",
       "id": "src_services_router_getbaseurl",
       "community": 23,
@@ -3156,8 +3178,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "src_web_handler",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "handler.ts"
     },
     {
@@ -3167,8 +3189,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "src_web_handler_bundlefrontend",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "bundlefrontend()"
     },
     {
@@ -3178,8 +3200,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "src_web_handler_webhandler",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 27,
+      "community_name": "src/index.ts",
       "norm_label": "webhandler"
     },
     {
@@ -7632,6 +7654,18 @@
       "context": "field",
       "confidence": "EXTRACTED",
       "source_file": "src/services/router.ts",
+      "source_location": "L178",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_services_router_upstreamcandidatesresult",
+      "target": "src_db_schema_upstreamkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "references",
+      "context": "field",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/router.ts",
       "source_location": "L172",
       "weight": 1.0,
       "_origin": "ast",
@@ -9385,7 +9419,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L348",
+      "source_location": "L358",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -9421,7 +9455,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L409",
+      "source_location": "L419",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -9626,7 +9660,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L893",
+      "source_location": "L944",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -9638,7 +9672,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L230",
+      "source_location": "L240",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -9662,7 +9696,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L823",
+      "source_location": "L874",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -9674,7 +9708,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L144",
+      "source_location": "L154",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -9799,7 +9833,7 @@
       "deferred": true,
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1463",
+      "source_location": "L1543",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaimodels",
@@ -10143,7 +10177,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L425",
+      "source_location": "L435",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10179,7 +10213,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L363",
+      "source_location": "L373",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10227,7 +10261,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L377",
+      "source_location": "L387",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10419,7 +10453,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L341",
+      "source_location": "L351",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10443,7 +10477,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L342",
+      "source_location": "L352",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10479,7 +10513,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L343",
+      "source_location": "L353",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10683,7 +10717,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L837",
+      "source_location": "L888",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -10695,7 +10729,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L164",
+      "source_location": "L174",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10755,7 +10789,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L838",
+      "source_location": "L889",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -10767,7 +10801,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L165",
+      "source_location": "L175",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10791,7 +10825,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L868",
+      "source_location": "L919",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -10803,7 +10837,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L208",
+      "source_location": "L218",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10827,7 +10861,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L872",
+      "source_location": "L923",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -10839,7 +10873,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L209",
+      "source_location": "L219",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10863,7 +10897,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1144",
+      "source_location": "L1224",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -10875,7 +10909,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L609",
+      "source_location": "L653",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -10885,7 +10919,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L60",
+      "source_location": "L63",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10907,7 +10941,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1322",
+      "source_location": "L1402",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10918,7 +10952,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1259",
+      "source_location": "L1339",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10929,7 +10963,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1296",
+      "source_location": "L1376",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10940,7 +10974,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1310",
+      "source_location": "L1390",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10951,7 +10985,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L54",
+      "source_location": "L57",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10962,7 +10996,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L777",
+      "source_location": "L821",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10973,7 +11007,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L98",
+      "source_location": "L101",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10984,7 +11018,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1387",
+      "source_location": "L1467",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -10995,7 +11029,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L49",
+      "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
@@ -11107,7 +11141,7 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy",
-      "target": "src_services_router_selectupstreamkey",
+      "target": "src_services_router_selectupstreamcandidates",
       "confidence_score": 1.0
     },
     {
@@ -11152,7 +11186,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L55",
+      "source_location": "L58",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_isretryablestatus",
@@ -11163,7 +11197,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1023",
+      "source_location": "L1089",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -11175,7 +11209,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L459",
+      "source_location": "L489",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11187,7 +11221,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1004",
+      "source_location": "L1063",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -11199,7 +11233,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L445",
+      "source_location": "L468",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11212,7 +11246,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L447",
+      "source_location": "L470",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11224,7 +11258,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L444",
+      "source_location": "L469",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11236,7 +11270,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L288",
+      "source_location": "L298",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11248,7 +11282,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L345",
+      "source_location": "L355",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11260,11 +11294,11 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L106",
+      "source_location": "L109",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
-      "target": "src_services_router_selectupstreamkey"
+      "target": "src_services_router_selectupstreamcandidates"
     },
     {
       "relation": "calls",
@@ -11272,7 +11306,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L213",
+      "source_location": "L223",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11284,7 +11318,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L184",
+      "source_location": "L194",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaichatcompletions",
@@ -11296,7 +11330,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1006",
+      "source_location": "L1065",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -11308,7 +11342,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1003",
+      "source_location": "L1064",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -11320,7 +11354,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L961",
+      "source_location": "L1012",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -11332,11 +11366,11 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L785",
+      "source_location": "L829",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
-      "target": "src_services_router_selectupstreamkey"
+      "target": "src_services_router_selectupstreamcandidates"
     },
     {
       "relation": "calls",
@@ -11344,7 +11378,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L876",
+      "source_location": "L927",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -11356,7 +11390,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L855",
+      "source_location": "L906",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyanthropicmessages",
@@ -11367,7 +11401,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1333",
+      "source_location": "L1413",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_enrichmodel",
@@ -11379,7 +11413,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1334",
+      "source_location": "L1414",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_enrichmodel",
@@ -11391,7 +11425,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1335",
+      "source_location": "L1415",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_enrichmodel",
@@ -11403,7 +11437,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1465",
+      "source_location": "L1545",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaimodels",
@@ -11416,7 +11450,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1473",
+      "source_location": "L1553",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaimodels",
@@ -11428,7 +11462,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1404",
+      "source_location": "L1484",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaimodels",
@@ -11440,7 +11474,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "src/services/proxy.ts",
-      "source_location": "L1521",
+      "source_location": "L1601",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_proxy_proxyopenaimodels",
@@ -11483,7 +11517,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/router.ts",
-      "source_location": "L289",
+      "source_location": "L330",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_router",
@@ -11582,11 +11616,33 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "src/services/router.ts",
-      "source_location": "L177",
+      "source_location": "L186",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_services_router",
+      "target": "src_services_router_selectupstreamcandidates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/router.ts",
+      "source_location": "L317",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_router",
       "target": "src_services_router_selectupstreamkey",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/router.ts",
+      "source_location": "L177",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_services_router",
+      "target": "src_services_router_upstreamcandidatesresult",
       "confidence_score": 1.0
     },
     {
@@ -11616,10 +11672,10 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/router.ts",
-      "source_location": "L244",
+      "source_location": "L254",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "src_services_router_selectupstreamkey",
+      "source": "src_services_router_selectupstreamcandidates",
       "target": "src_services_router_parseupstreammodels",
       "confidence_score": 1.0
     },
@@ -11676,10 +11732,10 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/router.ts",
-      "source_location": "L182",
+      "source_location": "L192",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "src_services_router_selectupstreamkey",
+      "source": "src_services_router_selectupstreamcandidates",
       "target": "src_services_router_getactiveupstreamkeys",
       "confidence_score": 1.0
     },
@@ -11688,11 +11744,23 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "src/services/router.ts",
-      "source_location": "L195",
+      "source_location": "L205",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "src_services_router_selectupstreamcandidates",
+      "target": "src_services_router_parseallowedproviders",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "src/services/router.ts",
+      "source_location": "L322",
       "weight": 1.0,
       "_origin": "ast",
       "source": "src_services_router_selectupstreamkey",
-      "target": "src_services_router_parseallowedproviders",
+      "target": "src_services_router_selectupstreamcandidates",
       "confidence_score": 1.0
     },
     {
@@ -15666,5 +15734,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "c75bdaaf24d744a361dd3c1d231d0a90e7182450"
+  "built_at_commit": "d47bd79511b28891de8aa48efe0dc115a5fc7689"
 }

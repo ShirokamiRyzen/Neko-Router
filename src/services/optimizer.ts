@@ -8,6 +8,7 @@ export interface OptimizationSettings {
   cacheTtlSeconds: number;
   httpsOnly: boolean;
   requestTimeoutSeconds: number;
+  modelPrefixEnabled: boolean;
 }
 
 export function getOptimizationSettings(): OptimizationSettings {
@@ -25,20 +26,22 @@ export function getOptimizationSettings(): OptimizationSettings {
       cavemanMode: map.get("opt_caveman_mode") === "1",
       minifyPrompt: map.get("opt_minify_prompt") === "1",
       cacheTtlSeconds: parseInt(map.get("opt_cache_ttl") || "3600", 10),
-      httpsOnly: map.get("opt_https_only") === "1",
-      requestTimeoutSeconds: isNaN(timeoutVal) || timeoutVal < 0 ? 0 : timeoutVal,
-    };
-  } catch (e) {
-    return {
-      cacheEnabled: true,
-      rtkCompression: false,
-      cavemanMode: false,
-      minifyPrompt: false,
-      cacheTtlSeconds: 3600,
-      httpsOnly: false,
-      requestTimeoutSeconds: 0,
-    };
-  }
+    httpsOnly: map.get("opt_https_only") === "1",
+    requestTimeoutSeconds: isNaN(timeoutVal) || timeoutVal < 0 ? 0 : timeoutVal,
+    modelPrefixEnabled: map.get("opt_model_prefix_enabled") !== "0", // Default enabled (1)
+  };
+} catch (e) {
+  return {
+    cacheEnabled: true,
+    rtkCompression: false,
+    cavemanMode: false,
+    minifyPrompt: false,
+    cacheTtlSeconds: 3600,
+    httpsOnly: false,
+    requestTimeoutSeconds: 0,
+    modelPrefixEnabled: true,
+  };
+}
 }
 
 export function isHttpsRequest(request: Request): boolean {
@@ -127,6 +130,12 @@ export function updateOptimizationSettings(
     sqlite.run(
       "INSERT INTO settings (key, value, updated_at) VALUES ('opt_request_timeout', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
       [String(timeoutVal), now]
+    );
+  }
+  if (settings.modelPrefixEnabled !== undefined) {
+    sqlite.run(
+      "INSERT INTO settings (key, value, updated_at) VALUES ('opt_model_prefix_enabled', ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+      [settings.modelPrefixEnabled ? "1" : "0", now]
     );
   }
 

@@ -35,6 +35,7 @@ export const adminRoutes = new Elysia({ prefix: "/api/admin" })
         cacheTtlSeconds: t.Optional(t.Number()),
         httpsOnly: t.Optional(t.Boolean()),
         requestTimeoutSeconds: t.Optional(t.Number()),
+        modelPrefixEnabled: t.Optional(t.Boolean()),
       }),
     }
   )
