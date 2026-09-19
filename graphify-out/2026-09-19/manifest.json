@@ -283,5 +283,20 @@
     "mtime": 1788788613.556701,
     "ast_hash": "21c7473c592c67dc87223d49892c8f0a",
     "semantic_hash": ""
+  },
+  ".opencode/opencode.json": {
+    "mtime": 1789821982.1681747,
+    "ast_hash": "f2ae21510d07365eb2bce8159272c7a0",
+    "semantic_hash": ""
+  },
+  ".opencode/plugins/graphify.js": {
+    "mtime": 1789821982.1681747,
+    "ast_hash": "b33d000860642c6f4907a877e0387a21",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1789821982.1681747,
+    "ast_hash": "21ceb6533048be51308e69e7b74a35cf",
+    "semantic_hash": ""
   }
 }

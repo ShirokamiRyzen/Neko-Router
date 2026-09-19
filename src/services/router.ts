@@ -127,6 +127,15 @@ export function getApiKeyForUpstream(upstream: UpstreamKey): string {
   return activeEntries[idx]!.key;
 }
 
+export function getActiveUpstreamKeyEntries(
+  upstream: UpstreamKey
+): UpstreamKeyEntry[] {
+  const entries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
+  const active = entries.filter((e) => e.isActive);
+  if (active.length > 0) return active;
+  return entries;
+}
+
 export function getActiveUpstreamKeys(
   provider: "openai" | "anthropic"
 ): UpstreamKey[] {

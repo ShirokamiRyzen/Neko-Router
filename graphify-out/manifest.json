@@ -90,13 +90,13 @@
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
-    "mtime": 1789186984.4224942,
-    "ast_hash": "2349bdd9c38ca157b9c2e01cf017e3fc",
+    "mtime": 1789823448.284439,
+    "ast_hash": "7d88a49e9f6870f352fb099cb667637f",
     "semantic_hash": ""
   },
   "src/services/router.ts": {
-    "mtime": 1789136480.6052353,
-    "ast_hash": "8e6d87b758d439b3c9f08ded60859a1c",
+    "mtime": 1789823399.18013,
+    "ast_hash": "aab8944a034e85829dc54722456f7dec",
     "semantic_hash": ""
   },
   "src/services/telemetry.ts": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   ".opencode/opencode.json": {
-    "mtime": 1789821982.1681747,
-    "ast_hash": "f2ae21510d07365eb2bce8159272c7a0",
+    "mtime": 1789822310.8148823,
+    "ast_hash": "1efe24ecf938911d4f23e4b1c6ec91f7",
     "semantic_hash": ""
   },
   ".opencode/plugins/graphify.js": {

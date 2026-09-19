@@ -2,6 +2,7 @@ import {
   selectUpstreamKey,
   getBaseUrl,
   getApiKeyForUpstream,
+  getActiveUpstreamKeyEntries,
   getActiveUpstreamKeys,
   parseUpstreamModels,
   parseUpstreamKeyEntries,
@@ -38,6 +39,61 @@ import {
 type CancellableTransformer<I, O> = Transformer<I, O> & {
   cancel?(reason?: any): void | Promise<void>;
 };
+
+// Maximum number of upstream keys tried before giving up and returning the error.
+const FAILOVER_MAX_ATTEMPTS = 5;
+
+// Status codes that may be recovered by switching to another key of the same provider.
+// Deterministic client errors (400, 404, 413, 422, etc.) are NOT retried because
+// rotating keys would produce the exact same failure while wasting attempts.
+const RETRYABLE_UPSTREAM_STATUSES = new Set([
+  401, 402, 403, 408, 409, 425, 429, 500, 502, 503, 504, 520, 521, 522, 523,
+  524, 529,
+]);
+
+function isRetryableStatus(status: number): boolean {
+  return RETRYABLE_UPSTREAM_STATUSES.has(status);
+}
+
+// Builds the ordered list of keys to attempt: the round-robin primary key first,
+// then the remaining active keys shuffled randomly (max 5 total attempts).
+function buildFailoverKeyCandidates(
+  primaryKey: string,
+  entries: { key: string }[],
+  maxAttempts = FAILOVER_MAX_ATTEMPTS
+): string[] {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const entry of entries) {
+    const value = (entry.key || "").trim();
+    if (value.length > 0 && !seen.has(value)) {
+      seen.add(value);
+      unique.push(value);
+    }
+  }
+
+  const primary = (primaryKey || "").trim();
+  if (unique.length === 0) return [primary];
+  if (unique.length === 1) return [unique[0]!];
+
+  const candidates: string[] = [];
+  if (primary.length > 0) candidates.push(primary);
+
+  const others = unique.filter((key) => key !== primary);
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = others[i]!;
+    others[i] = others[j]!;
+    others[j] = tmp;
+  }
+
+  for (const key of others) {
+    if (candidates.length >= maxAttempts) break;
+    candidates.push(key);
+  }
+
+  return candidates.slice(0, maxAttempts);
+}
 
 export async function proxyOpenAIChatCompletions(
   reqHeaders: Headers,
@@ -258,10 +314,10 @@ export async function proxyOpenAIChatCompletions(
     }
   }
 
-  let upstreamResponse: Response;
-  try {
-    const currentUpstreamKey = getApiKeyForUpstream(upstream);
-    let upstreamHeaders: Record<string, string>;
+const performOpenAIFetch = async (
+  currentUpstreamKey: string
+): Promise<Response> => {
+  let upstreamHeaders: Record<string, string>;
 
     const isCopilot =
       upstream.baseUrl?.includes("githubcopilot.com") ||
@@ -340,85 +396,121 @@ export async function proxyOpenAIChatCompletions(
       };
     }
 
-    upstreamResponse = await fetch(upstreamUrl, {
-      method: "POST",
-      headers: upstreamHeaders,
-      body: JSON.stringify(requestPayload),
-      signal: controller.signal,
-    });
+  let response = await fetch(upstreamUrl, {
+    method: "POST",
+    headers: upstreamHeaders,
+    body: JSON.stringify(requestPayload),
+    signal: controller.signal,
+  });
 
-    // If Antigravity returns 401 Unauthorized, force-refresh token and retry once
-    if (isAntigravity && upstreamResponse.status === 401 && antigravityEntry?.refreshToken) {
-      try {
-        const refreshedToken = await forceRefreshAntigravityToken(upstream.id, antigravityEntry);
-        upstreamHeaders.Authorization = `Bearer ${refreshedToken}`;
-        upstreamResponse = await fetch(upstreamUrl, {
-          method: "POST",
-          headers: upstreamHeaders,
-          body: JSON.stringify(requestPayload),
-          signal: controller.signal,
-        });
-      } catch (refreshErr) {
-        // Continue with original response
-      }
+  // If Antigravity returns 401 Unauthorized, force-refresh token and retry once
+  if (isAntigravity && response.status === 401 && antigravityEntry?.refreshToken) {
+    try {
+      const refreshedToken = await forceRefreshAntigravityToken(upstream.id, antigravityEntry);
+      upstreamHeaders.Authorization = `Bearer ${refreshedToken}`;
+      response = await fetch(upstreamUrl, {
+        method: "POST",
+        headers: upstreamHeaders,
+        body: JSON.stringify(requestPayload),
+        signal: controller.signal,
+      });
+    } catch (refreshErr) {
+      // Continue with original response
     }
+  }
 
-    // If Codex returns 401 Unauthorized, refresh token and retry once
-    if (isCodex && upstreamResponse.status === 401 && codexEntry?.refreshToken) {
-      try {
-        const refreshed = await refreshCodexToken(codexEntry.refreshToken);
-        codexEntry.key = refreshed.accessToken;
-        if (refreshed.refreshToken) codexEntry.refreshToken = refreshed.refreshToken;
-        if (refreshed.expiresAt) codexEntry.expiresAt = refreshed.expiresAt;
-        upstreamHeaders.Authorization = `Bearer ${refreshed.accessToken}`;
-        upstreamResponse = await fetch(upstreamUrl, {
-          method: "POST",
-          headers: upstreamHeaders,
-          body: JSON.stringify(requestPayload),
-          signal: controller.signal,
-        });
-      } catch (refreshErr) {
-        // Continue with original response
-      }
+  // If Codex returns 401 Unauthorized, refresh token and retry once
+  if (isCodex && response.status === 401 && codexEntry?.refreshToken) {
+    try {
+      const refreshed = await refreshCodexToken(codexEntry.refreshToken);
+      codexEntry.key = refreshed.accessToken;
+      if (refreshed.refreshToken) codexEntry.refreshToken = refreshed.refreshToken;
+      if (refreshed.expiresAt) codexEntry.expiresAt = refreshed.expiresAt;
+      upstreamHeaders.Authorization = `Bearer ${refreshed.accessToken}`;
+      response = await fetch(upstreamUrl, {
+        method: "POST",
+        headers: upstreamHeaders,
+        body: JSON.stringify(requestPayload),
+        signal: controller.signal,
+      });
+    } catch (refreshErr) {
+      // Continue with original response
+    }
+  }
+
+  return response;
+};
+
+const primaryUpstreamKey = getApiKeyForUpstream(upstream);
+const failoverCandidates = buildFailoverKeyCandidates(
+  primaryUpstreamKey,
+  getActiveUpstreamKeyEntries(upstream)
+);
+
+let upstreamResponse!: Response;
+let responseResolved = false;
+let lastAttemptError: any = null;
+
+for (let attempt = 0; attempt < failoverCandidates.length; attempt++) {
+  const attemptKey = failoverCandidates[attempt]!;
+  try {
+    const response = await performOpenAIFetch(attemptKey);
+    const isLastAttempt = attempt === failoverCandidates.length - 1;
+    if (response.ok || isLastAttempt || !isRetryableStatus(response.status)) {
+      upstreamResponse = response;
+      responseResolved = true;
+      break;
+    }
+    try {
+      await response.body?.cancel();
+    } catch (cancelErr) {
+      // Ignore body cancellation failure before failover
     }
   } catch (err: any) {
-    if (timeoutTimer) clearTimeout(timeoutTimer);
-    finishActive();
-    const isTimeout = controller.signal.aborted;
-    const durationMs = Math.round(performance.now() - startTime);
-    const statusCode = isTimeout ? 504 : 502;
-    const errorMsg = isTimeout
-      ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
-      : (err?.message || "Failed to reach upstream provider");
-
-    recordTelemetry({
-      clientKeyId: clientKey?.id,
-      clientKeyName: clientKey?.name,
-      upstreamKeyId: upstream.id,
-      provider: "openai",
-      endpoint: "/v1/chat/completions",
-      model,
-      promptTokens: 0,
-      completionTokens: 0,
-      cachedTokens: 0,
-      totalTokens: 0,
-      statusCode,
-      durationMs,
-      isStreaming: isStream,
-      errorMessage: errorMsg,
-    });
-
-    return new Response(
-      JSON.stringify({
-        error: {
-          message: errorMsg,
-          type: isTimeout ? "timeout_error" : "gateway_error",
-          code: isTimeout ? "gateway_timeout" : undefined,
-        },
-      }),
-      { status: statusCode, headers: { "Content-Type": "application/json" } }
-    );
+    lastAttemptError = err;
+    if (controller.signal.aborted) break;
+    if (attempt === failoverCandidates.length - 1) break;
   }
+}
+
+if (!responseResolved) {
+  if (timeoutTimer) clearTimeout(timeoutTimer);
+  finishActive();
+  const isTimeout = controller.signal.aborted && timeoutSeconds > 0;
+  const durationMs = Math.round(performance.now() - startTime);
+  const statusCode = isTimeout ? 504 : 502;
+  const errorMsg = isTimeout
+    ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
+    : (lastAttemptError?.message || "Failed to reach upstream provider");
+
+  recordTelemetry({
+    clientKeyId: clientKey?.id,
+    clientKeyName: clientKey?.name,
+    upstreamKeyId: upstream.id,
+    provider: "openai",
+    endpoint: "/v1/chat/completions",
+    model,
+    promptTokens: 0,
+    completionTokens: 0,
+    cachedTokens: 0,
+    totalTokens: 0,
+    statusCode,
+    durationMs,
+    isStreaming: isStream,
+    errorMessage: errorMsg,
+  });
+
+  return new Response(
+    JSON.stringify({
+      error: {
+        message: errorMsg,
+        type: isTimeout ? "timeout_error" : "gateway_error",
+        code: isTimeout ? "gateway_timeout" : undefined,
+      },
+    }),
+    { status: statusCode, headers: { "Content-Type": "application/json" } }
+  );
+}
 
   // Handle upstream error
   if (!upstreamResponse.ok) {
@@ -868,17 +960,18 @@ export async function proxyAnthropicMessages(
 
   const upstreamUrl = `${getBaseUrl(upstream)}/v1/messages`;
 
-  const headers: Record<string, string> = {
+const buildAnthropicHeaders = (apiKey: string): Record<string, string> => {
+  const headerMap: Record<string, string> = {
     "Content-Type": "application/json",
-    "x-api-key": getApiKeyForUpstream(upstream),
-    "anthropic-version":
-      reqHeaders.get("anthropic-version") || "2023-06-01",
+    "x-api-key": apiKey,
+    "anthropic-version": reqHeaders.get("anthropic-version") || "2023-06-01",
   };
-
   const anthropicBeta = reqHeaders.get("anthropic-beta");
   if (anthropicBeta) {
-    headers["anthropic-beta"] = anthropicBeta;
+    headerMap["anthropic-beta"] = anthropicBeta;
   }
+  return headerMap;
+};
 
   const timeoutSeconds = Number(opt.requestTimeoutSeconds) || 0;
   const controller = new AbortController();
@@ -907,52 +1000,81 @@ export async function proxyAnthropicMessages(
     }
   }
 
-  let upstreamResponse: Response;
+const primaryUpstreamKey = getApiKeyForUpstream(upstream);
+const failoverCandidates = buildFailoverKeyCandidates(
+  primaryUpstreamKey,
+  getActiveUpstreamKeyEntries(upstream)
+);
+
+let upstreamResponse!: Response;
+let responseResolved = false;
+let lastAttemptError: any = null;
+
+for (let attempt = 0; attempt < failoverCandidates.length; attempt++) {
+  const attemptKey = failoverCandidates[attempt]!;
   try {
-    upstreamResponse = await fetch(upstreamUrl, {
+    const response = await fetch(upstreamUrl, {
       method: "POST",
-      headers,
+      headers: buildAnthropicHeaders(attemptKey),
       body: JSON.stringify(optimizedBody),
       signal: controller.signal,
     });
+    const isLastAttempt = attempt === failoverCandidates.length - 1;
+    if (response.ok || isLastAttempt || !isRetryableStatus(response.status)) {
+      upstreamResponse = response;
+      responseResolved = true;
+      break;
+    }
+    try {
+      await response.body?.cancel();
+    } catch (cancelErr) {
+      // Ignore body cancellation failure before failover
+    }
   } catch (err: any) {
-    if (timeoutTimer) clearTimeout(timeoutTimer);
-    finishActive();
-    const isTimeout = controller.signal.aborted;
-    const durationMs = Math.round(performance.now() - startTime);
-    const statusCode = isTimeout ? 504 : 502;
-    const errorMsg = isTimeout
-      ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
-      : (err?.message || "Failed to reach Anthropic upstream");
-
-    recordTelemetry({
-      clientKeyId: clientKey?.id,
-      clientKeyName: clientKey?.name,
-      upstreamKeyId: upstream.id,
-      provider: "anthropic",
-      endpoint: "/v1/messages",
-      model,
-      promptTokens: 0,
-      completionTokens: 0,
-      cachedTokens: 0,
-      totalTokens: 0,
-      statusCode,
-      durationMs,
-      isStreaming: isStream,
-      errorMessage: errorMsg,
-    });
-
-    return new Response(
-      JSON.stringify({
-        type: "error",
-        error: {
-          type: isTimeout ? "timeout_error" : "gateway_error",
-          message: errorMsg,
-        },
-      }),
-      { status: statusCode, headers: { "Content-Type": "application/json" } }
-    );
+    lastAttemptError = err;
+    if (controller.signal.aborted) break;
+    if (attempt === failoverCandidates.length - 1) break;
   }
+}
+
+if (!responseResolved) {
+  if (timeoutTimer) clearTimeout(timeoutTimer);
+  finishActive();
+  const isTimeout = controller.signal.aborted && timeoutSeconds > 0;
+  const durationMs = Math.round(performance.now() - startTime);
+  const statusCode = isTimeout ? 504 : 502;
+  const errorMsg = isTimeout
+    ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
+    : (lastAttemptError?.message || "Failed to reach Anthropic upstream");
+
+  recordTelemetry({
+    clientKeyId: clientKey?.id,
+    clientKeyName: clientKey?.name,
+    upstreamKeyId: upstream.id,
+    provider: "anthropic",
+    endpoint: "/v1/messages",
+    model,
+    promptTokens: 0,
+    completionTokens: 0,
+    cachedTokens: 0,
+    totalTokens: 0,
+    statusCode,
+    durationMs,
+    isStreaming: isStream,
+    errorMessage: errorMsg,
+  });
+
+  return new Response(
+    JSON.stringify({
+      type: "error",
+      error: {
+        type: isTimeout ? "timeout_error" : "gateway_error",
+        message: errorMsg,
+      },
+    }),
+    { status: statusCode, headers: { "Content-Type": "application/json" } }
+  );
+}
 
   // Handle upstream error
   if (!upstreamResponse.ok) {
