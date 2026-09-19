@@ -4,39 +4,6 @@
   "graph": {},
   "nodes": [
     {
-      "label": "graphify.js",
-      "file_type": "code",
-      "source_file": ".opencode/plugins/graphify.js",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "opencode_plugins_graphify",
-      "community": 25,
-      "community_name": "graphify.js",
-      "norm_label": "graphify.js"
-    },
-    {
-      "label": "GraphifyPlugin()",
-      "file_type": "code",
-      "source_file": ".opencode/plugins/graphify.js",
-      "source_location": "L12",
-      "_origin": "ast",
-      "id": "opencode_plugins_graphify_graphifyplugin",
-      "community": 25,
-      "community_name": "graphify.js",
-      "norm_label": "graphifyplugin()"
-    },
-    {
-      "label": "IMPORTANT: keep the reminder string free of backticks and $(...) constructs.",
-      "file_type": "rationale",
-      "source_file": ".opencode/plugins/graphify.js",
-      "source_location": "L4",
-      "_origin": "ast",
-      "id": "opencode_plugins_graphify_rationale_4",
-      "community": 25,
-      "community_name": "graphify.js",
-      "norm_label": "important: keep the reminder string free of backticks and $(...) constructs."
-    },
-    {
       "label": "index.ts",
       "file_type": "code",
       "source_file": "index.ts",
@@ -736,8 +703,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "src_db_index_db",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "db"
     },
     {
@@ -824,8 +791,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "src_db_schema_upstreamkeys",
-      "community": 2,
-      "community_name": "schema.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "upstreamkeys"
     },
     {
@@ -967,8 +934,8 @@
       "source_location": "L96",
       "_origin": "ast",
       "id": "src_index_app",
-      "community": 7,
-      "community_name": "App.tsx",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "app"
     },
     {
@@ -1209,8 +1176,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "src_routes_proxy_proxyroutes",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 2,
+      "community_name": "schema.ts",
       "norm_label": "proxyroutes"
     },
     {
@@ -1407,8 +1374,8 @@
       "source_location": "L268",
       "_origin": "ast",
       "id": "src_services_antigravity_ensureantigravityaccesstoken",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "ensureantigravityaccesstoken()"
     },
     {
@@ -1418,8 +1385,8 @@
       "source_location": "L288",
       "_origin": "ast",
       "id": "src_services_antigravity_forcerefreshantigravitytoken",
-      "community": 23,
-      "community_name": "services/proxy.ts",
+      "community": 9,
+      "community_name": "upstreams.ts",
       "norm_label": "forcerefreshantigravitytoken()"
     },
     {
@@ -4668,28 +4635,6 @@
       "norm_label": "workflow: graphify"
     },
     {
-      "label": "AGENTS.md",
-      "file_type": "document",
-      "source_file": "AGENTS.md",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "agents",
-      "community": 26,
-      "community_name": "AGENTS.md",
-      "norm_label": "agents.md"
-    },
-    {
-      "label": "graphify",
-      "file_type": "document",
-      "source_file": "AGENTS.md",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "agents_graphify",
-      "community": 26,
-      "community_name": "AGENTS.md",
-      "norm_label": "graphify"
-    },
-    {
       "label": "API_Docs.md",
       "file_type": "document",
       "source_file": "API_Docs.md",
@@ -5736,28 +5681,6 @@
     }
   ],
   "links": [
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": ".opencode/plugins/graphify.js",
-      "source_location": "L12",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "opencode_plugins_graphify",
-      "target": "opencode_plugins_graphify_graphifyplugin",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "rationale_for",
-      "confidence": "EXTRACTED",
-      "source_file": ".opencode/plugins/graphify.js",
-      "source_location": "L4",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "opencode_plugins_graphify_rationale_4",
-      "target": "opencode_plugins_graphify",
-      "confidence_score": 1.0
-    },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
@@ -14359,17 +14282,6 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "AGENTS.md",
-      "source_location": "L1",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "agents",
-      "target": "agents_graphify",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
       "source_file": "API_Docs.md",
       "source_location": "L1",
       "weight": 1.0,
@@ -15392,5 +15304,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "52014cbd8878b2d7d10e818256efad9cecc66d28"
+  "built_at_commit": "40265dcb66d893b56d26f98fe363e50edbab04af"
 }
