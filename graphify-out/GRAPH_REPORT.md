@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-19)
 
 ## Corpus Check
-- 53 files · ~78,191 words
+- 53 files · ~78,534 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 529 nodes · 857 edges · 30 communities (24 shown, 6 thin omitted)
+- 531 nodes · 861 edges · 30 communities (24 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c75bdaaf`
+- Built from commit: `d47bd795`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -41,7 +41,7 @@
 - F. Database & System Endpoints
 - graphify.js
 - AGENTS.md
-- copilot.ts
+- src/index.ts
 - opencode.json
 
 ## God Nodes (most connected - your core abstractions)
@@ -57,16 +57,16 @@
 10. `DEFAULT 3 × 3 PANEL SYSTEM` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `UpstreamCandidatesResult` --references--> `UpstreamKey`  [EXTRACTED]
+  src/services/router.ts → src/db/schema.ts
 - `UpstreamSelectionResult` --references--> `UpstreamKey`  [EXTRACTED]
   src/services/router.ts → src/db/schema.ts
 - `proxyOpenAIChatCompletions()` --calls--> `getCopilotInternalToken()`  [EXTRACTED]
   src/services/proxy.ts → src/services/copilot.ts
 - `proxyOpenAIChatCompletions()` --calls--> `transformCopilotRequestBody()`  [EXTRACTED]
   src/services/proxy.ts → src/services/copilot.ts
-- `proxyOpenAIChatCompletions()` --calls--> `selectUpstreamKey()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/router.ts
-- `proxyAnthropicMessages()` --calls--> `selectUpstreamKey()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/router.ts
+- `proxyAnthropicMessages()` --calls--> `getOptimizationSettings()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/optimizer.ts
 
 ## Import Cycles
 - None detected.
@@ -82,8 +82,8 @@ Cohesion: 0.06
 Nodes (32): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/cli, @tailwindcss/vite, @types/bun, @types/node (+24 more)
 
 ### Community 2 - "schema.ts"
-Cohesion: 0.06
-Nodes (47): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys, ClientKey (+39 more)
+Cohesion: 0.08
+Nodes (41): db, ApiKey, apiKeys, ClientKey, clientKeys, InsertApiKey, InsertClientKey, ResponseCache (+33 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -98,8 +98,8 @@ Cohesion: 0.07
 Nodes (48): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), DashboardTab(), formatTimeAgo(), getProviderTag() (+40 more)
 
 ### Community 9 - "upstreams.ts"
-Cohesion: 0.07
-Nodes (46): db, UpstreamKey, upstreamKeys, adjectives, nouns, ANTIGRAVITY_CONFIG, ANTIGRAVITY_DEFAULT_MODELS, buildAntigravityAuthUrl() (+38 more)
+Cohesion: 0.08
+Nodes (36): adjectives, nouns, ANTIGRAVITY_CONFIG, ANTIGRAVITY_DEFAULT_MODELS, buildAntigravityAuthUrl(), exchangeAntigravityCode(), fetchAntigravityModels(), getAntigravityClientMetadata() (+28 more)
 
 ### Community 11 - "dependencies"
 Cohesion: 0.09
@@ -146,16 +146,16 @@ Cohesion: 0.07
 Nodes (29): 1. Installation:, 1. OpenAI Streaming:, 1. Overview & Base URLs, 2. Anthropic Non-Streaming:, 2. Authentication Mechanisms, 2. Usage with Neko-Router `App` Type:, 3. AI Proxy Endpoints, 4. SDK Integration Guides (+21 more)
 
 ### Community 23 - "services/proxy.ts"
-Cohesion: 0.11
-Nodes (42): AVAILABLE_ENDPOINTS, formatBytes(), formatUptime(), getV1Directory(), MOTIVATIONAL_QUOTES, proxyRoutes, ensureAntigravityAccessToken(), forceRefreshAntigravityToken() (+34 more)
+Cohesion: 0.12
+Nodes (41): UpstreamKey, ensureAntigravityAccessToken(), forceRefreshAntigravityToken(), checkClientRateLimit(), incrementClientKeyTokens(), ensureCodexAccessToken(), refreshCodexToken(), transformChatToCodexResponses() (+33 more)
 
 ### Community 24 - "F. Database & System Endpoints"
 Cohesion: 0.40
 Nodes (5): 1. Export SQLite Database, 2. Import SQLite Database, 3. Runtime Engine Diagnostics, 4. Health Check, F. Database & System Endpoints
 
-### Community 27 - "copilot.ts"
-Cohesion: 0.21
-Nodes (11): CachedCopilotToken, COPILOT_DEFAULT_MODELS, copilotTokenCache, fetchCopilotLiveModels(), getCopilotInternalToken(), GITHUB_COPILOT_CONFIG, lastPollMap, pollGitHubDeviceToken() (+3 more)
+### Community 27 - "src/index.ts"
+Cohesion: 0.10
+Nodes (30): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, App, envPath, port (+22 more)
 
 ### Community 29 - "opencode.json"
 Cohesion: 0.50
@@ -182,4 +182,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.06060606060606061 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.06398730830248546 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07547169811320754 - nodes in this community are weakly interconnected._

@@ -174,15 +174,25 @@ export interface UpstreamSelectionResult {
   message?: string;
 }
 
-export function selectUpstreamKey(
+export interface UpstreamCandidatesResult {
+  upstreams: UpstreamKey[];
+  error?: "no_upstreams" | "no_allowed_providers" | "model_not_enabled";
+  message?: string;
+}
+
+// Returns the ordered list of eligible providers for a request.
+// The first item is the round-robin (or highest-weight) primary provider, followed
+// by the remaining eligible providers in random order for failover.
+export function selectUpstreamCandidates(
   provider: "openai" | "anthropic",
   requestedModel?: string,
-  clientKey?: { id: string; name: string; allowedProviders?: string | null; roundRobinProviders?: number } | null
-): UpstreamSelectionResult {
+  clientKey?: { id: string; name: string; allowedProviders?: string | null; roundRobinProviders?: number } | null,
+  maxProviders = 3
+): UpstreamCandidatesResult {
   const allActive = getActiveUpstreamKeys(provider);
   if (!allActive || allActive.length === 0) {
     return {
-      upstream: null,
+      upstreams: [],
       error: "no_upstreams",
       message: `No active ${provider.toUpperCase()} upstream providers configured in Neko-Router.`,
     };
@@ -195,7 +205,7 @@ export function selectUpstreamKey(
     const allowedIds = parseAllowedProviders(clientKey.allowedProviders);
     if (allowedIds.length === 0) {
       return {
-        upstream: null,
+        upstreams: [],
         error: "no_allowed_providers",
         message: `Client Key "${clientKey.name}" has no permitted upstream providers (Default: OFF all providers). Please enable providers for this key in the Neko-Router dashboard.`,
       };
@@ -206,7 +216,7 @@ export function selectUpstreamKey(
     );
     if (eligibleKeys.length === 0) {
       return {
-        upstream: null,
+        upstreams: [],
         error: "no_allowed_providers",
         message: `Client Key "${clientKey.name}" does not have permission to access any active ${provider.toUpperCase()} providers.`,
       };
@@ -257,33 +267,64 @@ export function selectUpstreamKey(
 
     if (eligibleKeys.length === 0) {
       return {
-        upstream: null,
+        upstreams: [],
         error: "model_not_enabled",
         message: `Model '${requestedModel}' is not enabled on any permitted ${provider.toUpperCase()} provider for this key.`,
       };
     }
   }
 
+  const cap = Math.max(1, maxProviders);
+
   // If only 1 eligible provider has this model
   if (eligibleKeys.length === 1) {
-    return { upstream: eligibleKeys[0] ?? null };
+    return { upstreams: [eligibleKeys[0]!] };
   }
 
   // 3. Round-robin across providers that have the same model
   const shouldRoundRobin = clientKey ? clientKey.roundRobinProviders !== 0 : true;
 
+  let primary: UpstreamKey | undefined;
   if (!shouldRoundRobin) {
     // Round-robin OFF: stick to the primary / highest weight provider
     const sorted = [...eligibleKeys].sort((a, b) => (b.weight || 1) - (a.weight || 1));
-    return { upstream: sorted[0] ?? null };
+    primary = sorted[0];
+  } else {
+    // Round-robin ON: rotate across the providers having this exact same model!
+    const rotationKey = `${clientKey?.id || "global"}:${provider}:${target || "any"}`;
+    const currentIndex = (providerModelRotationIndex[rotationKey] || 0) % eligibleKeys.length;
+    providerModelRotationIndex[rotationKey] = (currentIndex + 1) % eligibleKeys.length;
+    primary = eligibleKeys[currentIndex];
+  }
+  if (!primary) primary = eligibleKeys[0];
+
+  const candidates: UpstreamKey[] = [primary!];
+  const others = eligibleKeys.filter((k) => k.id !== primary!.id);
+  for (let i = others.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = others[i]!;
+    others[i] = others[j]!;
+    others[j] = tmp;
+  }
+  for (const k of others) {
+    if (candidates.length >= cap) break;
+    candidates.push(k);
   }
 
-  // Round-robin ON: rotate across the providers having this exact same model!
-  const rotationKey = `${clientKey?.id || "global"}:${provider}:${target || "any"}`;
-  const currentIndex = (providerModelRotationIndex[rotationKey] || 0) % eligibleKeys.length;
-  providerModelRotationIndex[rotationKey] = (currentIndex + 1) % eligibleKeys.length;
+  return { upstreams: candidates.slice(0, cap) };
+}
 
-  return { upstream: eligibleKeys[currentIndex] ?? eligibleKeys[0] ?? null };
+export function selectUpstreamKey(
+  provider: "openai" | "anthropic",
+  requestedModel?: string,
+  clientKey?: { id: string; name: string; allowedProviders?: string | null; roundRobinProviders?: number } | null
+): UpstreamSelectionResult {
+  const result = selectUpstreamCandidates(provider, requestedModel, clientKey, 1);
+  return {
+    upstream: result.upstreams[0] ?? null,
+    error: result.error,
+    message: result.message,
+  };
 }
 
 export function getBaseUrl(upstream: UpstreamKey): string {

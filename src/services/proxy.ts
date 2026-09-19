@@ -1,5 +1,5 @@
 import {
-  selectUpstreamKey,
+  selectUpstreamCandidates,
   getBaseUrl,
   getApiKeyForUpstream,
   getActiveUpstreamKeyEntries,
@@ -42,6 +42,9 @@ type CancellableTransformer<I, O> = Transformer<I, O> & {
 
 // Maximum number of upstream keys tried before giving up and returning the error.
 const FAILOVER_MAX_ATTEMPTS = 5;
+
+// Maximum number of upstream providers tried (each with its own key failover).
+const FAILOVER_MAX_PROVIDERS = 3;
 
 // Status codes that may be recovered by switching to another key of the same provider.
 // Deterministic client errors (400, 404, 413, 422, etc.) are NOT retried because
@@ -103,10 +106,15 @@ export async function proxyOpenAIChatCompletions(
 ): Promise<Response> {
   const startTime = performance.now();
   const requestedModel = (body && typeof body === "object" ? body.model : "") || "unknown";
-  const selection = selectUpstreamKey("openai", requestedModel, clientKey);
-  const upstream = selection.upstream;
+  const selection = selectUpstreamCandidates(
+    "openai",
+    requestedModel,
+    clientKey,
+    FAILOVER_MAX_PROVIDERS
+  );
+  const upstreamCandidates = selection.upstreams;
 
-  if (!upstream) {
+  if (upstreamCandidates.length === 0) {
     const isForbidden = selection.error === "no_allowed_providers";
     const isModelDisabled = selection.error === "model_not_enabled";
     return new Response(
@@ -124,6 +132,8 @@ export async function proxyOpenAIChatCompletions(
       { status: isForbidden ? 403 : isModelDisabled ? 400 : 503, headers: { "Content-Type": "application/json" } }
     );
   }
+
+  let upstream: UpstreamKey = upstreamCandidates[0]!;
 
   if (clientKey) {
     if (clientKey.tokenLimit !== null && clientKey.tokenLimit !== undefined && clientKey.tokenLimit > 0) {
@@ -279,13 +289,13 @@ export async function proxyOpenAIChatCompletions(
     };
   }
 
-  const isCodex =
-    upstream.baseUrl?.includes("chatgpt.com/backend-api/codex") ||
-    upstream.name.toLowerCase().includes("codex");
+let isCodex =
+  upstream.baseUrl?.includes("chatgpt.com/backend-api/codex") ||
+  upstream.name.toLowerCase().includes("codex");
 
-  const upstreamUrl = isCodex
-    ? (upstream.baseUrl?.trim() || CODEX_CONFIG.BASE_URL)
-    : `${getBaseUrl(upstream)}/chat/completions`;
+let upstreamUrl = isCodex
+  ? (upstream.baseUrl?.trim() || CODEX_CONFIG.BASE_URL)
+  : `${getBaseUrl(upstream)}/chat/completions`;
 
   const timeoutSeconds = Number(opt.requestTimeoutSeconds) || 0;
   const controller = new AbortController();
@@ -441,75 +451,109 @@ const performOpenAIFetch = async (
   return response;
 };
 
-const primaryUpstreamKey = getApiKeyForUpstream(upstream);
-const failoverCandidates = buildFailoverKeyCandidates(
-  primaryUpstreamKey,
-  getActiveUpstreamKeyEntries(upstream)
-);
-
 let upstreamResponse!: Response;
 let responseResolved = false;
 let lastAttemptError: any = null;
+let lastErrorResponse: Response | null = null;
 
-for (let attempt = 0; attempt < failoverCandidates.length; attempt++) {
-  const attemptKey = failoverCandidates[attempt]!;
-  try {
-    const response = await performOpenAIFetch(attemptKey);
-    const isLastAttempt = attempt === failoverCandidates.length - 1;
-    if (response.ok || isLastAttempt || !isRetryableStatus(response.status)) {
-      upstreamResponse = response;
-      responseResolved = true;
-      break;
-    }
+providerLoop: for (const candidate of upstreamCandidates) {
+  upstream = candidate;
+  isCodex =
+    candidate.baseUrl?.includes("chatgpt.com/backend-api/codex") ||
+    candidate.name.toLowerCase().includes("codex");
+  upstreamUrl = isCodex
+    ? (candidate.baseUrl?.trim() || CODEX_CONFIG.BASE_URL)
+    : `${getBaseUrl(candidate)}/chat/completions`;
+
+  const keyCandidates = buildFailoverKeyCandidates(
+    getApiKeyForUpstream(candidate),
+    getActiveUpstreamKeyEntries(candidate)
+  );
+
+  for (let attempt = 0; attempt < keyCandidates.length; attempt++) {
     try {
-      await response.body?.cancel();
-    } catch (cancelErr) {
-      // Ignore body cancellation failure before failover
+      const response = await performOpenAIFetch(keyCandidates[attempt]!);
+      if (response.ok) {
+        if (lastErrorResponse) {
+          try {
+            await lastErrorResponse.body?.cancel();
+          } catch (cancelErr) {
+            // Ignore body cancellation failure
+          }
+          lastErrorResponse = null;
+        }
+        upstreamResponse = response;
+        responseResolved = true;
+        break providerLoop;
+      }
+      if (!isRetryableStatus(response.status)) {
+        if (lastErrorResponse) {
+          try {
+            await lastErrorResponse.body?.cancel();
+          } catch (cancelErr) {
+            // Ignore body cancellation failure
+          }
+        }
+        lastErrorResponse = response;
+        break providerLoop;
+      }
+      if (lastErrorResponse) {
+        try {
+          await lastErrorResponse.body?.cancel();
+        } catch (cancelErr) {
+          // Ignore body cancellation failure before failover
+        }
+      }
+      lastErrorResponse = response;
+      lastAttemptError = null;
+    } catch (err: any) {
+      lastAttemptError = err;
+      if (controller.signal.aborted) break providerLoop;
     }
-  } catch (err: any) {
-    lastAttemptError = err;
-    if (controller.signal.aborted) break;
-    if (attempt === failoverCandidates.length - 1) break;
   }
 }
 
 if (!responseResolved) {
-  if (timeoutTimer) clearTimeout(timeoutTimer);
-  finishActive();
-  const isTimeout = controller.signal.aborted && timeoutSeconds > 0;
-  const durationMs = Math.round(performance.now() - startTime);
-  const statusCode = isTimeout ? 504 : 502;
-  const errorMsg = isTimeout
-    ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
-    : (lastAttemptError?.message || "Failed to reach upstream provider");
+  if (lastErrorResponse) {
+    upstreamResponse = lastErrorResponse;
+  } else {
+    if (timeoutTimer) clearTimeout(timeoutTimer);
+    finishActive();
+    const isTimeout = controller.signal.aborted && timeoutSeconds > 0;
+    const durationMs = Math.round(performance.now() - startTime);
+    const statusCode = isTimeout ? 504 : 502;
+    const errorMsg = isTimeout
+      ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
+      : (lastAttemptError?.message || "Failed to reach upstream provider");
 
-  recordTelemetry({
-    clientKeyId: clientKey?.id,
-    clientKeyName: clientKey?.name,
-    upstreamKeyId: upstream.id,
-    provider: "openai",
-    endpoint: "/v1/chat/completions",
-    model,
-    promptTokens: 0,
-    completionTokens: 0,
-    cachedTokens: 0,
-    totalTokens: 0,
-    statusCode,
-    durationMs,
-    isStreaming: isStream,
-    errorMessage: errorMsg,
-  });
+    recordTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      upstreamKeyId: upstream.id,
+      provider: "openai",
+      endpoint: "/v1/chat/completions",
+      model,
+      promptTokens: 0,
+      completionTokens: 0,
+      cachedTokens: 0,
+      totalTokens: 0,
+      statusCode,
+      durationMs,
+      isStreaming: isStream,
+      errorMessage: errorMsg,
+    });
 
-  return new Response(
-    JSON.stringify({
-      error: {
-        message: errorMsg,
-        type: isTimeout ? "timeout_error" : "gateway_error",
-        code: isTimeout ? "gateway_timeout" : undefined,
-      },
-    }),
-    { status: statusCode, headers: { "Content-Type": "application/json" } }
-  );
+    return new Response(
+      JSON.stringify({
+        error: {
+          message: errorMsg,
+          type: isTimeout ? "timeout_error" : "gateway_error",
+          code: isTimeout ? "gateway_timeout" : undefined,
+        },
+      }),
+      { status: statusCode, headers: { "Content-Type": "application/json" } }
+    );
+  }
 }
 
   // Handle upstream error
@@ -782,10 +826,15 @@ export async function proxyAnthropicMessages(
 ): Promise<Response> {
   const startTime = performance.now();
   const requestedModel = (body && typeof body === "object" ? body.model : "") || "unknown";
-  const selection = selectUpstreamKey("anthropic", requestedModel, clientKey);
-  const upstream = selection.upstream;
+  const selection = selectUpstreamCandidates(
+    "anthropic",
+    requestedModel,
+    clientKey,
+    FAILOVER_MAX_PROVIDERS
+  );
+  const upstreamCandidates = selection.upstreams;
 
-  if (!upstream) {
+  if (upstreamCandidates.length === 0) {
     const isForbidden = selection.error === "no_allowed_providers";
     const isModelDisabled = selection.error === "model_not_enabled";
     return new Response(
@@ -803,6 +852,8 @@ export async function proxyAnthropicMessages(
       { status: isForbidden ? 403 : isModelDisabled ? 400 : 503, headers: { "Content-Type": "application/json" } }
     );
   }
+
+  let upstream: UpstreamKey = upstreamCandidates[0]!;
 
   if (clientKey) {
     if (clientKey.tokenLimit !== null && clientKey.tokenLimit !== undefined && clientKey.tokenLimit > 0) {
@@ -958,7 +1009,7 @@ export async function proxyAnthropicMessages(
     }
   }
 
-  const upstreamUrl = `${getBaseUrl(upstream)}/v1/messages`;
+  let upstreamUrl = `${getBaseUrl(upstream)}/v1/messages`;
 
 const buildAnthropicHeaders = (apiKey: string): Record<string, string> => {
   const headerMap: Record<string, string> = {
@@ -1000,80 +1051,109 @@ const buildAnthropicHeaders = (apiKey: string): Record<string, string> => {
     }
   }
 
-const primaryUpstreamKey = getApiKeyForUpstream(upstream);
-const failoverCandidates = buildFailoverKeyCandidates(
-  primaryUpstreamKey,
-  getActiveUpstreamKeyEntries(upstream)
-);
-
 let upstreamResponse!: Response;
 let responseResolved = false;
 let lastAttemptError: any = null;
+let lastErrorResponse: Response | null = null;
 
-for (let attempt = 0; attempt < failoverCandidates.length; attempt++) {
-  const attemptKey = failoverCandidates[attempt]!;
-  try {
-    const response = await fetch(upstreamUrl, {
-      method: "POST",
-      headers: buildAnthropicHeaders(attemptKey),
-      body: JSON.stringify(optimizedBody),
-      signal: controller.signal,
-    });
-    const isLastAttempt = attempt === failoverCandidates.length - 1;
-    if (response.ok || isLastAttempt || !isRetryableStatus(response.status)) {
-      upstreamResponse = response;
-      responseResolved = true;
-      break;
-    }
+providerLoop: for (const candidate of upstreamCandidates) {
+  upstream = candidate;
+  upstreamUrl = `${getBaseUrl(candidate)}/v1/messages`;
+
+  const keyCandidates = buildFailoverKeyCandidates(
+    getApiKeyForUpstream(candidate),
+    getActiveUpstreamKeyEntries(candidate)
+  );
+
+  for (let attempt = 0; attempt < keyCandidates.length; attempt++) {
     try {
-      await response.body?.cancel();
-    } catch (cancelErr) {
-      // Ignore body cancellation failure before failover
+      const response = await fetch(upstreamUrl, {
+        method: "POST",
+        headers: buildAnthropicHeaders(keyCandidates[attempt]!),
+        body: JSON.stringify(optimizedBody),
+        signal: controller.signal,
+      });
+      if (response.ok) {
+        if (lastErrorResponse) {
+          try {
+            await lastErrorResponse.body?.cancel();
+          } catch (cancelErr) {
+            // Ignore body cancellation failure
+          }
+          lastErrorResponse = null;
+        }
+        upstreamResponse = response;
+        responseResolved = true;
+        break providerLoop;
+      }
+      if (!isRetryableStatus(response.status)) {
+        if (lastErrorResponse) {
+          try {
+            await lastErrorResponse.body?.cancel();
+          } catch (cancelErr) {
+            // Ignore body cancellation failure
+          }
+        }
+        lastErrorResponse = response;
+        break providerLoop;
+      }
+      if (lastErrorResponse) {
+        try {
+          await lastErrorResponse.body?.cancel();
+        } catch (cancelErr) {
+          // Ignore body cancellation failure before failover
+        }
+      }
+      lastErrorResponse = response;
+      lastAttemptError = null;
+    } catch (err: any) {
+      lastAttemptError = err;
+      if (controller.signal.aborted) break providerLoop;
     }
-  } catch (err: any) {
-    lastAttemptError = err;
-    if (controller.signal.aborted) break;
-    if (attempt === failoverCandidates.length - 1) break;
   }
 }
 
 if (!responseResolved) {
-  if (timeoutTimer) clearTimeout(timeoutTimer);
-  finishActive();
-  const isTimeout = controller.signal.aborted && timeoutSeconds > 0;
-  const durationMs = Math.round(performance.now() - startTime);
-  const statusCode = isTimeout ? 504 : 502;
-  const errorMsg = isTimeout
-    ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
-    : (lastAttemptError?.message || "Failed to reach Anthropic upstream");
+  if (lastErrorResponse) {
+    upstreamResponse = lastErrorResponse;
+  } else {
+    if (timeoutTimer) clearTimeout(timeoutTimer);
+    finishActive();
+    const isTimeout = controller.signal.aborted && timeoutSeconds > 0;
+    const durationMs = Math.round(performance.now() - startTime);
+    const statusCode = isTimeout ? 504 : 502;
+    const errorMsg = isTimeout
+      ? `Gateway timeout: Request duration exceeded configured limit of ${timeoutSeconds}s.`
+      : (lastAttemptError?.message || "Failed to reach Anthropic upstream");
 
-  recordTelemetry({
-    clientKeyId: clientKey?.id,
-    clientKeyName: clientKey?.name,
-    upstreamKeyId: upstream.id,
-    provider: "anthropic",
-    endpoint: "/v1/messages",
-    model,
-    promptTokens: 0,
-    completionTokens: 0,
-    cachedTokens: 0,
-    totalTokens: 0,
-    statusCode,
-    durationMs,
-    isStreaming: isStream,
-    errorMessage: errorMsg,
-  });
+    recordTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      upstreamKeyId: upstream.id,
+      provider: "anthropic",
+      endpoint: "/v1/messages",
+      model,
+      promptTokens: 0,
+      completionTokens: 0,
+      cachedTokens: 0,
+      totalTokens: 0,
+      statusCode,
+      durationMs,
+      isStreaming: isStream,
+      errorMessage: errorMsg,
+    });
 
-  return new Response(
-    JSON.stringify({
-      type: "error",
-      error: {
-        type: isTimeout ? "timeout_error" : "gateway_error",
-        message: errorMsg,
-      },
-    }),
-    { status: statusCode, headers: { "Content-Type": "application/json" } }
-  );
+    return new Response(
+      JSON.stringify({
+        type: "error",
+        error: {
+          type: isTimeout ? "timeout_error" : "gateway_error",
+          message: errorMsg,
+        },
+      }),
+      { status: statusCode, headers: { "Content-Type": "application/json" } }
+    );
+  }
 }
 
   // Handle upstream error
