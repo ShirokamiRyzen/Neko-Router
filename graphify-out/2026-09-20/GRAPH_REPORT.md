@@ -1,16 +1,16 @@
-# Graph Report - Neko-Router  (2026-09-20)
+# Graph Report - Neko-Router  (2026-09-19)
 
 ## Corpus Check
-- 53 files · ~78,984 words
+- 53 files · ~78,742 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 533 nodes · 866 edges · 29 communities (23 shown, 6 thin omitted)
+- 531 nodes · 862 edges · 30 communities (24 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3c617567`
+- Built from commit: `0e83fd91`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -41,6 +41,7 @@
 - F. Database & System Endpoints
 - graphify.js
 - AGENTS.md
+- src/index.ts
 - opencode.json
 
 ## God Nodes (most connected - your core abstractions)
@@ -64,13 +65,13 @@
   src/services/proxy.ts → src/services/copilot.ts
 - `proxyOpenAIChatCompletions()` --calls--> `transformCopilotRequestBody()`  [EXTRACTED]
   src/services/proxy.ts → src/services/copilot.ts
-- `proxyOpenAIChatCompletions()` --calls--> `ensureAntigravityAccessToken()`  [EXTRACTED]
-  src/services/proxy.ts → src/services/antigravity.ts
+- `proxyAnthropicMessages()` --calls--> `getOptimizationSettings()`  [EXTRACTED]
+  src/services/proxy.ts → src/services/optimizer.ts
 
 ## Import Cycles
 - None detected.
 
-## Communities (29 total, 6 thin omitted)
+## Communities (30 total, 6 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.06
@@ -81,8 +82,8 @@ Cohesion: 0.06
 Nodes (32): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss/cli, @tailwindcss/vite, @types/bun, @types/node (+24 more)
 
 ### Community 2 - "schema.ts"
-Cohesion: 0.06
-Nodes (57): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+49 more)
+Cohesion: 0.08
+Nodes (41): db, ApiKey, apiKeys, ClientKey, clientKeys, InsertApiKey, InsertClientKey, ResponseCache (+33 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -145,12 +146,16 @@ Cohesion: 0.07
 Nodes (29): 1. Installation:, 1. OpenAI Streaming:, 1. Overview & Base URLs, 2. Anthropic Non-Streaming:, 2. Authentication Mechanisms, 2. Usage with Neko-Router `App` Type:, 3. AI Proxy Endpoints, 4. SDK Integration Guides (+21 more)
 
 ### Community 23 - "services/proxy.ts"
-Cohesion: 0.08
-Nodes (57): UpstreamKey, AVAILABLE_ENDPOINTS, formatBytes(), formatUptime(), getV1Directory(), MOTIVATIONAL_QUOTES, ensureAntigravityAccessToken(), forceRefreshAntigravityToken() (+49 more)
+Cohesion: 0.12
+Nodes (41): UpstreamKey, ensureAntigravityAccessToken(), forceRefreshAntigravityToken(), checkClientRateLimit(), incrementClientKeyTokens(), ensureCodexAccessToken(), refreshCodexToken(), transformChatToCodexResponses() (+33 more)
 
 ### Community 24 - "F. Database & System Endpoints"
 Cohesion: 0.40
 Nodes (5): 1. Export SQLite Database, 2. Import SQLite Database, 3. Runtime Engine Diagnostics, 4. Health Check, F. Database & System Endpoints
+
+### Community 27 - "src/index.ts"
+Cohesion: 0.10
+Nodes (30): checkpointWal(), initDatabase(), initTablesSync(), reloadDatabase(), sqlite, App, envPath, port (+22 more)
 
 ### Community 29 - "opencode.json"
 Cohesion: 0.50
@@ -177,4 +182,4 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.06060606060606061 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.059237319511292116 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07547169811320754 - nodes in this community are weakly interconnected._

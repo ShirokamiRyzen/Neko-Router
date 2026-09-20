@@ -67,14 +67,16 @@ const MAX_INACTIVITY_MS = 20 * 1000;
 // Absolute maximum request lifetime: 180s (3 minutes)
 const MAX_TOTAL_LIFETIME_MS = 180 * 1000;
 
-export function registerActiveRequest(req: ActiveRequest): (() => void) & { touch: () => void; finish: () => void } {
+export function registerActiveRequest(
+  req: ActiveRequest
+): (() => void) & { touch: () => void; finish: () => void; setUpstream: (upstreamKeyId?: string | null) => void } {
   const item: ActiveRequest = {
     ...req,
     lastActivityAt: Date.now(),
   };
   activeRequestsMap.set(req.id, item);
-  if (req.upstreamKeyId) {
-    recentActivityMap.set(req.upstreamKeyId, Date.now());
+  if (item.upstreamKeyId) {
+    recentActivityMap.set(item.upstreamKeyId, Date.now());
   }
 
   let finished = false;
@@ -82,8 +84,8 @@ export function registerActiveRequest(req: ActiveRequest): (() => void) & { touc
     if (finished) return;
     finished = true;
     activeRequestsMap.delete(req.id);
-    if (req.upstreamKeyId) {
-      recentActivityMap.set(req.upstreamKeyId, Date.now());
+    if (item.upstreamKeyId) {
+      recentActivityMap.set(item.upstreamKeyId, Date.now());
     }
   };
 
@@ -95,9 +97,24 @@ export function registerActiveRequest(req: ActiveRequest): (() => void) & { touc
     }
   };
 
+  // Re-point the in-flight request to the provider actually being used. This keeps
+  // failover accurate: only the real upstream lights up, the abandoned one is cleared.
+  const setUpstream = (upstreamKeyId?: string | null) => {
+    if (finished) return;
+    const next = upstreamKeyId ?? null;
+    if (item.upstreamKeyId && item.upstreamKeyId !== next) {
+      recentActivityMap.delete(item.upstreamKeyId);
+    }
+    item.upstreamKeyId = next;
+    if (next) {
+      recentActivityMap.set(next, Date.now());
+    }
+  };
+
   const fn = finish as any;
   fn.finish = finish;
   fn.touch = touch;
+  fn.setUpstream = setUpstream;
   return fn;
 }
 

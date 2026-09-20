@@ -458,6 +458,7 @@ let lastErrorResponse: Response | null = null;
 
 providerLoop: for (const candidate of upstreamCandidates) {
   upstream = candidate;
+  finishActive.setUpstream(candidate.id);
   isCodex =
     candidate.baseUrl?.includes("chatgpt.com/backend-api/codex") ||
     candidate.name.toLowerCase().includes("codex");
@@ -1058,6 +1059,7 @@ let lastErrorResponse: Response | null = null;
 
 providerLoop: for (const candidate of upstreamCandidates) {
   upstream = candidate;
+  finishActive.setUpstream(candidate.id);
   upstreamUrl = `${getBaseUrl(candidate)}/v1/messages`;
 
   const keyCandidates = buildFailoverKeyCandidates(

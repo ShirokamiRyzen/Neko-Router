@@ -168,6 +168,31 @@ export function parseAllowedProviders(allowedJson?: string | null): string[] {
 
 let providerModelRotationIndex: Record<string, number> = {};
 
+// Providers pointing at the exact same upstream endpoint are the same backend.
+// When a request key allows both a custom provider and a pass-through (follow
+// upstream) provider that share a base URL, they must not be treated as two
+// separate routes: doing so lights up both nodes in the topology and resends the
+// same request to the very same upstream (double counting).
+function normalizeUpstreamBaseUrl(url?: string | null): string {
+  return (url || "").trim().toLowerCase().replace(/\/+$/, "");
+}
+
+function dedupeSameEndpointProviders(keys: UpstreamKey[]): UpstreamKey[] {
+  const customEndpoints = new Set<string>();
+  for (const key of keys) {
+    if (!Boolean((key as any).followUpstream)) {
+      const base = normalizeUpstreamBaseUrl(key.baseUrl);
+      if (base.length > 0) customEndpoints.add(base);
+    }
+  }
+
+  return keys.filter((key) => {
+    if (!Boolean((key as any).followUpstream)) return true;
+    const base = normalizeUpstreamBaseUrl(key.baseUrl);
+    return !(base.length > 0 && customEndpoints.has(base));
+  });
+}
+
 export interface UpstreamSelectionResult {
   upstream: UpstreamKey | null;
   error?: "no_upstreams" | "no_allowed_providers" | "model_not_enabled";
@@ -273,6 +298,10 @@ export function selectUpstreamCandidates(
       };
     }
   }
+
+  // 2b. Collapse a custom provider and a pass-through provider that resolve to the
+  // same upstream endpoint so they are never treated as two distinct routes.
+  eligibleKeys = dedupeSameEndpointProviders(eligibleKeys);
 
   const cap = Math.max(1, maxProviders);
 
