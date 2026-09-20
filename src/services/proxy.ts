@@ -7,6 +7,7 @@ import {
   parseUpstreamModels,
   parseUpstreamKeyEntries,
   parseAllowedProviders,
+  filterSelfReferencingUpstreams,
 } from "./router";
 import { recordTelemetry, registerActiveRequest } from "./telemetry";
 import { incrementClientKeyTokens, checkClientRateLimit, validateClientKey } from "./auth";
@@ -106,32 +107,46 @@ export async function proxyOpenAIChatCompletions(
 ): Promise<Response> {
   const startTime = performance.now();
   const requestedModel = (body && typeof body === "object" ? body.model : "") || "unknown";
-  const selection = selectUpstreamCandidates(
-    "openai",
-    requestedModel,
-    clientKey,
-    FAILOVER_MAX_PROVIDERS
-  );
-  const upstreamCandidates = selection.upstreams;
+const selection = selectUpstreamCandidates(
+  "openai",
+  requestedModel,
+  clientKey,
+  FAILOVER_MAX_PROVIDERS
+);
+const { upstreams: upstreamCandidates, blocked: selfLoopUpstreams } =
+  filterSelfReferencingUpstreams(selection.upstreams, reqHeaders);
 
-  if (upstreamCandidates.length === 0) {
-    const isForbidden = selection.error === "no_allowed_providers";
-    const isModelDisabled = selection.error === "model_not_enabled";
+if (upstreamCandidates.length === 0) {
+  if (selfLoopUpstreams.length > 0) {
     return new Response(
       JSON.stringify({
         error: {
           message:
-            selection.message ||
-            (isModelDisabled
-              ? `Model '${requestedModel}' is not enabled on any active OpenAI upstream provider. Enable it in Upstream Settings.`
-              : "No active OpenAI upstream provider configured in Neko-Router"),
-          type: isForbidden ? "permission_error" : isModelDisabled ? "invalid_request_error" : "router_error",
-          code: isForbidden ? "provider_access_denied" : isModelDisabled ? "model_not_enabled" : "no_upstream_key",
+            "Upstream provider points back to Neko-Router's own endpoint (routing loop detected). Change its Base URL to a real upstream provider.",
+          type: "router_error",
+          code: "upstream_self_loop",
         },
       }),
-      { status: isForbidden ? 403 : isModelDisabled ? 400 : 503, headers: { "Content-Type": "application/json" } }
+      { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
+  const isForbidden = selection.error === "no_allowed_providers";
+  const isModelDisabled = selection.error === "model_not_enabled";
+  return new Response(
+    JSON.stringify({
+      error: {
+        message:
+          selection.message ||
+          (isModelDisabled
+            ? `Model '${requestedModel}' is not enabled on any active OpenAI upstream provider. Enable it in Upstream Settings.`
+            : "No active OpenAI upstream provider configured in Neko-Router"),
+        type: isForbidden ? "permission_error" : isModelDisabled ? "invalid_request_error" : "router_error",
+        code: isForbidden ? "provider_access_denied" : isModelDisabled ? "model_not_enabled" : "no_upstream_key",
+      },
+    }),
+    { status: isForbidden ? 403 : isModelDisabled ? 400 : 503, headers: { "Content-Type": "application/json" } }
+  );
+}
 
   let upstream: UpstreamKey = upstreamCandidates[0]!;
 
@@ -827,32 +842,46 @@ export async function proxyAnthropicMessages(
 ): Promise<Response> {
   const startTime = performance.now();
   const requestedModel = (body && typeof body === "object" ? body.model : "") || "unknown";
-  const selection = selectUpstreamCandidates(
-    "anthropic",
-    requestedModel,
-    clientKey,
-    FAILOVER_MAX_PROVIDERS
-  );
-  const upstreamCandidates = selection.upstreams;
+const selection = selectUpstreamCandidates(
+  "anthropic",
+  requestedModel,
+  clientKey,
+  FAILOVER_MAX_PROVIDERS
+);
+const { upstreams: upstreamCandidates, blocked: selfLoopUpstreams } =
+  filterSelfReferencingUpstreams(selection.upstreams, reqHeaders);
 
-  if (upstreamCandidates.length === 0) {
-    const isForbidden = selection.error === "no_allowed_providers";
-    const isModelDisabled = selection.error === "model_not_enabled";
+if (upstreamCandidates.length === 0) {
+  if (selfLoopUpstreams.length > 0) {
     return new Response(
       JSON.stringify({
         type: "error",
         error: {
-          type: isForbidden ? "permission_error" : isModelDisabled ? "invalid_request_error" : "router_error",
+          type: "router_error",
           message:
-            selection.message ||
-            (isModelDisabled
-              ? `Model '${requestedModel}' is not enabled on any active Anthropic upstream provider. Enable it in Upstream Settings.`
-              : "No active Anthropic upstream key configured in Neko-Router"),
+            "Upstream provider points back to Neko-Router's own endpoint (routing loop detected). Change its Base URL to a real upstream provider.",
         },
       }),
-      { status: isForbidden ? 403 : isModelDisabled ? 400 : 503, headers: { "Content-Type": "application/json" } }
+      { status: 400, headers: { "Content-Type": "application/json" } }
     );
   }
+  const isForbidden = selection.error === "no_allowed_providers";
+  const isModelDisabled = selection.error === "model_not_enabled";
+  return new Response(
+    JSON.stringify({
+      type: "error",
+      error: {
+        type: isForbidden ? "permission_error" : isModelDisabled ? "invalid_request_error" : "router_error",
+        message:
+          selection.message ||
+          (isModelDisabled
+            ? `Model '${requestedModel}' is not enabled on any active Anthropic upstream provider. Enable it in Upstream Settings.`
+            : "No active Anthropic upstream key configured in Neko-Router"),
+      },
+    }),
+    { status: isForbidden ? 403 : isModelDisabled ? 400 : 503, headers: { "Content-Type": "application/json" } }
+  );
+}
 
   let upstream: UpstreamKey = upstreamCandidates[0]!;
 

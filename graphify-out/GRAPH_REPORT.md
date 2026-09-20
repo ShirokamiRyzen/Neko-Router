@@ -1,16 +1,16 @@
 # Graph Report - Neko-Router  (2026-09-20)
 
 ## Corpus Check
-- 53 files · ~78,984 words
+- 53 files · ~79,366 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 533 nodes · 866 edges · 29 communities (23 shown, 6 thin omitted)
+- 538 nodes · 878 edges · 30 communities (24 shown, 6 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS · INFERRED: 2 edges (avg confidence: 0.5)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3c617567`
+- Built from commit: `4de644c7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -41,12 +41,13 @@
 - F. Database & System Endpoints
 - graphify.js
 - AGENTS.md
+- routes/proxy.ts
 - opencode.json
 
 ## God Nodes (most connected - your core abstractions)
-1. `proxyOpenAIChatCompletions()` - 26 edges
+1. `proxyOpenAIChatCompletions()` - 27 edges
 2. `compilerOptions` - 20 edges
-3. `proxyAnthropicMessages()` - 17 edges
+3. `proxyAnthropicMessages()` - 18 edges
 4. `apiRequest()` - 16 edges
 5. `parseUpstreamKeyEntries()` - 14 edges
 6. `db` - 12 edges
@@ -70,7 +71,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (29 total, 6 thin omitted)
+## Communities (30 total, 6 thin omitted)
 
 ### Community 0 - "compilerOptions"
 Cohesion: 0.06
@@ -82,7 +83,7 @@ Nodes (32): drizzle-kit, devDependencies, drizzle-kit, tailwindcss, @tailwindcss
 
 ### Community 2 - "schema.ts"
 Cohesion: 0.06
-Nodes (57): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+49 more)
+Nodes (61): checkpointWal(), db, initDatabase(), initTablesSync(), reloadDatabase(), sqlite, ApiKey, apiKeys (+53 more)
 
 ### Community 5 - "Neko-Router"
 Cohesion: 0.14
@@ -94,7 +95,7 @@ Nodes (43): 1. Logo Cover, 1. Monogram + Meaning, 2 × 3 REFERENCE-STYLE LAYOUT,
 
 ### Community 7 - "App.tsx"
 Cohesion: 0.07
-Nodes (48): App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), DashboardTab(), formatTimeAgo(), getProviderTag() (+40 more)
+Nodes (49): App, App(), getTabFromLocation(), ROUTE_TO_TAB, TAB_ROUTES, ClientKeysTab(), DashboardTab(), formatTimeAgo() (+41 more)
 
 ### Community 9 - "upstreams.ts"
 Cohesion: 0.08
@@ -145,19 +146,23 @@ Cohesion: 0.07
 Nodes (29): 1. Installation:, 1. OpenAI Streaming:, 1. Overview & Base URLs, 2. Anthropic Non-Streaming:, 2. Authentication Mechanisms, 2. Usage with Neko-Router `App` Type:, 3. AI Proxy Endpoints, 4. SDK Integration Guides (+21 more)
 
 ### Community 23 - "services/proxy.ts"
-Cohesion: 0.08
-Nodes (57): UpstreamKey, AVAILABLE_ENDPOINTS, formatBytes(), formatUptime(), getV1Directory(), MOTIVATIONAL_QUOTES, ensureAntigravityAccessToken(), forceRefreshAntigravityToken() (+49 more)
+Cohesion: 0.10
+Nodes (50): UpstreamKey, ensureAntigravityAccessToken(), forceRefreshAntigravityToken(), checkClientRateLimit(), incrementClientKeyTokens(), ensureCodexAccessToken(), refreshCodexToken(), transformChatToCodexResponses() (+42 more)
 
 ### Community 24 - "F. Database & System Endpoints"
 Cohesion: 0.40
 Nodes (5): 1. Export SQLite Database, 2. Import SQLite Database, 3. Runtime Engine Diagnostics, 4. Health Check, F. Database & System Endpoints
+
+### Community 27 - "routes/proxy.ts"
+Cohesion: 0.32
+Nodes (7): AVAILABLE_ENDPOINTS, formatBytes(), formatUptime(), getV1Directory(), MOTIVATIONAL_QUOTES, proxyRoutes, validateClientKey()
 
 ### Community 29 - "opencode.json"
 Cohesion: 0.50
 Nodes (3): plugin, $schema, .opencode/plugins/graphify.js
 
 ## Knowledge Gaps
-- **251 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `name`, `module`, `type` (+246 more)
+- **252 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `name`, `module`, `type` (+247 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -167,14 +172,14 @@ _Questions this graph is uniquely positioned to answer:_
 - **Why does `5. Router Management APIs` connect `5. Router Management APIs` to `C. Upstream Router Keys Endpoints`, `E. Upstream Router Providers & Multi-Key Pool`, `B. Client Keys Endpoints`, `B.2 Router Integration API Keys (`/api/router-keys`)`, `A. Authentication & PIN Endpoints`, `Neko-Router API Documentation`, `F. Database & System Endpoints`?**
   _High betweenness centrality (0.018) - this node is a cross-community bridge._
 - **Why does `Neko-Router API Documentation` connect `Neko-Router API Documentation` to `5. Router Management APIs`?**
-  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+  _High betweenness centrality (0.012) - this node is a cross-community bridge._
 - **Why does `dependencies` connect `dependencies` to `devDependencies`?**
   _High betweenness centrality (0.007) - this node is a cross-community bridge._
 - **What connects `$schema`, `.opencode/plugins/graphify.js`, `name` to the rest of the system?**
-  _251 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _252 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `compilerOptions` be split into smaller, more focused modules?**
   _Cohesion score 0.06451612903225806 - nodes in this community are weakly interconnected._
 - **Should `devDependencies` be split into smaller, more focused modules?**
   _Cohesion score 0.06060606060606061 - nodes in this community are weakly interconnected._
 - **Should `schema.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.059237319511292116 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.055176890619928594 - nodes in this community are weakly interconnected._

@@ -193,6 +193,97 @@ function dedupeSameEndpointProviders(keys: UpstreamKey[]): UpstreamKey[] {
   });
 }
 
+// Optional env vars that may advertise the router's own public origin.
+const SELF_URL_ENV_KEYS = [
+  "ROUTER_PUBLIC_URL",
+  "PUBLIC_URL",
+  "PUBLIC_BASE_URL",
+  "SELF_URL",
+  "BASE_URL",
+];
+
+// Normalizes a Host token: lowercases, strips surrounding brackets and default ports.
+function normalizeHostToken(host: string): string {
+  return host
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+    .replace(/:(?:80|443)$/, "");
+}
+
+function collectSelfHosts(reqHeaders?: Headers): Set<string> {
+  const hosts = new Set<string>();
+
+  const addHost = (value?: string | null) => {
+    if (!value) return;
+    for (const part of value.split(",")) {
+      const normalized = normalizeHostToken(part);
+      if (normalized.length > 0) hosts.add(normalized);
+    }
+  };
+
+  if (reqHeaders) {
+    addHost(reqHeaders.get("host"));
+    addHost(reqHeaders.get("x-forwarded-host"));
+  }
+
+  for (const key of SELF_URL_ENV_KEYS) {
+    const value = process.env[key];
+    if (!value) continue;
+    try {
+      addHost(new URL(value).host);
+    } catch {
+      addHost(value);
+    }
+  }
+
+  // The router's own loopback listener (e.g. an upstream set to http://localhost:3000/v1).
+  const port = process.env.PORT || "3000";
+  for (const loopback of [`localhost:${port}`, `127.0.0.1:${port}`, `[::1]:${port}`]) {
+    addHost(loopback);
+  }
+
+  return hosts;
+}
+
+// Detects an upstream whose Base URL points back to Neko-Router itself. Routing a
+// request there causes an infinite self-loop, which the telemetry parser records as
+// duplicated traffic until the request times out.
+export function isSelfReferencingUpstream(
+  baseUrl?: string | null,
+  reqHeaders?: Headers
+): boolean {
+  if (!baseUrl || !baseUrl.trim()) return false;
+
+  let host: string;
+  try {
+    host = normalizeHostToken(new URL(baseUrl).host);
+  } catch {
+    return false;
+  }
+  if (!host) return false;
+
+  return collectSelfHosts(reqHeaders).has(host);
+}
+
+export function filterSelfReferencingUpstreams(
+  upstreams: UpstreamKey[],
+  reqHeaders?: Headers
+): { upstreams: UpstreamKey[]; blocked: UpstreamKey[] } {
+  const allowed: UpstreamKey[] = [];
+  const blocked: UpstreamKey[] = [];
+
+  for (const upstream of upstreams) {
+    if (isSelfReferencingUpstream(upstream.baseUrl, reqHeaders)) {
+      blocked.push(upstream);
+    } else {
+      allowed.push(upstream);
+    }
+  }
+
+  return { upstreams: allowed, blocked };
+}
+
 export interface UpstreamSelectionResult {
   upstream: UpstreamKey | null;
   error?: "no_upstreams" | "no_allowed_providers" | "model_not_enabled";

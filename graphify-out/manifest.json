@@ -90,13 +90,13 @@
     "semantic_hash": ""
   },
   "src/services/proxy.ts": {
-    "mtime": 1789880486.2464774,
-    "ast_hash": "2cf2c3f52b955a3301db6a1399aa14ba",
+    "mtime": 1789881087.479227,
+    "ast_hash": "d33218a42cb91657bf80c3b193a440f4",
     "semantic_hash": ""
   },
   "src/services/router.ts": {
-    "mtime": 1789880470.583264,
-    "ast_hash": "301f70b0e094274cca3a7dd2ac458926",
+    "mtime": 1789881068.6411152,
+    "ast_hash": "c3e8166305bee6fcd7e03566d813a92a",
     "semantic_hash": ""
   },
   "src/services/telemetry.ts": {
