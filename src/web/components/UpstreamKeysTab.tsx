@@ -104,8 +104,9 @@ export interface ProviderPreset {
 export function parseJwtInfo(token: string): { email?: string; exp?: number; isExpired?: boolean } | null {
   try {
     const parts = token.trim().split(".");
-    if (parts.length === 3) {
-      const payloadStr = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+    const payloadPart = parts[1];
+    if (parts.length === 3 && payloadPart) {
+      const payloadStr = atob(payloadPart.replace(/-/g, "+").replace(/_/g, "/"));
       const payload = JSON.parse(payloadStr);
       const email = payload?.email || payload?.["https://api.openai.com/profile"]?.email || payload?.sub;
       const exp = typeof payload?.exp === "number" ? payload.exp : undefined;
@@ -167,7 +168,6 @@ const PRESET_PROVIDERS: ProviderPreset[] = [
     authType: "api_key",
     badge: "Follow Upstream",
     description: "Direct pass-through forwarding to BandelBanget. No local secret keys generated in Endpoint & Keys — requests forward with valid BandelBanget credentials and active models sync dynamically.",
-    domainMatch: "bandelbanget.xyz",
   },
   // API Provider Template: BandelBanget (Input Key)
   {
@@ -180,7 +180,6 @@ const PRESET_PROVIDERS: ProviderPreset[] = [
     authType: "api_key",
     badge: "Input Key",
     description: "Standard upstream provider targeting BandelBanget. Add your own personal API keys with automatic round-robin rotation, error fallback failover, and model filtering.",
-    domainMatch: "bandelbanget.xyz",
   },
 ];
 
@@ -1135,31 +1134,31 @@ export const UpstreamKeysTab: React.FC = () => {
 
   const openEditModal = async (item: UpstreamKeyItem) => {
     setEditingUpstream(item);
-    const matchedPreset = PRESET_PROVIDERS.find(
-      (p) =>
-        p.id === item.id ||
-        (p.domainMatch && item.baseUrl?.toLowerCase().includes(p.domainMatch)) ||
-        p.name.toLowerCase() === item.name.toLowerCase()
-    );
-    setActivePreset(matchedPreset || null);
+    // Only associate with presets if it's explicitly the official template provider or an OAuth provider
+    let matchedPreset: ProviderPreset | null = null;
+    if (item.id === "up_bandelbanget_follow" || (Boolean(item.followUpstream) && item.name.toLowerCase() === "bandelbanget")) {
+      matchedPreset = PRESET_PROVIDERS.find((p) => p.id === "bandelbanget-follow") || null;
+    } else if (item.id === "up_bandelbanget_input") {
+      matchedPreset = PRESET_PROVIDERS.find((p) => p.id === "bandelbanget-input") || null;
+    } else if (isOAuthUpstream(item)) {
+      matchedPreset = PRESET_PROVIDERS.find(
+        (p) =>
+          p.id === item.id ||
+          (p.domainMatch && item.baseUrl?.toLowerCase().includes(p.domainMatch)) ||
+          p.name.toLowerCase() === item.name.toLowerCase()
+      ) || null;
+    }
+    setActivePreset(matchedPreset);
     setProvider(item.provider);
     setAlias(item.name);
     setPrefix(item.prefix || "");
     setBaseUrl(item.baseUrl || "");
+    setApiType(item.provider === "anthropic" ? "Anthropic Messages" : "Chat Completions");
     setWeight(item.weight || 1);
     setRoundRobin(item.roundRobin !== false);
     setCheckStatus(null);
     setModalError("");
-    const isAcc =
-      item.name.toLowerCase().includes("copilot") ||
-      item.name.toLowerCase().includes("antigravity") ||
-      item.name.toLowerCase().includes("codex") ||
-      Boolean(
-        item.baseUrl &&
-        (item.baseUrl.includes("githubcopilot.com") ||
-          item.baseUrl.includes("cloudcode-pa.googleapis.com") ||
-          item.baseUrl.includes("chatgpt.com/backend-api/codex"))
-      );
+    const isAcc = isOAuthUpstream(item);
     setIsAccountMode(Boolean(isAcc));
     setIsModalOpen(true);
 
@@ -1205,11 +1204,16 @@ export const UpstreamKeysTab: React.FC = () => {
 
   const handleKeyNameChange = (index: number, val: string) => {
     const updated = [...formKeys];
-    updated[index] = { ...updated[index], name: val };
+    const target = updated[index];
+    if (!target) return;
+    updated[index] = { ...target, name: val };
     setFormKeys(updated);
   };
 
   const handleKeyValChange = (index: number, val: string) => {
+    const currentItem = formKeys[index];
+    if (!currentItem) return;
+
     if (val.includes("\n") || val.includes(",")) {
       const splitKeys = val
         .split(/[\n,]+/)
@@ -1217,14 +1221,13 @@ export const UpstreamKeysTab: React.FC = () => {
         .filter(Boolean);
       if (splitKeys.length > 1) {
         const updated = [...formKeys];
-        const currentItem = updated[index];
         const newItems: FormKeyEntry[] = splitKeys.map((k, i) => {
           const jwt = parseJwtInfo(k);
           return {
             id: `k_${Date.now()}_${i}`,
             name:
               jwt?.email ||
-              (i === 0 && currentItem?.name && !currentItem.name.includes("user@email.com")
+              (i === 0 && currentItem.name && !currentItem.name.includes("user@email.com")
                 ? currentItem.name
                 : isAccountMode
                   ? `Account #${updated.length + i}`
@@ -1242,15 +1245,18 @@ export const UpstreamKeysTab: React.FC = () => {
     }
 
     const updated = [...formKeys];
+    const target = updated[index];
+    if (!target) return;
+
     const jwt = parseJwtInfo(val);
-    const prevName = updated[index]?.name || "";
+    const prevName = target.name || "";
     let newName = prevName;
     if (jwt?.email && (prevName.includes("Account #") || prevName.includes("user@email.com") || !prevName)) {
       newName = jwt.email;
     }
 
     updated[index] = {
-      ...updated[index],
+      ...target,
       name: newName,
       key: val,
       testResult: null,
@@ -1261,13 +1267,17 @@ export const UpstreamKeysTab: React.FC = () => {
 
   const handleToggleKeyActive = (index: number) => {
     const updated = [...formKeys];
-    updated[index] = { ...updated[index], isActive: !updated[index].isActive };
+    const target = updated[index];
+    if (!target) return;
+    updated[index] = { ...target, isActive: !target.isActive };
     setFormKeys(updated);
   };
 
   const handleToggleShowSecret = (index: number) => {
     const updated = [...formKeys];
-    updated[index] = { ...updated[index], showSecret: !updated[index].showSecret };
+    const target = updated[index];
+    if (!target) return;
+    updated[index] = { ...target, showSecret: !target.showSecret };
     setFormKeys(updated);
   };
 
@@ -2007,13 +2017,13 @@ export const UpstreamKeysTab: React.FC = () => {
   // Filtered Upstreams & Presets based on Search Query
   const query = searchQuery.toLowerCase().trim();
 
-  // Helper to identify BandelBanget upstreams
+  // Helper to identify BandelBanget template upstreams
   const isBandelBanget = (u: UpstreamKeyItem) => {
     return (
       Boolean(u.followUpstream) ||
       u.id === "up_bandelbanget_follow" ||
       u.id === "up_bandelbanget_input" ||
-      u.name.toLowerCase().includes("bandelbanget")
+      u.name.toLowerCase() === "bandelbanget"
     );
   };
 
@@ -2084,8 +2094,8 @@ export const UpstreamKeysTab: React.FC = () => {
         return (
           !u.followUpstream &&
           (u.id === "up_bandelbanget_input" ||
-            u.name.toLowerCase().includes("bandelbanget") ||
-            u.name.toLowerCase().includes("input key"))
+            u.name.toLowerCase() === "bandelbanget" ||
+            u.name.toLowerCase() === "bandelbanget (input key)")
         );
       }
       if (preset.domainMatch && u.baseUrl && u.baseUrl.toLowerCase().includes(preset.domainMatch)) {
@@ -2941,7 +2951,7 @@ export const UpstreamKeysTab: React.FC = () => {
                           : "Setup GitHub Copilot"
                         : "Setup OAuth Provider"
                   : editingUpstream
-                    ? `Edit ${provider === "openai" ? "OpenAI" : "Anthropic"} Compatible`
+                    ? `Edit ${editingUpstream.name || (provider === "openai" ? "OpenAI" : "Anthropic") + " Compatible"}`
                     : `Add ${provider === "openai" ? "OpenAI" : "Anthropic"} Compatible`}
               </h3>
             </div>
