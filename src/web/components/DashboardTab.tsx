@@ -12,6 +12,7 @@ import {
   Minus,
   Maximize2,
   Globe,
+  Loader2,
 } from "lucide-react";
 import {
   apiRequest,
@@ -460,6 +461,14 @@ export const DashboardTab: React.FC = () => {
   const originUrl = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
   const openAiBaseUrl = `${originUrl}/v1`;
   const anthropicBaseUrl = originUrl;
+
+  if (loading && !stats) {
+    return (
+      <div className="flex items-center justify-center py-24 text-zinc-500 dark:text-zinc-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

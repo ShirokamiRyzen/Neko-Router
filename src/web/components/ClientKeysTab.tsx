@@ -21,6 +21,7 @@ import {
   Edit3,
   CheckCircle2,
   Radio,
+  Loader2,
 } from "lucide-react";
 import {
   apiRequest,
@@ -603,6 +604,14 @@ export const ClientKeysTab: React.FC = () => {
       console.error(e);
     }
   };
+
+  if (loading && secretKeys.length === 0 && routerApiKeys.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-24 text-zinc-500 dark:text-zinc-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

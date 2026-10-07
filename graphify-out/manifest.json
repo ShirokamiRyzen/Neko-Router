@@ -185,8 +185,8 @@
     "semantic_hash": ""
   },
   "src/web/components/ClientKeysTab.tsx": {
-    "mtime": 1789438260.3673012,
-    "ast_hash": "7abf0e2c65e528a0c7149be8f32249a0",
+    "mtime": 1791369344.1885667,
+    "ast_hash": "0f73eee1f4321c7a07aca92b10b32767",
     "semantic_hash": ""
   },
   "src/web/components/CodeSnippetViewer.tsx": {
@@ -195,13 +195,13 @@
     "semantic_hash": ""
   },
   "src/web/components/DashboardTab.tsx": {
-    "mtime": 1789379881.6532996,
-    "ast_hash": "b8b3ca44e9b9b86729fe3b75b0783d44",
+    "mtime": 1791369426.406411,
+    "ast_hash": "c1e20ca367c1658f95a7fe8c05ab83fe",
     "semantic_hash": ""
   },
   "src/web/components/DatabaseSettingsTab.tsx": {
-    "mtime": 1791367255.9931338,
-    "ast_hash": "08707b2cf5a9d697cb224e89ce10b3fb",
+    "mtime": 1791369511.0095048,
+    "ast_hash": "7d8e73ab53aef4d5edd302b0421dbbfb",
     "semantic_hash": ""
   },
   "src/web/components/Header.tsx": {
@@ -210,8 +210,8 @@
     "semantic_hash": ""
   },
   "src/web/components/LoginScreen.tsx": {
-    "mtime": 1791367229.2655241,
-    "ast_hash": "8089b56b44b243e26ad82b79eea62e19",
+    "mtime": 1791368106.4512413,
+    "ast_hash": "6e8c54e0842ef0dc698ba2302485ff31",
     "semantic_hash": ""
   },
   "src/web/components/SetupScreen.tsx": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "src/web/components/TelemetryTab.tsx": {
-    "mtime": 1788826715.2921305,
-    "ast_hash": "6df23aa50a6e1f25da96d19efa4a2564",
+    "mtime": 1791369491.214024,
+    "ast_hash": "c43f7adf81807b9547436c1eb760419b",
     "semantic_hash": ""
   },
   "src/web/components/Topbar.tsx": {
@@ -235,8 +235,8 @@
     "semantic_hash": ""
   },
   "src/web/components/UpstreamKeysTab.tsx": {
-    "mtime": 1791077460.1661665,
-    "ast_hash": "5025d8cc380be2e15393290ab5722320",
+    "mtime": 1791369437.9598615,
+    "ast_hash": "4b9d30725473884bacf6390f40895d91",
     "semantic_hash": ""
   },
   "src/web/handler.ts": {

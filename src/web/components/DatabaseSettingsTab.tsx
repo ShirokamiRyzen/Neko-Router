@@ -17,6 +17,7 @@ import {
   Clock,
   Tags,
   KeyRound,
+  Loader2,
 } from "lucide-react";
 import {
   apiRequest,
@@ -274,6 +275,14 @@ export const DatabaseSettingsTab: React.FC = () => {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
+
+  if (loadingInfo && !systemInfo) {
+    return (
+      <div className="flex items-center justify-center py-24 text-zinc-500 dark:text-zinc-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

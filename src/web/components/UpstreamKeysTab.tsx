@@ -2105,6 +2105,14 @@ export const UpstreamKeysTab: React.FC = () => {
     });
   };
 
+  if (loading && upstreams.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-24 text-zinc-500 dark:text-zinc-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Header matching 9Router style */}

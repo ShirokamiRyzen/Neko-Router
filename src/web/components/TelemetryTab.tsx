@@ -6,6 +6,7 @@ import {
   Sparkles,
   Copy,
   Check,
+  Loader2,
 } from "lucide-react";
 import { apiRequest, type TelemetryLogItem } from "../lib/api";
 
@@ -38,6 +39,14 @@ export const TelemetryTab: React.FC = () => {
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
   };
+
+  if (loading && logs.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-24 text-zinc-500 dark:text-zinc-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
