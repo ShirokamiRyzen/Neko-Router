@@ -231,10 +231,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2.5 pl-9 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  className="w-full px-3 py-2.5 pl-9 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 text-center tracking-widest text-lg font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
                   placeholder="Enter your password"
                 />
-                <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+                <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3.5" />
               </div>
             </div>
           )}
