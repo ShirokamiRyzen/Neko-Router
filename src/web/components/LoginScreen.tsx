@@ -25,16 +25,22 @@ interface LoginScreenProps {
   onLoginSuccess: () => void;
   turnstileSiteKey?: string;
   turnstileEnabled?: boolean;
+  hasPassword?: boolean;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
   onLoginSuccess,
   turnstileSiteKey,
   turnstileEnabled,
+  hasPassword,
 }) => {
   const [pin, setPin] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passwordRequired, setPasswordRequired] = useState<boolean>(
+    Boolean(hasPassword)
+  );
 
   const [siteKey, setSiteKey] = useState<string>(turnstileSiteKey || "");
   const [turnstileActive, setTurnstileActive] = useState<boolean>(
@@ -45,8 +51,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   const turnstileContainerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
 
-  // Sync or fetch Turnstile config
+  // Sync or fetch Turnstile config + password requirement
   useEffect(() => {
+    if (hasPassword !== undefined) {
+      setPasswordRequired(Boolean(hasPassword));
+    }
+
     if (turnstileSiteKey !== undefined) {
       setSiteKey(turnstileSiteKey);
       setTurnstileActive(Boolean(turnstileEnabled && turnstileSiteKey));
@@ -57,10 +67,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             setSiteKey(res.turnstileSiteKey);
             setTurnstileActive(true);
           }
+          if (res?.hasPassword !== undefined) {
+            setPasswordRequired(Boolean(res.hasPassword));
+          }
         })
         .catch(() => {});
     }
-  }, [turnstileSiteKey, turnstileEnabled]);
+  }, [turnstileSiteKey, turnstileEnabled, hasPassword]);
 
   // Load and render Turnstile widget
   useEffect(() => {
@@ -143,6 +156,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         method: "POST",
         body: JSON.stringify({
           pin,
+          password: passwordRequired ? password : undefined,
           turnstileToken: turnstileActive ? turnstileToken : undefined,
         }),
       });
@@ -171,7 +185,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             Neko-Router Gateway
           </h1>
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Enter your Master PIN to unlock the router control dashboard
+            {passwordRequired
+              ? "Enter your Master PIN and password to unlock the router control dashboard"
+              : "Enter your Master PIN to unlock the router control dashboard"}
           </p>
         </div>
 
@@ -203,6 +219,33 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
           </div>
 
+          {passwordRequired && (
+            <div>
+              <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Master Password
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2.5 pl-9 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                  placeholder="Enter your password"
+                />
+                <Lock className="w-4 h-4 text-zinc-400 absolute left-3 top-3" />
+              </div>
+            </div>
+          )}
+
+          {!passwordRequired && (
+            <div className="p-2.5 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] leading-relaxed">
+              PIN-only login is active. For protection against brute-force, set a password in
+              <span className="font-semibold"> Settings → Change Password</span>.
+            </div>
+          )}
+
           {/* Cloudflare Turnstile Container */}
           {turnstileActive && (
             <div className="flex flex-col items-center justify-center pt-2 min-h-[66px]">
@@ -212,7 +255,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
 
           <button
             type="submit"
-            disabled={loading || !pin || (turnstileActive && !turnstileToken)}
+                        disabled={loading || !pin || (passwordRequired && !password) || (turnstileActive && !turnstileToken)}
             className="w-full mt-4 py-2.5 px-4 rounded-md skeuo-btn-primary font-medium text-sm flex items-center justify-center space-x-2 disabled:opacity-50 cursor-pointer"
           >
             <span>{loading ? "Verifying..." : "Unlock Dashboard"}</span>

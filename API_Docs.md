@@ -354,7 +354,7 @@ console.log("Generated Key:", newKey?.key); // "sk-neko-..."
 
 All `/api/*` management endpoints can be authenticated via an **Admin Session Cookie**, an **Admin Bearer Token** (`Authorization: Bearer <admin-token>`), or a **Client Key** (`Authorization: Bearer <client-key>` / `x-api-key: <client-key>`).
 
-### A. Authentication & PIN Endpoints
+### A. Authentication & PIN / Password Endpoints
 
 #### 1. Check Authentication Status
 - **`GET /api/auth/status`**
@@ -362,13 +362,16 @@ All `/api/*` management endpoints can be authenticated via an **Admin Session Co
   ```json
   {
     "isDefaultPin": false,
-    "authenticated": true
+    "authenticated": true,
+    "hasPassword": true
   }
   ```
+- `hasPassword` indicates whether a master password has been configured. When `true`, login requires both PIN and password.
 
-#### 2. Login with 6-Digit Master PIN
+#### 2. Login with Master PIN (+ Password when configured)
 - **`POST /api/auth/login`**
-- **Body:** `{ "pin": "654321" }`
+- **Body:** `{ "pin": "654321", "password": "my-secret-password" }`
+- `password` is required once a master password has been set via `/api/auth/change-password`; otherwise login is PIN-only.
 - **Response:**
   ```json
   {
@@ -390,7 +393,14 @@ All `/api/*` management endpoints can be authenticated via an **Admin Session Co
   }
   ```
 
-#### 4. Logout
+#### 4. Set / Change Master Password
+- **`POST /api/auth/change-password`**
+- **Body (first time, no password set):** `{ "currentPin": "654321", "newPassword": "my-secret-password" }`
+- **Body (password already set):** `{ "currentPassword": "old-password", "newPassword": "my-secret-password" }`
+- `newPassword` must be at least 8 characters. Once set, login requires both the PIN and this password.
+- **Response:** `{ "success": true, "message": "Password updated successfully" }`
+
+#### 5. Logout
 - **`POST /api/auth/logout`**
 - **Response:** `{ "success": true }`
 

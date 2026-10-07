@@ -16,8 +16,14 @@ import {
   ShieldCheck,
   Clock,
   Tags,
+  KeyRound,
 } from "lucide-react";
-import { apiRequest, type SystemInfo, type OptimizationSettings } from "../lib/api";
+import {
+  apiRequest,
+  type SystemInfo,
+  type OptimizationSettings,
+  type AuthStatus,
+} from "../lib/api";
 
 const formatBytes = (bytes?: number): string => {
   if (!bytes || bytes <= 0) return "0 B";
@@ -68,6 +74,15 @@ export const DatabaseSettingsTab: React.FC = () => {
   const [confirmPin, setConfirmPin] = useState("");
   const [pinStatus, setPinStatus] = useState<{ success?: boolean; message?: string } | null>(null);
   const [pinSubmitting, setPinSubmitting] = useState(false);
+
+  // Change Password state
+  const [hasPassword, setHasPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [currentPinForPassword, setCurrentPinForPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStatus, setPasswordStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
   // Import DB state
   const [importing, setImporting] = useState(false);
@@ -124,9 +139,19 @@ export const DatabaseSettingsTab: React.FC = () => {
     }
   };
 
+  const loadAuthStatus = async () => {
+    try {
+      const status = await apiRequest<AuthStatus>("/api/auth/status");
+      setHasPassword(Boolean(status?.hasPassword));
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   useEffect(() => {
     loadSystemInfo();
     loadOptimizations();
+    loadAuthStatus();
   }, []);
 
   const handleChangePin = async (e: React.FormEvent) => {
@@ -156,6 +181,47 @@ export const DatabaseSettingsTab: React.FC = () => {
       setPinStatus({ success: false, message: err.message || "Failed to update PIN" });
     } finally {
       setPinSubmitting(false);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordStatus(null);
+
+    if (newPassword.length < 8) {
+      setPasswordStatus({ success: false, message: "New password must be at least 8 characters" });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordStatus({ success: false, message: "New password and confirmation do not match" });
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      await apiRequest("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({
+          currentPassword: hasPassword ? currentPassword : undefined,
+          currentPin: hasPassword ? undefined : currentPinForPassword,
+          newPassword,
+        }),
+      });
+      setPasswordStatus({
+        success: true,
+        message: hasPassword
+          ? "Master password successfully updated!"
+          : "Master password set! Login now requires your PIN and password.",
+      });
+      setHasPassword(true);
+      setCurrentPassword("");
+      setCurrentPinForPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err: any) {
+      setPasswordStatus({ success: false, message: err.message || "Failed to update password" });
+    } finally {
+      setPasswordSubmitting(false);
     }
   };
 
@@ -698,6 +764,132 @@ export const DatabaseSettingsTab: React.FC = () => {
               className="mt-2 px-4 py-2 rounded-md skeuo-btn-primary font-semibold disabled:opacity-50"
             >
               {pinSubmitting ? "Updating..." : "Update Master PIN"}
+            </button>
+          </form>
+        </div>
+
+        {/* Change Password Security Card */}
+        <div className="skeuo-card p-6 space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center space-x-2">
+              <KeyRound className="w-5 h-5 text-emerald-500" />
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                Master Authentication Password
+              </h3>
+            </div>
+            <span
+              className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase ${
+                hasPassword
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+              }`}
+            >
+              {hasPassword ? "Enabled" : "Not Set"}
+            </span>
+          </div>
+
+          <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
+            {hasPassword
+              ? "A master password is set. Logging in requires both your PIN and this password, protecting the gateway against PIN brute-force attacks."
+              : "No password set yet. Login currently only requires your PIN. Set a password to require both PIN and password at login."}
+          </p>
+
+          {passwordStatus && (
+            <div
+              className={`p-3 rounded-md text-xs flex items-center space-x-2 ${
+                passwordStatus.success
+                  ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                  : "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
+              }`}
+            >
+              {passwordStatus.success ? (
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+              )}
+              <span>{passwordStatus.message}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleChangePassword} className="space-y-3 text-xs">
+            {hasPassword ? (
+              <div>
+                <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Enter current password"
+                  className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                  Current PIN (to authorize setting a password)
+                </label>
+                <input
+                  type="password"
+                  required
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={currentPinForPassword}
+                  onChange={(e) =>
+                    setCurrentPinForPassword(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  placeholder="Enter current 6-digit PIN"
+                  className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 font-mono tracking-widest focus:outline-none focus:ring-1 focus:ring-zinc-600"
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                New Password (min 8 characters)
+              </label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
+              />
+            </div>
+
+            <div>
+              <label className="block font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                Confirm New Password
+              </label>
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3 py-2 rounded-md skeuo-inset text-zinc-900 dark:text-zinc-100 font-mono focus:outline-none focus:ring-1 focus:ring-zinc-600"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={passwordSubmitting}
+              className="mt-2 px-4 py-2 rounded-md skeuo-btn-primary font-semibold disabled:opacity-50"
+            >
+              {passwordSubmitting
+                ? "Updating..."
+                : hasPassword
+                ? "Update Master Password"
+                : "Set Master Password"}
             </button>
           </form>
         </div>

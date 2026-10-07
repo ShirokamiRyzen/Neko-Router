@@ -1,8 +1,11 @@
 import { Elysia, t } from "elysia";
 import {
   isDefaultPin,
+  hasPassword,
   verifyPin,
+  verifyPassword,
   changePin,
+  changePassword,
   getJwtSecret,
   getTurnstileConfig,
   verifyTurnstileToken,
@@ -38,6 +41,7 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
     return {
       isDefaultPin: isDefault,
       authenticated,
+      hasPassword: hasPassword(),
       turnstileEnabled: enabled,
       turnstileSiteKey: enabled ? siteKey : "",
     };
@@ -45,7 +49,7 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
   .post(
     "/login",
     async ({ body, cookie, jwt, set, headers }) => {
-      const { pin, turnstileToken } = body;
+      const { pin, password, turnstileToken } = body;
 
       const { enabled } = getTurnstileConfig();
       if (enabled) {
@@ -69,11 +73,23 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
         }
       }
 
-      const isValid = await verifyPin(pin);
+      const passwordRequired = hasPassword();
+      const isValidPin = await verifyPin(pin);
 
-      if (!isValid) {
+      if (!isValidPin) {
         set.status = 401;
-        return { success: false, message: "Invalid PIN" };
+        return {
+          success: false,
+          message: passwordRequired ? "Invalid PIN or password" : "Invalid PIN",
+        };
+      }
+
+      if (passwordRequired) {
+        const isValidPassword = await verifyPassword(password || "");
+        if (!isValidPassword) {
+          set.status = 401;
+          return { success: false, message: "Invalid PIN or password" };
+        }
       }
 
       const token = await jwt.sign({ role: "admin", timestamp: Date.now() });
@@ -95,7 +111,36 @@ export const authRoutes = new Elysia({ prefix: "/api/auth" })
     {
       body: t.Object({
         pin: t.String(),
+        password: t.Optional(t.String()),
         turnstileToken: t.Optional(t.String()),
+      }),
+    }
+  )
+  .post(
+    "/change-password",
+    async ({ body, set }) => {
+      const { currentPassword, newPassword, currentPin } = body;
+      const result = await changePassword(
+        currentPassword || "",
+        newPassword,
+        currentPin
+      );
+
+      if (!result.success) {
+        set.status = 400;
+        return {
+          success: false,
+          message: result.error || "Failed to update password",
+        };
+      }
+
+      return { success: true, message: "Password updated successfully" };
+    },
+    {
+      body: t.Object({
+        currentPassword: t.Optional(t.String()),
+        newPassword: t.String({ minLength: 8 }),
+        currentPin: t.Optional(t.String()),
       }),
     }
   )

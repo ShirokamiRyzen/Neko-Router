@@ -108,6 +108,77 @@ export async function verifyTurnstileToken(
   }
 }
 
+export function hasPassword(): boolean {
+  try {
+    const row = sqlite
+      .query("SELECT value FROM settings WHERE key = 'auth_password_hash'")
+      .get() as { value: string } | null;
+    return Boolean(row?.value);
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function verifyPassword(password: string): Promise<boolean> {
+  if (!password) return false;
+  try {
+    const row = sqlite
+      .query("SELECT value FROM settings WHERE key = 'auth_password_hash'")
+      .get() as { value: string } | null;
+    if (!row?.value) return false;
+    return await Bun.password.verify(password, row.value);
+  } catch (e) {
+    console.error("Error verifying password:", e);
+    return false;
+  }
+}
+
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+  currentPin?: string
+): Promise<{ success: boolean; error?: string }> {
+  if (!newPassword || newPassword.length < 8) {
+    return { success: false, error: "New password must be at least 8 characters" };
+  }
+
+  if (hasPassword()) {
+    const isValidCurrent = await verifyPassword(currentPassword);
+    if (!isValidCurrent) {
+      return { success: false, error: "Current password is incorrect" };
+    }
+  } else {
+    const isValidPin = await verifyPin(currentPin || "");
+    if (!isValidPin) {
+      return { success: false, error: "Current PIN is incorrect" };
+    }
+  }
+
+  const newHash = await Bun.password.hash(newPassword, {
+    algorithm: "bcrypt",
+    cost: 10,
+  });
+
+  const now = Date.now();
+  const existing = sqlite
+    .query("SELECT key FROM settings WHERE key = 'auth_password_hash'")
+    .get() as { key: string } | null;
+
+  if (existing) {
+    sqlite.run(
+      "UPDATE settings SET value = ?, updated_at = ? WHERE key = 'auth_password_hash'",
+      [newHash, now]
+    );
+  } else {
+    sqlite.run(
+      "INSERT INTO settings (key, value, updated_at) VALUES ('auth_password_hash', ?, ?)",
+      [newHash, now]
+    );
+  }
+
+  return { success: true };
+}
+
 export async function verifyPin(pin: string): Promise<boolean> {
   try {
     const row = sqlite

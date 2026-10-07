@@ -43,6 +43,7 @@ export async function apiRequest<T = any>(
 export interface AuthStatus {
   isDefaultPin: boolean;
   authenticated: boolean;
+  hasPassword?: boolean;
   turnstileEnabled?: boolean;
   turnstileSiteKey?: string;
 }

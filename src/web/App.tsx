@@ -164,6 +164,7 @@ export const App: React.FC = () => {
       <LoginScreen
         turnstileSiteKey={authStatus?.turnstileSiteKey}
         turnstileEnabled={authStatus?.turnstileEnabled}
+        hasPassword={authStatus?.hasPassword}
         onLoginSuccess={() => {
           checkAuth();
         }}
