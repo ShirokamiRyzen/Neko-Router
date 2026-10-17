@@ -42,3 +42,7 @@ data/*.bak
 data/temp_*
 *.bak
 bun.lock
+
+# Local tooling
+.codegraph/
+.mcp.json
