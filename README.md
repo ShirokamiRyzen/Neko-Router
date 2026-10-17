@@ -49,7 +49,7 @@ Neko-Router/
 │   │   ├── router.ts           # Upstream selection & load balancing
 │   │   ├── telemetry.ts        # Asynchronous telemetry logger & cached token counters
 │ │ ├── optimizer.ts # RTK compression, Caveman mode, response cache engine
-│ │ ├── tools.ts # DuckDuckGo search & readable web content extraction
+│ │ ├── tools.ts # Multi-engine web search & readable content extraction
 │ │ └── proxy.ts # Zero-latency WebStream passthrough engine
 │   └── index.ts                # Elysia server, Swagger, & Eden type App export
 ├── data/                       # Local SQLite storage folder
@@ -223,5 +223,5 @@ curl -N http://localhost:3000/v1/chat/completions \
 | `POST` | `/v1/chat/completions` | OpenAI Chat Completions proxy | Client Key (`sk-neko-...`) |
 | `GET` | `/v1/models` | List available models | Client Key (`sk-neko-...`) |
 | `POST` | `/v1/messages` | Anthropic Claude Messages proxy | Client Key (`sk-neko-...`) |
-| `POST` | `/v1/tools/search` | DuckDuckGo web search (`title`, `url`, `snippet`) | Client Key (`sk-neko-...`) |
+| `POST` | `/v1/tools/search` | Multi-engine web search (`title`, `url`, `snippet`) | Client Key (`sk-neko-...`) |
 | `POST` | `/v1/tools/fetch` | Fetch a URL and extract readable text | Client Key (`sk-neko-...`) |

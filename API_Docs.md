@@ -156,7 +156,7 @@ Supports the native Anthropic Claude Messages protocol for both non-streaming an
 
 ### D. Web Search (`POST /v1/tools/search`)
 
-Searches the web by scraping **DuckDuckGo Lite**. Requires a valid client API key.
+Searches the web using a randomized pool of engines (DuckDuckGo Lite/HTML, DuckDuckGo Scrape, and Yahoo) with automatic fallback and per-engine cooldowns. Requires a valid client API key.
 
 - **URL:** `/v1/tools/search`
 - **Method:** `POST` (GET alias: `/v1/tools/search?q=<query>&maxResults=5`)
@@ -173,7 +173,7 @@ Searches the web by scraping **DuckDuckGo Lite**. Requires a valid client API ke
 #### Example Response
 ```json
 {
- "provider": "duckduckgo",
+ "provider": "duckduckgo-lite",
  "query": "bun elysia framework",
  "results": [
  {

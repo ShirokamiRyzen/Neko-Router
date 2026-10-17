@@ -1,6 +1,7 @@
 import * as cheerio from "cheerio";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { search as duckDuckScrapeSearch, SafeSearchType } from "duck-duck-scrape";
 
 const DEFAULT_TIMEOUT = 20000;
 const DEFAULT_MAX_CONTENT_LENGTH = 12000;
@@ -20,7 +21,7 @@ export interface WebSearchResult {
 }
 
 export interface WebSearchResponse {
-  provider: "duckduckgo";
+  provider: string;
   query: string;
   results: WebSearchResult[];
   count: number;
@@ -70,17 +71,25 @@ function unwrapDuckDuckGoUrl(href?: string): string | null {
 
 const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
 const SEARCH_CACHE_MAX_ENTRIES = 200;
-const SEARCH_MIN_INTERVAL_MS = 1000;
-const SEARCH_MAX_ATTEMPTS = 3;
 
 interface SearchCacheEntry {
   expiresAt: number;
+  provider: string;
   results: WebSearchResult[];
 }
 
+interface EngineGroupState {
+  chain: Promise<unknown>;
+  lastRequestAt: number;
+  cooldownUntil: number;
+}
+
 const searchCache = new Map<string, SearchCacheEntry>();
-let searchChain: Promise<unknown> = Promise.resolve();
-let lastSearchRequestAt = 0;
+const engineGroups = new Map<string, EngineGroupState>();
+const inFlightSearches = new Map<
+  string,
+  Promise<{ provider: string; results: WebSearchResult[] }>
+>();
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -90,17 +99,21 @@ function getSearchCacheKey(query: string): string {
   return query.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function getCachedSearch(key: string): WebSearchResult[] | null {
+function getCachedSearch(key: string): SearchCacheEntry | null {
   const entry = searchCache.get(key);
   if (!entry) return null;
   if (entry.expiresAt <= Date.now()) {
     searchCache.delete(key);
     return null;
   }
-  return entry.results;
+  return entry;
 }
 
-function setCachedSearch(key: string, results: WebSearchResult[]): void {
+function setCachedSearch(
+  key: string,
+  provider: string,
+  results: WebSearchResult[]
+): void {
   if (results.length === 0) return;
   if (searchCache.size >= SEARCH_CACHE_MAX_ENTRIES) {
     const oldestKey = searchCache.keys().next().value;
@@ -108,21 +121,52 @@ function setCachedSearch(key: string, results: WebSearchResult[]): void {
   }
   searchCache.set(key, {
     expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+    provider,
     results,
   });
 }
 
-function withSearchLock<T>(fn: () => Promise<T>): Promise<T> {
-  const run = searchChain.then(async () => {
-    const waitMs = SEARCH_MIN_INTERVAL_MS - (Date.now() - lastSearchRequestAt);
+function getEngineGroupState(group: string): EngineGroupState {
+  let state = engineGroups.get(group);
+  if (!state) {
+    state = { chain: Promise.resolve(), lastRequestAt: 0, cooldownUntil: 0 };
+    engineGroups.set(group, state);
+  }
+  return state;
+}
+
+function isEngineCoolingDown(engine: SearchEngine): boolean {
+  return getEngineGroupState(engine.group).cooldownUntil > Date.now();
+}
+
+function markEngineCooldown(engine: SearchEngine, retryAfterMs: number): void {
+  const state = getEngineGroupState(engine.group);
+  state.cooldownUntil = Math.max(state.cooldownUntil, Date.now() + retryAfterMs);
+}
+
+function clearEngineCooldown(engine: SearchEngine): void {
+  getEngineGroupState(engine.group).cooldownUntil = 0;
+}
+
+function withEngineSlot<T>(
+  engine: SearchEngine,
+  fn: () => Promise<T>
+): Promise<T> {
+  const state = getEngineGroupState(engine.group);
+  const run = state.chain.then(async () => {
+    const waitUntil = Math.max(
+      state.lastRequestAt + engine.minIntervalMs,
+      state.cooldownUntil
+    );
+    const waitMs = waitUntil - Date.now();
     if (waitMs > 0) await sleep(waitMs);
     try {
       return await fn();
     } finally {
-      lastSearchRequestAt = Date.now();
+      state.lastRequestAt = Date.now();
     }
   });
-  searchChain = run.then(
+  state.chain = run.then(
     () => undefined,
     () => undefined
   );
@@ -223,21 +267,244 @@ function parseDuckDuckGoHtml(html: string): WebSearchResult[] {
   return results;
 }
 
-interface SearchEngine {
-  name: string;
-  fetch: (query: string) => Promise<Response>;
-  parse: (html: string) => WebSearchResult[];
+class SearchRateLimitError extends Error {
+  retryAfterMs: number;
+
+  constructor(message: string, retryAfterMs = 60000) {
+    super(message);
+    this.name = "SearchRateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
 }
 
-const SEARCH_ENGINES: SearchEngine[] = [
-  { name: "duckduckgo-lite", fetch: fetchDuckDuckGoLite, parse: parseDuckDuckGoLite },
-  { name: "duckduckgo-html", fetch: fetchDuckDuckGoHtml, parse: parseDuckDuckGoHtml },
-];
+function cleanHtmlText(text: string): string {
+  if (!text) return "";
+  return cheerio
+    .load(`<div>${text}</div>`)("div")
+    .text()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function shuffle<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = arr[i]!;
+    arr[i] = arr[j]!;
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+function getBrowserHeaders(referer: string): Record<string, string> {
+  return {
+    "User-Agent": BROWSER_UA,
+    Accept:
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+    Referer: referer,
+    DNT: "1",
+    Connection: "keep-alive",
+  };
+}
+
+function looksLikeSearchChallenge(status: number, html: string): boolean {
+  if (status === 202 || status === 403 || status === 429) return true;
+  return /anubis_challenge|challenge-form|anomaly-modal|unusual traffic|g-recaptcha|h-captcha|id=["']captcha["']/i.test(
+    html
+  );
+}
 
 function looksLikeDuckDuckGoChallenge(status: number, html: string): boolean {
   if (status === 202 || status === 403 || status === 429) return true;
-  return /anomaly-modal|captcha|challenge-form|bots use DuckDuckGo/i.test(html);
+  return /anomaly-modal|challenge-form|bots use DuckDuckGo|id=["']captcha["']/i.test(
+    html
+  );
 }
+
+function unwrapYahooUrl(href?: string): string | null {
+  if (!href) return null;
+  try {
+    const ruMatch = href.match(/\/RU=([^/]+)/i);
+    if (ruMatch?.[1]) {
+      return decodeURIComponent(ruMatch[1]);
+    }
+
+    const parsed = new URL(href, "https://search.yahoo.com");
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+async function searchYahoo(
+  query: string,
+  limit: number
+): Promise<WebSearchResult[]> {
+  const url = new URL("https://search.yahoo.com/search");
+  url.searchParams.set("p", query);
+  url.searchParams.set("fr2", "p:s,v:w,m:sa:all");
+
+  const response = await fetchWithTimeout(
+    url.toString(),
+    { headers: getBrowserHeaders("https://search.yahoo.com/") },
+    15000
+  );
+  const html = await response.text();
+
+  if (looksLikeSearchChallenge(response.status, html)) {
+    throw new SearchRateLimitError(`Yahoo HTTP ${response.status}`, 30000);
+  }
+  if (!response.ok) throw new Error(`Yahoo HTTP ${response.status}`);
+
+  const $ = cheerio.load(html);
+  const results: WebSearchResult[] = [];
+
+  $(".algo").each((_index, element) => {
+    if (results.length >= limit) return false;
+
+    let anchor = $(element).find("h3 a[href]").first();
+    if (anchor.length === 0) anchor = $(element).find("a[href]").first();
+
+    const target = unwrapYahooUrl(anchor.attr("href"));
+    const title = $(element)
+      .find("h3")
+      .first()
+      .text()
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!target || !title) return;
+
+    const snippet = $(element)
+      .find(".compText")
+      .first()
+      .text()
+      .replace(/\s+/g, " ")
+      .trim();
+
+    results.push({ title, url: target, snippet });
+  });
+
+  return results;
+}
+
+async function searchDuckDuckGoLite(
+  query: string,
+  limit: number
+): Promise<WebSearchResult[]> {
+  const response = await fetchDuckDuckGoLite(query);
+  const html = await response.text();
+
+  if (looksLikeDuckDuckGoChallenge(response.status, html)) {
+    throw new SearchRateLimitError(
+      `DuckDuckGo Lite HTTP ${response.status}`,
+      30000
+    );
+  }
+  if (!response.ok) throw new Error(`DuckDuckGo Lite HTTP ${response.status}`);
+
+  return parseDuckDuckGoLite(html).slice(0, limit);
+}
+
+async function searchDuckDuckGoHtml(
+  query: string,
+  limit: number
+): Promise<WebSearchResult[]> {
+  const response = await fetchDuckDuckGoHtml(query);
+  const html = await response.text();
+
+  if (looksLikeDuckDuckGoChallenge(response.status, html)) {
+    throw new SearchRateLimitError(
+      `DuckDuckGo HTML HTTP ${response.status}`,
+      30000
+    );
+  }
+  if (!response.ok) throw new Error(`DuckDuckGo HTML HTTP ${response.status}`);
+
+  return parseDuckDuckGoHtml(html).slice(0, limit);
+}
+
+async function searchDuckDuckGoScrape(
+  query: string,
+  limit: number
+): Promise<WebSearchResult[]> {
+  try {
+    const data = await duckDuckScrapeSearch(
+      query,
+      {
+        safeSearch: SafeSearchType.MODERATE,
+        region: "wt-wt",
+      },
+      { timeout: 15000 }
+    );
+
+    if (data.noResults || !Array.isArray(data.results)) return [];
+
+    return data.results
+      .slice(0, limit)
+      .map((result) => ({
+        title: cleanHtmlText(result.title || ""),
+        url: result.url || "",
+        snippet: cleanHtmlText(
+          result.description || result.rawDescription || ""
+        ),
+      }))
+      .filter((result) => result.title && result.url);
+  } catch (error: any) {
+    if (/anomaly|too quickly|rate limit/i.test(error?.message || "")) {
+      throw new SearchRateLimitError(
+        `DuckDuckGo Scrape: ${error.message}`,
+        30000
+      );
+    }
+    throw error;
+  }
+}
+
+interface SearchEngine {
+  name: string;
+  group: string;
+  minIntervalMs: number;
+  cooldownMs: number;
+  search: (query: string, limit: number) => Promise<WebSearchResult[]>;
+}
+
+const SEARCH_ENGINES: SearchEngine[] = [
+  {
+    name: "yahoo",
+    group: "yahoo",
+    minIntervalMs: 1000,
+    cooldownMs: 30000,
+    search: searchYahoo,
+  },
+  {
+    name: "duckduckgo-lite",
+    group: "duckduckgo",
+    minIntervalMs: 1000,
+    cooldownMs: 30000,
+    search: searchDuckDuckGoLite,
+  },
+  {
+    name: "duckduckgo-html",
+    group: "duckduckgo",
+    minIntervalMs: 1000,
+    cooldownMs: 30000,
+    search: searchDuckDuckGoHtml,
+  },
+  {
+    name: "duckduckgo-scrape",
+    group: "duckduckgo-scrape",
+    minIntervalMs: 1000,
+    cooldownMs: 60000,
+    search: searchDuckDuckGoScrape,
+  },
+];
 
 export async function searchDuckDuckGo(
   query: string,
@@ -251,7 +518,7 @@ export async function searchDuckDuckGo(
   const limit = Math.min(Math.max(Math.floor(Number(maxResults) || 5), 1), 20);
   if (!trimmedQuery) {
     return {
-      provider: "duckduckgo",
+      provider: "none",
       query: trimmedQuery,
       results: [],
       count: 0,
@@ -261,74 +528,82 @@ export async function searchDuckDuckGo(
   const cacheKey = getSearchCacheKey(trimmedQuery);
   const cached = getCachedSearch(cacheKey);
   if (cached) {
-    const results = cached.slice(0, limit);
+    const results = cached.results.slice(0, limit);
     return {
-      provider: "duckduckgo",
+      provider: cached.provider,
       query: trimmedQuery,
       results,
       count: results.length,
     };
   }
 
-  const results = await withSearchLock(async () => {
-    const cachedInside = getCachedSearch(cacheKey);
-    if (cachedInside) return cachedInside;
+  const existingSearch = inFlightSearches.get(cacheKey);
+  if (existingSearch) {
+    const { provider, results } = await existingSearch;
+    const limited = results.slice(0, limit);
+    return {
+      provider,
+      query: trimmedQuery,
+      results: limited,
+      count: limited.length,
+    };
+  }
 
+  const searchPromise = (async () => {
+    const engines = shuffle(SEARCH_ENGINES);
     const errors: string[] = [];
     let hadValidResponse = false;
+    let lastValidProvider = "none";
 
-    for (let attempt = 1; attempt <= SEARCH_MAX_ATTEMPTS; attempt++) {
-      const engines =
-        attempt % 2 === 1 ? SEARCH_ENGINES : [...SEARCH_ENGINES].reverse();
-
-      for (const engine of engines) {
-        try {
-          const response = await engine.fetch(trimmedQuery);
-          const html = await response.text();
-
-          if (looksLikeDuckDuckGoChallenge(response.status, html)) {
-            errors.push(`${engine.name}: HTTP ${response.status} challenge`);
-            continue;
-          }
-
-          if (!response.ok) {
-            errors.push(`${engine.name}: HTTP ${response.status}`);
-            continue;
-          }
-
-          hadValidResponse = true;
-          const parsed = engine.parse(html);
-          if (parsed.length > 0) {
-            setCachedSearch(cacheKey, parsed);
-            return parsed;
-          }
-
-          errors.push(`${engine.name}: no results`);
-        } catch (error: any) {
-          errors.push(`${engine.name}: ${error?.message || "request failed"}`);
-        }
+    for (const engine of engines) {
+      if (isEngineCoolingDown(engine)) {
+        errors.push(`${engine.name}: cooling down`);
+        continue;
       }
 
-      if (attempt < SEARCH_MAX_ATTEMPTS) {
-        await sleep(1500 * attempt + Math.floor(Math.random() * 500));
+      try {
+        const results = await withEngineSlot(engine, () =>
+          engine.search(trimmedQuery, 20)
+        );
+
+        hadValidResponse = true;
+        lastValidProvider = engine.name;
+
+        if (results.length > 0) {
+          clearEngineCooldown(engine);
+          setCachedSearch(cacheKey, engine.name, results);
+          return { provider: engine.name, results };
+        }
+
+        errors.push(`${engine.name}: no results`);
+      } catch (error: any) {
+        if (error instanceof SearchRateLimitError) {
+          markEngineCooldown(engine, error.retryAfterMs || engine.cooldownMs);
+        }
+        errors.push(`${engine.name}: ${error?.message || "request failed"}`);
       }
     }
 
-    if (hadValidResponse) return [];
-    throw new Error(
-      `DuckDuckGo search failed after ${SEARCH_MAX_ATTEMPTS} attempts (${errors
-        .slice(-3)
-        .join("; ")})`
-    );
-  });
+    if (hadValidResponse) {
+      return { provider: lastValidProvider, results: [] as WebSearchResult[] };
+    }
 
-  const limited = results.slice(0, limit);
-  return {
-    provider: "duckduckgo",
-    query: trimmedQuery,
-    results: limited,
-    count: limited.length,
-  };
+    throw new Error(`All search engines failed (${errors.join("; ")})`);
+  })();
+
+  inFlightSearches.set(cacheKey, searchPromise);
+  try {
+    const { provider, results } = await searchPromise;
+    const limited = results.slice(0, limit);
+    return {
+      provider,
+      query: trimmedQuery,
+      results: limited,
+      count: limited.length,
+    };
+  } finally {
+    inFlightSearches.delete(cacheKey);
+  }
 }
 
 function normalizeTargetUrl(input: string): string {

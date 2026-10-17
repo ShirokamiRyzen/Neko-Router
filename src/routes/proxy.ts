@@ -81,7 +81,7 @@ const AVAILABLE_ENDPOINTS = [
  method: "POST",
  path: "/v1/tools/search",
  auth: "Bearer <client_key> or x-api-key: <client_key>",
- description: "Search the web with DuckDuckGo and return { title, url, snippet } results.",
+ description: "Search the web with a randomized multi-engine pool (DuckDuckGo, Yahoo) and return { title, url, snippet } results.",
  },
  {
  method: "POST",
