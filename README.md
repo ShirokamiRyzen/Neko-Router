@@ -41,14 +41,16 @@ Neko-Router/
 │   │   ├── api-keys.ts         # Router integration API keys
 │   │   ├── upstreams.ts        # Upstream keys CRUD, alias generator & test
 │   │   ├── telemetry.ts        # Aggregated stats & request logs
-│   │   ├── admin.ts            # SQLite export/import, metrics, timeout & optimizer settings
-│   │   └── proxy.ts            # /v1/chat/completions, /v1/models, /v1/messages
+│ │ ├── admin.ts # SQLite export/import, metrics, timeout & optimizer settings
+│ │ ├── tools.ts # /v1/tools/search & /v1/tools/fetch
+│ │ └── proxy.ts # /v1/chat/completions, /v1/models, /v1/messages
 │   ├── services/
 │   │   ├── auth.ts             # 6-digit PIN bcrypt verification & client key validation
 │   │   ├── router.ts           # Upstream selection & load balancing
 │   │   ├── telemetry.ts        # Asynchronous telemetry logger & cached token counters
-│   │   ├── optimizer.ts        # RTK compression, Caveman mode, response cache engine
-│   │   └── proxy.ts            # Zero-latency WebStream passthrough engine
+│ │ ├── optimizer.ts # RTK compression, Caveman mode, response cache engine
+│ │ ├── tools.ts # DuckDuckGo search & readable web content extraction
+│ │ └── proxy.ts # Zero-latency WebStream passthrough engine
 │   └── index.ts                # Elysia server, Swagger, & Eden type App export
 ├── data/                       # Local SQLite storage folder
 │   └── router.db               # Persisted SQLite database (WAL mode)
@@ -221,3 +223,5 @@ curl -N http://localhost:3000/v1/chat/completions \
 | `POST` | `/v1/chat/completions` | OpenAI Chat Completions proxy | Client Key (`sk-neko-...`) |
 | `GET` | `/v1/models` | List available models | Client Key (`sk-neko-...`) |
 | `POST` | `/v1/messages` | Anthropic Claude Messages proxy | Client Key (`sk-neko-...`) |
+| `POST` | `/v1/tools/search` | DuckDuckGo web search (`title`, `url`, `snippet`) | Client Key (`sk-neko-...`) |
+| `POST` | `/v1/tools/fetch` | Fetch a URL and extract readable text | Client Key (`sk-neko-...`) |

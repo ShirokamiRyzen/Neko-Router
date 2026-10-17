@@ -10,6 +10,7 @@ import { telemetryRoutes } from "./routes/telemetry";
 import { adminRoutes } from "./routes/admin";
 import { proxyRoutes } from "./routes/proxy";
 import { apiProvidersRoutes } from "./routes/api-providers";
+import { toolsRoutes } from "./routes/tools";
 import { existsSync, watch } from "fs";
 import { join } from "path";
 import { webHandler, htmlTemplate, bundleFrontend } from "./web/handler";
@@ -58,6 +59,7 @@ const app = new Elysia()
         },
         tags: [
           { name: "Proxy", description: "AI proxy endpoints (OpenAI & Anthropic)" },
+ { name: "Tools", description: "Web search and URL fetch utilities" },
           { name: "Auth", description: "Authentication & PIN management" },
           { name: "Keys", description: "Client access keys management" },
           { name: "Router Keys", description: "Router integration API keys management" },
@@ -78,8 +80,9 @@ const app = new Elysia()
   .use(upstreamRoutes)
   .use(apiProvidersRoutes)
   .use(telemetryRoutes)
-  .use(adminRoutes)
-  .use(proxyRoutes)
+ .use(adminRoutes)
+ .use(toolsRoutes)
+ .use(proxyRoutes)
   // Dynamic Web Frontend Handler
   .use(webHandler)
   // Catch-all SPA route: serves dynamic HTML template (no dist needed)

@@ -71,12 +71,24 @@ const AVAILABLE_ENDPOINTS = [
     auth: "x-api-key: <client_key> or Bearer <client_key>",
     description: "Anthropic-compatible Messages API with full streaming and thinking protocol support.",
   },
-  {
-    method: "GET",
-    path: "/v1/models",
-    auth: "Public / Optional Client Key",
-    description: "List all active AI models across connected upstream providers in OpenAI format.",
-  },
+ {
+ method: "GET",
+ path: "/v1/models",
+ auth: "Public / Optional Client Key",
+ description: "List all active AI models across connected upstream providers in OpenAI format.",
+ },
+ {
+ method: "POST",
+ path: "/v1/tools/search",
+ auth: "Bearer <client_key> or x-api-key: <client_key>",
+ description: "Search the web with DuckDuckGo and return { title, url, snippet } results.",
+ },
+ {
+ method: "POST",
+ path: "/v1/tools/fetch",
+ auth: "Bearer <client_key> or x-api-key: <client_key>",
+ description: "Fetch a URL and extract readable text from HTML, JSON, XML, or plain text.",
+ },
   {
     method: "GET",
     path: "/models",

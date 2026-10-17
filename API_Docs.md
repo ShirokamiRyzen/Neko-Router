@@ -12,6 +12,8 @@ Comprehensive API integration documentation for **Neko-Router**, a high-performa
    - [OpenAI Chat Completions (`POST /v1/chat/completions`)](#a-openai-chat-completions-post-v1chatcompletions)
    - [OpenAI Models List (`GET /v1/models`)](#b-openai-models-list-get-v1models)
    - [Anthropic Messages (`POST /v1/messages`)](#c-anthropic-messages-post-v1messages)
+ - [Web Search (`POST /v1/tools/search`)](#d-web-search-post-v1toolssearch)
+ - [Web Fetch (`POST /v1/tools/fetch`)](#e-web-fetch-post-v1toolsfetch)
 4. [SDK Integration Guides](#4-sdk-integration-guides)
    - [OpenAI Python SDK](#a-openai-python-sdk)
    - [OpenAI Node.js / TypeScript SDK](#b-openai-nodejs--typescript-sdk)
@@ -149,6 +151,69 @@ Supports the native Anthropic Claude Messages protocol for both non-streaming an
 #### Anthropic Token Telemetry & Caching:
 - `event: message_start` -> extracts `input_tokens` (Prompt tokens) and `cache_read_input_tokens` (Cached tokens).
 - `event: message_delta` -> extracts `output_tokens` (Completion tokens).
+
+---
+
+### D. Web Search (`POST /v1/tools/search`)
+
+Searches the web by scraping **DuckDuckGo Lite**. Requires a valid client API key.
+
+- **URL:** `/v1/tools/search`
+- **Method:** `POST` (GET alias: `/v1/tools/search?q=<query>&maxResults=5`)
+- **Headers:** `Authorization: Bearer <client-api-key>` *or* `x-api-key: <client-api-key>`
+
+#### Request Body (JSON)
+```json
+{
+ "query": "bun elysia framework",
+ "maxResults": 5
+}
+```
+
+#### Example Response
+```json
+{
+ "provider": "duckduckgo",
+ "query": "bun elysia framework",
+ "results": [
+ {
+ "title": "Elysia - Ergonomic Framework for Humans | ElysiaJS",
+ "url": "https://elysiajs.com/",
+ "snippet": "Elysia is an ergonomic framework for Humans..."
+ }
+ ],
+ "count": 1
+}
+```
+
+---
+
+### E. Web Fetch (`POST /v1/tools/fetch`)
+
+Fetches a URL and extracts readable content from HTML, JSON, XML, or plain text. Follows up to 5 redirects and blocks private/internal hosts by default (set `TOOLS_ALLOW_PRIVATE_HOSTS=1` to override). Requires a valid client API key.
+
+- **URL:** `/v1/tools/fetch`
+- **Method:** `POST` (GET alias: `/v1/tools/fetch?url=<url>&maxChars=12000`)
+- **Headers:** `Authorization: Bearer <client-api-key>` *or* `x-api-key: <client-api-key>`
+
+#### Request Body (JSON)
+```json
+{
+ "url": "https://example.com",
+ "maxChars": 12000
+}
+```
+
+#### Example Response
+```json
+{
+ "url": "https://example.com",
+ "contentType": "text/html",
+ "title": "Example Domain",
+ "content": "This domain is for use in documentation examples...",
+ "truncated": false
+}
+```
 
 ---
 
