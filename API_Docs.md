@@ -758,30 +758,57 @@ Import hundreds of API keys in a single atomic request from multiline raw text o
 #### 2. Recent Request Telemetry Logs
 - **`GET /api/telemetry/logs?limit=50&offset=0`**
 - **Response:**
-  ```json
-  {
-    "logs": [
-      {
-        "id": "log_0a8b9c...",
-        "clientKeyId": "ck_abc123",
-        "clientKeyName": "Production Web App",
-        "upstreamKeyId": "up_xyz789",
-        "provider": "openai",
-        "endpoint": "/v1/chat/completions",
-        "model": "gpt-4o",
-        "promptTokens": 45,
-        "completionTokens": 120,
-        "cachedTokens": 45,
-        "totalTokens": 165,
-        "statusCode": 200,
-        "durationMs": 312,
-        "isStreaming": 1,
-        "errorMessage": null,
-        "createdAt": 1788776000000
-      }
-    ]
-  }
-  ```
+```json
+{
+ "logs": [
+ {
+ "id": "log_0a8b9c...",
+ "clientKeyId": "ck_abc123",
+ "clientKeyName": "Production Web App",
+ "upstreamKeyId": "up_xyz789",
+ "provider": "openai",
+ "endpoint": "/v1/chat/completions",
+ "model": "gpt-4o",
+ "promptTokens": 45,
+ "completionTokens": 120,
+ "cachedTokens": 45,
+ "totalTokens": 165,
+ "statusCode": 200,
+ "durationMs": 312,
+ "isStreaming": 1,
+ "errorMessage": null,
+ "createdAt": 1788776000000
+ }
+ ]
+}
+```
+
+#### 3. Recent Search & Fetch Tool Logs
+- **`GET /api/telemetry/tool-logs?limit=50&offset=0&hours=24&type=search`**
+- Supports the same range filters as telemetry stats: `hours`, `since`, or `all=true`.
+- `type` is optional and can be `search` or `fetch`.
+- **Response:**
+```json
+{
+ "logs": [
+ {
+ "id": "tool_0a8b9c...",
+ "clientKeyId": "ck_abc123",
+ "clientKeyName": "Production Web App",
+ "toolType": "search",
+ "provider": "duckduckgo-lite",
+ "query": "bun runtime",
+ "url": null,
+ "statusCode": 200,
+ "durationMs": 842,
+ "resultCount": 5,
+ "contentLength": 0,
+ "errorMessage": null,
+ "createdAt": 1788776000000
+ }
+ ]
+}
+```
 
 ---
 

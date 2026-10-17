@@ -214,6 +214,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 | `POST` | `/api/upstreams/:id/test` | Ping upstream key & measure latency | Session / Key |
 | `GET` | `/api/telemetry/stats` | Aggregated usage, cached tokens & latency metrics | Session / Key |
 | `GET` | `/api/telemetry/logs` | Real-time paginated request telemetry logs | Session / Key |
+| `GET` | `/api/telemetry/tool-logs` | Paginated search & fetch tool logs with range filters | Session / Key |
 | `GET` | `/api/admin/settings/optimizations` | Read global prompt & token optimizer flags | Session / Key |
 | `POST` | `/api/admin/settings/optimizations` | Update global prompt & token optimizer flags | Session / Key |
 | `POST` | `/api/admin/cache/clear` | Purge exact response cache table | Session / Key |

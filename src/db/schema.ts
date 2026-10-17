@@ -68,6 +68,22 @@ export const telemetryLogs = sqliteTable("telemetry_logs", {
   createdAt: integer("created_at").notNull(),
 });
 
+export const toolLogs = sqliteTable("tool_logs", {
+  id: text("id").primaryKey(),
+  clientKeyId: text("client_key_id"),
+  clientKeyName: text("client_key_name"),
+  toolType: text("tool_type").notNull(), // 'search' | 'fetch'
+  provider: text("provider"), // search engine, null for fetch
+  query: text("query"),
+  url: text("url"),
+  statusCode: integer("status_code").notNull(),
+  durationMs: integer("duration_ms").notNull().default(0),
+  resultCount: integer("result_count").notNull().default(0),
+  contentLength: integer("content_length").notNull().default(0),
+  errorMessage: text("error_message"),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const responseCache = sqliteTable("response_cache", {
   hash: text("hash").primaryKey(),
   provider: text("provider").notNull(),
@@ -87,4 +103,5 @@ export type ClientKey = typeof clientKeys.$inferSelect;
 export type InsertClientKey = typeof clientKeys.$inferInsert;
 export type UpstreamKey = typeof upstreamKeys.$inferSelect;
 export type TelemetryLog = typeof telemetryLogs.$inferSelect;
+export type ToolLog = typeof toolLogs.$inferSelect;
 export type ResponseCache = typeof responseCache.$inferSelect;

@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { checkClientRateLimit, validateClientKey } from "../services/auth";
 import { checkHttpsRequirement } from "../services/optimizer";
+import { recordToolTelemetry } from "../services/telemetry";
 import { fetchWebPage, searchDuckDuckGo } from "../services/tools";
 
 function getProvidedKey(request: Request): string | null {
@@ -64,39 +65,100 @@ async function authenticateRequest(request: Request, set: any) {
   return { clientKey };
 }
 
-async function runSearch(query: string | undefined, maxResults: number | undefined, set: any) {
+async function runSearch(
+  query: string | undefined,
+  maxResults: number | undefined,
+  set: any,
+  clientKey: any
+) {
+  const startedAt = Date.now();
+
   if (!query || !query.trim()) {
+    recordToolTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      toolType: "search",
+      query: query ?? null,
+      statusCode: 400,
+      durationMs: Math.max(1, Date.now() - startedAt),
+      errorMessage: "Query parameter 'query' is required.",
+    });
     return errorResponse(set, 400, "Query parameter 'query' is required.", "missing_query");
   }
 
   try {
-    return await searchDuckDuckGo(query, maxResults ?? 5);
+    const result = await searchDuckDuckGo(query, maxResults ?? 5);
+    recordToolTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      toolType: "search",
+      provider: result.provider,
+      query: result.query,
+      statusCode: 200,
+      durationMs: Math.max(1, Date.now() - startedAt),
+      resultCount: result.count,
+    });
+    return result;
   } catch (error: any) {
-    return errorResponse(
-      set,
-      502,
-      error?.message || "Failed to search DuckDuckGo.",
-      "search_failed",
-      "upstream_error"
-    );
+    const message = error?.message || "Failed to search the web.";
+    recordToolTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      toolType: "search",
+      query: query.trim(),
+      statusCode: 502,
+      durationMs: Math.max(1, Date.now() - startedAt),
+      errorMessage: message,
+    });
+    return errorResponse(set, 502, message, "search_failed", "upstream_error");
   }
 }
 
-async function runFetch(url: string | undefined, maxChars: number | undefined, set: any) {
+async function runFetch(
+  url: string | undefined,
+  maxChars: number | undefined,
+  set: any,
+  clientKey: any
+) {
+  const startedAt = Date.now();
+
   if (!url || !url.trim()) {
+    recordToolTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      toolType: "fetch",
+      url: url ?? null,
+      statusCode: 400,
+      durationMs: Math.max(1, Date.now() - startedAt),
+      errorMessage: "Parameter 'url' is required.",
+    });
     return errorResponse(set, 400, "Parameter 'url' is required.", "missing_url");
   }
 
   try {
-    return await fetchWebPage(url, maxChars ?? 12000);
+    const result = await fetchWebPage(url, maxChars ?? 12000);
+    recordToolTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      toolType: "fetch",
+      url: result.url,
+      statusCode: 200,
+      durationMs: Math.max(1, Date.now() - startedAt),
+      contentLength: result.content.length,
+    });
+    return result;
   } catch (error: any) {
-    return errorResponse(
-      set,
-      502,
-      error?.message || "Failed to fetch the requested URL.",
-      "fetch_failed",
-      "upstream_error"
-    );
+    const message = error?.message || "Failed to fetch the requested URL.";
+    recordToolTelemetry({
+      clientKeyId: clientKey?.id,
+      clientKeyName: clientKey?.name,
+      toolType: "fetch",
+      url: url.trim(),
+      statusCode: 502,
+      durationMs: Math.max(1, Date.now() - startedAt),
+      errorMessage: message,
+    });
+    return errorResponse(set, 502, message, "fetch_failed", "upstream_error");
   }
 }
 
@@ -111,7 +173,7 @@ export const toolsRoutes = new Elysia()
       const auth = await authenticateRequest(request, set);
       if ("error" in auth) return auth.error;
 
-      return runSearch(body.query, body.maxResults, set);
+      return runSearch(body.query, body.maxResults, set, auth.clientKey);
     },
     {
       body: t.Object({
@@ -120,9 +182,9 @@ export const toolsRoutes = new Elysia()
       }),
       detail: {
         tags: ["Tools"],
-        summary: "Search the web using DuckDuckGo",
+        summary: "Search the web using a randomized multi-engine pool",
         description:
-          "Scrapes DuckDuckGo Lite and returns a list of { title, url, snippet } results. Requires a valid client API key.",
+          "Returns a list of { title, url, snippet } results. Requires a valid client API key.",
       },
     }
   )
@@ -133,7 +195,7 @@ export const toolsRoutes = new Elysia()
       if ("error" in auth) return auth.error;
 
       const maxResults = query.maxResults ? Number(query.maxResults) : undefined;
-      return runSearch(query.q ?? query.query, maxResults, set);
+      return runSearch(query.q ?? query.query, maxResults, set, auth.clientKey);
     },
     {
       query: t.Object({
@@ -143,7 +205,7 @@ export const toolsRoutes = new Elysia()
       }),
       detail: {
         tags: ["Tools"],
-        summary: "Search the web using DuckDuckGo (GET alias)",
+        summary: "Search the web using a randomized multi-engine pool (GET alias)",
         description:
           "GET alias for /v1/tools/search. Example: /v1/tools/search?q=bun+elysia&maxResults=5",
       },
@@ -155,7 +217,7 @@ export const toolsRoutes = new Elysia()
       const auth = await authenticateRequest(request, set);
       if ("error" in auth) return auth.error;
 
-      return runFetch(body.url, body.maxChars, set);
+      return runFetch(body.url, body.maxChars, set, auth.clientKey);
     },
     {
       body: t.Object({
@@ -177,7 +239,7 @@ export const toolsRoutes = new Elysia()
       if ("error" in auth) return auth.error;
 
       const maxChars = query.maxChars ? Number(query.maxChars) : undefined;
-      return runFetch(query.url, maxChars, set);
+      return runFetch(query.url, maxChars, set, auth.clientKey);
     },
     {
       query: t.Object({

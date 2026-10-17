@@ -85,7 +85,23 @@ export function initTablesSync(): void {
       created_at INTEGER NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS response_cache (
+    CREATE TABLE IF NOT EXISTS tool_logs (
+ id TEXT PRIMARY KEY,
+ client_key_id TEXT,
+ client_key_name TEXT,
+ tool_type TEXT NOT NULL,
+ provider TEXT,
+ query TEXT,
+ url TEXT,
+ status_code INTEGER NOT NULL,
+ duration_ms INTEGER NOT NULL DEFAULT 0,
+ result_count INTEGER NOT NULL DEFAULT 0,
+ content_length INTEGER NOT NULL DEFAULT 0,
+ error_message TEXT,
+ created_at INTEGER NOT NULL
+ );
+
+ CREATE TABLE IF NOT EXISTS response_cache (
       hash TEXT PRIMARY KEY,
       provider TEXT NOT NULL,
       model TEXT NOT NULL,
@@ -139,9 +155,12 @@ export function initTablesSync(): void {
   // Safe index creations
   try {
     sqlite.run(`
-      CREATE INDEX IF NOT EXISTS idx_telemetry_created_at ON telemetry_logs (created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_telemetry_client_key ON telemetry_logs (client_key_id);
-      CREATE INDEX IF NOT EXISTS idx_telemetry_provider ON telemetry_logs (provider);
+ CREATE INDEX IF NOT EXISTS idx_telemetry_created_at ON telemetry_logs (created_at DESC);
+ CREATE INDEX IF NOT EXISTS idx_telemetry_client_key ON telemetry_logs (client_key_id);
+ CREATE INDEX IF NOT EXISTS idx_telemetry_provider ON telemetry_logs (provider);
+ CREATE INDEX IF NOT EXISTS idx_tool_logs_created_at ON tool_logs (created_at DESC);
+ CREATE INDEX IF NOT EXISTS idx_tool_logs_type ON tool_logs (tool_type);
+ CREATE INDEX IF NOT EXISTS idx_tool_logs_client_key ON tool_logs (client_key_id);
       CREATE INDEX IF NOT EXISTS idx_client_keys_key ON client_keys (key);
       CREATE INDEX IF NOT EXISTS idx_client_keys_api_key_id ON client_keys (api_key_id);
       CREATE INDEX IF NOT EXISTS idx_api_keys_key ON api_keys (key);

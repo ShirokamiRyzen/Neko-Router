@@ -175,22 +175,38 @@ export interface TelemetryStats {
 }
 
 export interface TelemetryLogItem {
-  id: string;
-  clientKeyId: string | null;
-  clientKeyName: string | null;
-  upstreamKeyId: string | null;
-  provider: string;
-  endpoint: string;
-  model: string;
-  promptTokens: number;
-  completionTokens: number;
-  cachedTokens: number;
-  totalTokens: number;
-  statusCode: number;
-  durationMs: number;
-  isStreaming: number;
-  errorMessage: string | null;
-  createdAt: number;
+ id: string;
+ clientKeyId: string | null;
+ clientKeyName: string | null;
+ upstreamKeyId: string | null;
+ provider: string;
+ endpoint: string;
+ model: string;
+ promptTokens: number;
+ completionTokens: number;
+ cachedTokens: number;
+ totalTokens: number;
+ statusCode: number;
+ durationMs: number;
+ isStreaming: number;
+ errorMessage: string | null;
+ createdAt: number;
+}
+
+export interface ToolLogItem {
+ id: string;
+ clientKeyId: string | null;
+ clientKeyName: string | null;
+ toolType: "search" | "fetch";
+ provider: string | null;
+ query: string | null;
+ url: string | null;
+ statusCode: number;
+ durationMs: number;
+ resultCount: number;
+ contentLength: number;
+ errorMessage: string | null;
+ createdAt: number;
 }
 
 export interface OptimizationSettings {

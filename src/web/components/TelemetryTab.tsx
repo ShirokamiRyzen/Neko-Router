@@ -1,20 +1,36 @@
 import React, { useState, useEffect } from "react";
 import {
-  Activity,
-  RefreshCw,
-  Radio,
-  Sparkles,
-  Copy,
-  Check,
-  Loader2,
+ Activity,
+ Search,
+ RefreshCw,
+ Radio,
+ Sparkles,
+ Copy,
+ Check,
+ Loader2,
 } from "lucide-react";
 import { apiRequest, type TelemetryLogItem } from "../lib/api";
+import { ToolLogsSection } from "./ToolLogsSection";
 
 export const TelemetryTab: React.FC = () => {
-  const [logs, setLogs] = useState<TelemetryLogItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedLog, setSelectedLog] = useState<TelemetryLogItem | null>(null);
-  const [copiedId, setCopiedId] = useState(false);
+ const [logs, setLogs] = useState<TelemetryLogItem[]>([]);
+ const [loading, setLoading] = useState(true);
+ const [selectedLog, setSelectedLog] = useState<TelemetryLogItem | null>(null);
+ const [copiedId, setCopiedId] = useState(false);
+ const [activeSection, setActiveSection] = useState<"requests" | "tools">(() => {
+ if (typeof window !== "undefined") {
+ const saved = localStorage.getItem("neko_telemetry_section");
+ if (saved === "tools" || saved === "requests") return saved;
+ }
+ return "requests";
+ });
+
+ const setActiveSectionPersisted = (section: "requests" | "tools") => {
+ setActiveSection(section);
+ try {
+ localStorage.setItem("neko_telemetry_section", section);
+ } catch {}
+ };
 
   const loadLogs = async () => {
     setLoading(true);
@@ -40,7 +56,7 @@ export const TelemetryTab: React.FC = () => {
     setTimeout(() => setCopiedId(false), 2000);
   };
 
-  if (loading && logs.length === 0) {
+  if (loading && logs.length === 0 && activeSection === "requests") {
     return (
       <div className="flex items-center justify-center py-24 text-zinc-500 dark:text-zinc-400">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -51,27 +67,54 @@ export const TelemetryTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header & Refresh */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            Request Telemetry & Token Logs
-          </h2>
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">
-            Real-time inspection of captured prompt/completion tokens, cached savings, latency metrics, and stream events.
-          </p>
-        </div>
-        <button
-          onClick={loadLogs}
-          disabled={loading}
-          className="skeuo-btn inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-md self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>Refresh Logs</span>
-        </button>
-      </div>
+ <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+ <div>
+ <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+ Live Telemetry Logs
+ </h2>
+ <p className="text-xs text-zinc-500 dark:text-zinc-400">
+ Inspect AI request telemetry plus search and fetch tool activity.
+ </p>
+ </div>
+ <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+ <div className="flex items-center p-0.5 rounded-md skeuo-inset text-xs">
+ {(["requests", "tools"] as const).map((section) => (
+ <button
+ key={section}
+ type="button"
+ onClick={() => setActiveSectionPersisted(section)}
+ className={`inline-flex items-center px-2.5 py-1 rounded transition-all font-medium cursor-pointer ${
+ activeSection === section
+ ? "skeuo-btn text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs"
+ : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+ }`}
+ >
+ {section === "requests" ? (
+ <Activity className="w-3 h-3 mr-1" />
+ ) : (
+ <Search className="w-3 h-3 mr-1" />
+ )}
+ {section === "requests" ? "Request Logs" : "Search & Fetch"}
+ </button>
+ ))}
+ </div>
+ {activeSection === "requests" && (
+ <button
+ onClick={loadLogs}
+ disabled={loading}
+ className="skeuo-btn inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-md"
+ >
+ <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+ <span>Refresh Logs</span>
+ </button>
+ )}
+ </div>
+ </div>
 
-      {/* Logs Table */}
-      <div className="skeuo-card overflow-hidden">
+ {activeSection === "requests" ? (
+ <>
+ {/* Logs Table */}
+ <div className="skeuo-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 font-medium">
@@ -309,9 +352,13 @@ export const TelemetryTab: React.FC = () => {
                 Close
               </button>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+ </div>
+ </div>
+ )}
+ </>
+ ) : (
+ <ToolLogsSection />
+ )}
+ </div>
+ );
 };

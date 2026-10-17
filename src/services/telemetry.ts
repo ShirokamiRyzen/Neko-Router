@@ -1,6 +1,11 @@
 import { db } from "../db";
-import { telemetryLogs, type TelemetryLog } from "../db/schema";
-import { desc, eq, sql } from "drizzle-orm";
+import {
+  telemetryLogs,
+  toolLogs,
+  type TelemetryLog,
+  type ToolLog,
+} from "../db/schema";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 
 export interface LogTelemetryParams {
   clientKeyId?: string | null;
@@ -44,9 +49,76 @@ export function recordTelemetry(params: LogTelemetryParams): void {
         createdAt: Date.now(),
       })
       .run();
-  } catch (e) {
-    console.error("Failed to record telemetry log:", e);
-  }
+} catch (e) {
+ console.error("Failed to record telemetry log:", e);
+ }
+}
+
+export interface LogToolTelemetryParams {
+ clientKeyId?: string | null;
+ clientKeyName?: string | null;
+ toolType: "search" | "fetch";
+ provider?: string | null;
+ query?: string | null;
+ url?: string | null;
+ statusCode: number;
+ durationMs: number;
+ resultCount?: number;
+ contentLength?: number;
+ errorMessage?: string | null;
+}
+
+export function recordToolTelemetry(params: LogToolTelemetryParams): void {
+ try {
+ const id = "tool_" + crypto.randomUUID().replace(/-/g, "");
+ db.insert(toolLogs)
+ .values({
+ id,
+ clientKeyId: params.clientKeyId ?? null,
+ clientKeyName: params.clientKeyName ?? null,
+ toolType: params.toolType,
+ provider: params.provider ?? null,
+ query: params.query ?? null,
+ url: params.url ?? null,
+ statusCode: params.statusCode,
+ durationMs: params.durationMs || 0,
+ resultCount: params.resultCount || 0,
+ contentLength: params.contentLength || 0,
+ errorMessage: params.errorMessage ?? null,
+ createdAt: Date.now(),
+ })
+ .run();
+ } catch (e) {
+ console.error("Failed to record tool telemetry log:", e);
+ }
+}
+
+export interface ToolLogQuery {
+ toolType?: "search" | "fetch" | null;
+ since?: number;
+}
+
+export function getRecentToolLogs(
+ limit = 50,
+ offset = 0,
+ query: ToolLogQuery = {}
+): ToolLog[] {
+ const conditions = [];
+ if (query.toolType) {
+ conditions.push(eq(toolLogs.toolType, query.toolType));
+ }
+ if (query.since && query.since > 0) {
+ conditions.push(gte(toolLogs.createdAt, query.since));
+ }
+
+ return db
+ .select()
+ .from(toolLogs)
+ .where(conditions.length > 0 ? and(...conditions) : undefined)
+ .orderBy(desc(toolLogs.createdAt))
+ .limit(limit)
+ .offset(offset)
+ .all();
 }
 
 export interface ActiveRequest {
