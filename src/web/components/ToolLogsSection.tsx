@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import {
  Search,
  Globe,
- RefreshCw,
  Loader2,
  Copy,
  Check,
@@ -11,81 +10,25 @@ import {
 } from "lucide-react";
 import { apiRequest, type ToolLogItem } from "../lib/api";
 
-type ToolTypeFilter = "all" | "search" | "fetch";
-type TimeFilter = "Today" | "24h" | "7D" | "30D" | "All";
-
-function getTimeRangeQuery(filter: TimeFilter): string {
- if (filter === "All") return "all=true";
- if (filter === "Today") {
- const now = new Date();
- const startOfDay = new Date(
- now.getFullYear(),
- now.getMonth(),
- now.getDate()
- ).getTime();
- return `since=${startOfDay}`;
- }
- if (filter === "7D") return `hours=${24 * 7}`;
- if (filter === "30D") return `hours=${24 * 30}`;
- return "hours=24";
-}
-
 function formatCount(value: number): string {
  if (!value) return "0";
  if (value < 1000) return value.toLocaleString();
  return `${(value / 1000).toFixed(1)}k`;
 }
 
-export const ToolLogsSection: React.FC = () => {
+export const ToolLogsSection: React.FC<{ refreshKey?: number }> = ({
+ refreshKey = 0,
+}) => {
  const [logs, setLogs] = useState<ToolLogItem[]>([]);
  const [loading, setLoading] = useState(true);
  const [selectedLog, setSelectedLog] = useState<ToolLogItem | null>(null);
  const [copiedId, setCopiedId] = useState(false);
- const [typeFilter, setTypeFilter] = useState<ToolTypeFilter>(() => {
- if (typeof window !== "undefined") {
- const saved = localStorage.getItem("neko_tool_log_type");
- if (saved === "search" || saved === "fetch") return saved;
- }
- return "all";
- });
- const [timeFilter, setTimeFilter] = useState<TimeFilter>(() => {
- if (typeof window !== "undefined") {
- const saved = localStorage.getItem("neko_tool_log_time");
- if (
- saved === "Today" ||
- saved === "24h" ||
- saved === "7D" ||
- saved === "30D" ||
- saved === "All"
- ) {
- return saved;
- }
- }
- return "Today";
- });
-
- const setTypeFilterPersisted = (value: ToolTypeFilter) => {
- setTypeFilter(value);
- try {
- localStorage.setItem("neko_tool_log_type", value);
- } catch {}
- };
-
- const setTimeFilterPersisted = (value: TimeFilter) => {
- setTimeFilter(value);
- try {
- localStorage.setItem("neko_tool_log_time", value);
- } catch {}
- };
 
  const loadLogs = async () => {
  setLoading(true);
  try {
- const typeQuery = typeFilter === "all" ? "" : `&type=${typeFilter}`;
  const data = await apiRequest<{ logs: ToolLogItem[] }>(
- `/api/telemetry/tool-logs?limit=50&${getTimeRangeQuery(
- timeFilter
- )}${typeQuery}`
+ "/api/telemetry/tool-logs?limit=50"
  );
  setLogs(data.logs);
  } catch (e) {
@@ -99,7 +42,7 @@ export const ToolLogsSection: React.FC = () => {
  loadLogs();
  const interval = setInterval(loadLogs, 8000);
  return () => clearInterval(interval);
- }, [typeFilter, timeFilter]);
+ }, [refreshKey]);
 
  const handleCopyLogId = (id: string) => {
  navigator.clipboard.writeText(id);
@@ -109,63 +52,6 @@ export const ToolLogsSection: React.FC = () => {
 
  return (
  <div className="space-y-4">
- <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
- <div>
- <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
- Search & Fetch Logs
- </h3>
- <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
- Tool calls to /v1/tools/search and /v1/tools/fetch, including engine, query, target, latency and status.
- </p>
- </div>
-
- <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
- <div className="flex items-center p-0.5 rounded-md skeuo-inset text-xs">
- {(["Today", "24h", "7D", "30D", "All"] as const).map((t) => (
- <button
- key={t}
- type="button"
- onClick={() => setTimeFilterPersisted(t)}
- className={`px-2.5 py-1 rounded transition-all font-medium cursor-pointer ${
- timeFilter === t
- ? "skeuo-btn text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs"
- : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
- }`}
- >
- {t === "All" ? "All Time" : t}
- </button>
- ))}
- </div>
-
- <div className="flex items-center p-0.5 rounded-md skeuo-inset text-xs">
- {(["all", "search", "fetch"] as const).map((t) => (
- <button
- key={t}
- type="button"
- onClick={() => setTypeFilterPersisted(t)}
- className={`px-2.5 py-1 rounded transition-all font-medium capitalize cursor-pointer ${
- typeFilter === t
- ? "skeuo-btn text-zinc-900 dark:text-zinc-100 font-semibold shadow-xs"
- : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
- }`}
- >
- {t}
- </button>
- ))}
- </div>
-
- <button
- type="button"
- onClick={loadLogs}
- disabled={loading}
- className="skeuo-btn inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-md"
- >
- <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
- <span>Refresh</span>
- </button>
- </div>
- </div>
-
  <div className="skeuo-card overflow-hidden">
  <div className="overflow-x-auto">
  <table className="w-full text-left text-xs">

@@ -17,6 +17,7 @@ export const TelemetryTab: React.FC = () => {
  const [loading, setLoading] = useState(true);
  const [selectedLog, setSelectedLog] = useState<TelemetryLogItem | null>(null);
  const [copiedId, setCopiedId] = useState(false);
+ const [toolRefreshKey, setToolRefreshKey] = useState(0);
  const [activeSection, setActiveSection] = useState<"requests" | "tools">(() => {
  if (typeof window !== "undefined") {
  const saved = localStorage.getItem("neko_telemetry_section");
@@ -44,13 +45,21 @@ export const TelemetryTab: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    loadLogs();
-    const interval = setInterval(loadLogs, 8000);
-    return () => clearInterval(interval);
-  }, []);
+ useEffect(() => {
+ loadLogs();
+ const interval = setInterval(loadLogs, 8000);
+ return () => clearInterval(interval);
+ }, []);
 
-  const handleCopyLogId = (id: string) => {
+ const handleRefresh = () => {
+ if (activeSection === "requests") {
+ loadLogs();
+ } else {
+ setToolRefreshKey((value) => value + 1);
+ }
+ };
+
+ const handleCopyLogId = (id: string) => {
     navigator.clipboard.writeText(id);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
@@ -98,16 +107,18 @@ export const TelemetryTab: React.FC = () => {
  </button>
  ))}
  </div>
- {activeSection === "requests" && (
  <button
- onClick={loadLogs}
- disabled={loading}
+ onClick={handleRefresh}
+ disabled={activeSection === "requests" && loading}
  className="skeuo-btn inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-md"
  >
- <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+ <RefreshCw
+ className={`w-3.5 h-3.5 ${
+ activeSection === "requests" && loading ? "animate-spin" : ""
+ }`}
+ />
  <span>Refresh Logs</span>
  </button>
- )}
  </div>
  </div>
 
@@ -357,7 +368,7 @@ export const TelemetryTab: React.FC = () => {
  )}
  </>
  ) : (
- <ToolLogsSection />
+ <ToolLogsSection refreshKey={toolRefreshKey} />
  )}
  </div>
  );

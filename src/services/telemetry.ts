@@ -5,7 +5,7 @@ import {
   type TelemetryLog,
   type ToolLog,
 } from "../db/schema";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 export interface LogTelemetryParams {
   clientKeyId?: string | null;
@@ -95,7 +95,6 @@ export function recordToolTelemetry(params: LogToolTelemetryParams): void {
 
 export interface ToolLogQuery {
  toolType?: "search" | "fetch" | null;
- since?: number;
 }
 
 export function getRecentToolLogs(
@@ -106,9 +105,6 @@ export function getRecentToolLogs(
  const conditions = [];
  if (query.toolType) {
  conditions.push(eq(toolLogs.toolType, query.toolType));
- }
- if (query.since && query.since > 0) {
- conditions.push(gte(toolLogs.createdAt, query.since));
  }
 
  return db

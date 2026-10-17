@@ -784,9 +784,8 @@ Import hundreds of API keys in a single atomic request from multiline raw text o
 ```
 
 #### 3. Recent Search & Fetch Tool Logs
-- **`GET /api/telemetry/tool-logs?limit=50&offset=0&hours=24&type=search`**
-- Supports the same range filters as telemetry stats: `hours`, `since`, or `all=true`.
-- `type` is optional and can be `search` or `fetch`.
+- **`GET /api/telemetry/tool-logs?limit=50&offset=0`**
+- Returns the latest tool logs. `type` is optional and can be `search` or `fetch`.
 - **Response:**
 ```json
 {
