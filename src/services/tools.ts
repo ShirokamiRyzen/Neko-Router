@@ -56,7 +56,7 @@ async function fetchWithTimeout(
 function unwrapDuckDuckGoUrl(href?: string): string | null {
   if (!href) return null;
   try {
-    const parsed = new URL(href, "https://lite.duckduckgo.com");
+    const parsed = new URL(href, "https://duckduckgo.com");
     const realUrl = parsed.searchParams.get("uddg");
     if (realUrl) return decodeURIComponent(realUrl);
     if (parsed.protocol === "http:" || parsed.protocol === "https:") {
@@ -68,47 +68,107 @@ function unwrapDuckDuckGoUrl(href?: string): string | null {
   return null;
 }
 
-export async function searchDuckDuckGo(
-  query: string,
-  maxResults = 5
-): Promise<WebSearchResponse> {
-  if (!query || typeof query !== "string") {
-    throw new Error("Search query must be a non-empty string");
-  }
+const SEARCH_CACHE_TTL_MS = 5 * 60 * 1000;
+const SEARCH_CACHE_MAX_ENTRIES = 200;
+const SEARCH_MIN_INTERVAL_MS = 1000;
+const SEARCH_MAX_ATTEMPTS = 3;
 
-  const trimmedQuery = query.trim();
-  const limit = Math.min(Math.max(Math.floor(Number(maxResults) || 5), 1), 20);
-  if (!trimmedQuery) {
-    return {
-      provider: "duckduckgo",
-      query: trimmedQuery,
-      results: [],
-      count: 0,
-    };
-  }
+interface SearchCacheEntry {
+  expiresAt: number;
+  results: WebSearchResult[];
+}
 
-  const response = await fetchWithTimeout("https://lite.duckduckgo.com/lite/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "User-Agent": LYNX_UA,
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-    },
-    body: new URLSearchParams({ q: trimmedQuery }).toString(),
+const searchCache = new Map<string, SearchCacheEntry>();
+let searchChain: Promise<unknown> = Promise.resolve();
+let lastSearchRequestAt = 0;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getSearchCacheKey(query: string): string {
+  return query.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function getCachedSearch(key: string): WebSearchResult[] | null {
+  const entry = searchCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    searchCache.delete(key);
+    return null;
+  }
+  return entry.results;
+}
+
+function setCachedSearch(key: string, results: WebSearchResult[]): void {
+  if (results.length === 0) return;
+  if (searchCache.size >= SEARCH_CACHE_MAX_ENTRIES) {
+    const oldestKey = searchCache.keys().next().value;
+    if (oldestKey) searchCache.delete(oldestKey);
+  }
+  searchCache.set(key, {
+    expiresAt: Date.now() + SEARCH_CACHE_TTL_MS,
+    results,
   });
+}
 
-  if (!response.ok) {
-    throw new Error(`DuckDuckGo responded with HTTP ${response.status}`);
-  }
+function withSearchLock<T>(fn: () => Promise<T>): Promise<T> {
+  const run = searchChain.then(async () => {
+    const waitMs = SEARCH_MIN_INTERVAL_MS - (Date.now() - lastSearchRequestAt);
+    if (waitMs > 0) await sleep(waitMs);
+    try {
+      return await fn();
+    } finally {
+      lastSearchRequestAt = Date.now();
+    }
+  });
+  searchChain = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
 
-  const html = await response.text();
+function getSearchHeaders(): Record<string, string> {
+  return {
+    "User-Agent": LYNX_UA,
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
+    "Cache-Control": "no-cache",
+    Pragma: "no-cache",
+    Referer: "https://lite.duckduckgo.com/lite/",
+    DNT: "1",
+    Connection: "keep-alive",
+  };
+}
+
+async function fetchDuckDuckGoLite(query: string): Promise<Response> {
+  const url = new URL("https://lite.duckduckgo.com/lite/");
+  url.searchParams.set("q", query);
+  url.searchParams.set("kl", "wt-wt");
+  return fetchWithTimeout(
+    url.toString(),
+    { method: "GET", headers: getSearchHeaders() },
+    15000
+  );
+}
+
+async function fetchDuckDuckGoHtml(query: string): Promise<Response> {
+  const url = new URL("https://html.duckduckgo.com/html/");
+  url.searchParams.set("q", query);
+  url.searchParams.set("kl", "wt-wt");
+  return fetchWithTimeout(
+    url.toString(),
+    { method: "GET", headers: getSearchHeaders() },
+    15000
+  );
+}
+
+function parseDuckDuckGoLite(html: string): WebSearchResult[] {
   const $ = cheerio.load(html);
   const results: WebSearchResult[] = [];
 
   $("a.result-link").each((_index, element) => {
-    if (results.length >= limit) return false;
-
     const title = $(element).text().replace(/\s+/g, " ").trim();
     const url = unwrapDuckDuckGoUrl($(element).attr("href"));
     if (!title || !url) return;
@@ -130,11 +190,144 @@ export async function searchDuckDuckGo(
     results.push({ title, url, snippet });
   });
 
+  return results;
+}
+
+function parseDuckDuckGoHtml(html: string): WebSearchResult[] {
+  const $ = cheerio.load(html);
+  const results: WebSearchResult[] = [];
+
+  $("a.result__a").each((_index, element) => {
+    const title = $(element).text().replace(/\s+/g, " ").trim();
+    const url = unwrapDuckDuckGoUrl($(element).attr("href"));
+    if (!title || !url) return;
+
+    const container = $(element).closest(".result");
+    let snippet = container
+      .find(".result__snippet")
+      .text()
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!snippet) {
+      snippet = $(element)
+        .closest(".result__body")
+        .find(".result__snippet")
+        .text()
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    results.push({ title, url, snippet });
+  });
+
+  return results;
+}
+
+interface SearchEngine {
+  name: string;
+  fetch: (query: string) => Promise<Response>;
+  parse: (html: string) => WebSearchResult[];
+}
+
+const SEARCH_ENGINES: SearchEngine[] = [
+  { name: "duckduckgo-lite", fetch: fetchDuckDuckGoLite, parse: parseDuckDuckGoLite },
+  { name: "duckduckgo-html", fetch: fetchDuckDuckGoHtml, parse: parseDuckDuckGoHtml },
+];
+
+function looksLikeDuckDuckGoChallenge(status: number, html: string): boolean {
+  if (status === 202 || status === 403 || status === 429) return true;
+  return /anomaly-modal|captcha|challenge-form|bots use DuckDuckGo/i.test(html);
+}
+
+export async function searchDuckDuckGo(
+  query: string,
+  maxResults = 5
+): Promise<WebSearchResponse> {
+  if (!query || typeof query !== "string") {
+    throw new Error("Search query must be a non-empty string");
+  }
+
+  const trimmedQuery = query.trim();
+  const limit = Math.min(Math.max(Math.floor(Number(maxResults) || 5), 1), 20);
+  if (!trimmedQuery) {
+    return {
+      provider: "duckduckgo",
+      query: trimmedQuery,
+      results: [],
+      count: 0,
+    };
+  }
+
+  const cacheKey = getSearchCacheKey(trimmedQuery);
+  const cached = getCachedSearch(cacheKey);
+  if (cached) {
+    const results = cached.slice(0, limit);
+    return {
+      provider: "duckduckgo",
+      query: trimmedQuery,
+      results,
+      count: results.length,
+    };
+  }
+
+  const results = await withSearchLock(async () => {
+    const cachedInside = getCachedSearch(cacheKey);
+    if (cachedInside) return cachedInside;
+
+    const errors: string[] = [];
+    let hadValidResponse = false;
+
+    for (let attempt = 1; attempt <= SEARCH_MAX_ATTEMPTS; attempt++) {
+      const engines =
+        attempt % 2 === 1 ? SEARCH_ENGINES : [...SEARCH_ENGINES].reverse();
+
+      for (const engine of engines) {
+        try {
+          const response = await engine.fetch(trimmedQuery);
+          const html = await response.text();
+
+          if (looksLikeDuckDuckGoChallenge(response.status, html)) {
+            errors.push(`${engine.name}: HTTP ${response.status} challenge`);
+            continue;
+          }
+
+          if (!response.ok) {
+            errors.push(`${engine.name}: HTTP ${response.status}`);
+            continue;
+          }
+
+          hadValidResponse = true;
+          const parsed = engine.parse(html);
+          if (parsed.length > 0) {
+            setCachedSearch(cacheKey, parsed);
+            return parsed;
+          }
+
+          errors.push(`${engine.name}: no results`);
+        } catch (error: any) {
+          errors.push(`${engine.name}: ${error?.message || "request failed"}`);
+        }
+      }
+
+      if (attempt < SEARCH_MAX_ATTEMPTS) {
+        await sleep(1500 * attempt + Math.floor(Math.random() * 500));
+      }
+    }
+
+    if (hadValidResponse) return [];
+    throw new Error(
+      `DuckDuckGo search failed after ${SEARCH_MAX_ATTEMPTS} attempts (${errors
+        .slice(-3)
+        .join("; ")})`
+    );
+  });
+
+  const limited = results.slice(0, limit);
   return {
     provider: "duckduckgo",
     query: trimmedQuery,
-    results,
-    count: results.length,
+    results: limited,
+    count: limited.length,
   };
 }
 
