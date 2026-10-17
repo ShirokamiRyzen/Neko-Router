@@ -1404,32 +1404,6 @@ function getModelCapabilities(modelId: string) {
   };
 }
 
-function getModelContextWindow(modelId: string): number {
-  const lower = modelId.toLowerCase();
-  if (lower.includes("claude-3") || lower.includes("claude-3.5") || lower.includes("claude-3.7")) return 200000;
-  if (lower.includes("o1") || lower.includes("o3")) return 200000;
-  if (lower.includes("gemini-1.5") || lower.includes("gemini-2.0")) return 1000000;
-  if (lower.includes("gpt-4o") || lower.includes("gpt-4-turbo")) return 128000;
-  if (lower.includes("gpt-4-32k")) return 32768;
-  if (lower.includes("gpt-4")) return 8192;
-  if (lower.includes("gpt-3.5-turbo-16k")) return 16385;
-  if (lower.includes("gpt-3.5")) return 16385;
-  if (lower.includes("deepseek")) return 64000;
-  return 128000;
-}
-
-function getModelMaxTokens(modelId: string): number {
-  const lower = modelId.toLowerCase();
-  if (lower.includes("o1") || lower.includes("o3")) return 100000;
-  if (lower.includes("claude-3-7")) return 64000;
-  if (lower.includes("gpt-4o")) return 16384;
-  if (lower.includes("claude-3-5")) return 8192;
-  if (lower.includes("claude-3")) return 4096;
-  if (lower.includes("gpt-4-turbo")) return 4096;
-  if (lower.includes("gpt-4")) return 8192;
-  return 8192;
-}
-
 function enrichModel(prefix: string, m: any, defaultCreated?: number) {
   const rawId = String(m.id || m.name || "").trim();
   // Strip any existing provider prefix to extract clean model id
@@ -1441,10 +1415,8 @@ function enrichModel(prefix: string, m: any, defaultCreated?: number) {
       ? m.created
       : defaultCreated || Math.floor(Date.now() / 1000);
 
-  const capabilities = m.capabilities || getModelCapabilities(cleanId);
-  const contextWindow = m.context_window || m.contextWindow || getModelContextWindow(cleanId);
-  const maxTokens = m.max_tokens || m.maxTokens || m.max_output_tokens || getModelMaxTokens(cleanId);
-  const type = capabilities.embeddings ? "embeddings" : "chat";
+const capabilities = m.capabilities || getModelCapabilities(cleanId);
+const type = capabilities.embeddings ? "embeddings" : "chat";
 
   const modelObj: Record<string, any> = {
     id: fullId,
@@ -1454,11 +1426,8 @@ function enrichModel(prefix: string, m: any, defaultCreated?: number) {
     name: m.name || cleanId,
     description: m.description || `${cleanId} routed via Neko-Router${prefix ? ` (${prefix})` : ""}`,
     provider: prefix || m.provider || "NekoRouter",
-    type,
-    context_window: contextWindow,
-    max_tokens: maxTokens,
-    max_output_tokens: maxTokens,
-    capabilities,
+type,
+capabilities,
     permission: [
       {
         id: `modelperm-${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`,
@@ -1482,11 +1451,16 @@ function enrichModel(prefix: string, m: any, defaultCreated?: number) {
   // Copy any extra metadata from original, preserving owned_by as NekoRouter
   for (const [key, val] of Object.entries(m)) {
     if (
-      key !== "owned_by" &&
-      key !== "id" &&
-      key !== "object" &&
-      key !== "created" &&
-      modelObj[key] === undefined
+key !== "owned_by" &&
+key !== "id" &&
+key !== "object" &&
+key !== "created" &&
+key !== "context_window" &&
+key !== "contextWindow" &&
+key !== "max_tokens" &&
+key !== "maxTokens" &&
+key !== "max_output_tokens" &&
+modelObj[key] === undefined
     ) {
       modelObj[key] = val;
     }
