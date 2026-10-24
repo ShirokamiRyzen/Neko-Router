@@ -64,7 +64,7 @@ const AVAILABLE_ENDPOINTS = [
     method: "POST",
     path: "/v1/chat/completions",
     auth: "Bearer <client_key> or x-api-key: <client_key>",
-    description: "OpenAI-compatible Chat Completions API with streaming, prompt caching, failover routing, and token telemetry.",
+    description: "OpenAI-compatible Chat Completions API with streaming, prompt caching, failover routing, and token telemetry. Falls back to Anthropic-format upstreams when no OpenAI-compatible provider is available.",
   },
   {
     method: "POST",

@@ -686,36 +686,613 @@ export function createOpenAIToAnthropicStream(
 }
 
 /**
- * Pick a usable OpenAI model for an Anthropic request. Claude Code sends
- * `claude-*` model names, which usually do not exist on an OpenAI-compatible
- * upstream; in that case fall back to the provider's first enabled model.
+ * Pick a usable model from an upstream. When the requested model is not
+ * available (for example Claude Code's `claude-*` ids against an
+ * OpenAI-compatible provider) fall back to the provider's first enabled model.
  */
-export function resolveOpenAICompatModel(
- upstream: UpstreamKey,
- requestedModel: string
+export function resolveCompatModel(
+  upstream: UpstreamKey,
+  requestedModel: string
 ): string {
- const requested = (requestedModel || "").trim();
+  const requested = (requestedModel || "").trim();
 
- if (Boolean((upstream as any).followUpstream)) return requested;
+  if (Boolean((upstream as any).followUpstream)) return requested;
 
- const models = parseUpstreamModels((upstream as any).models).filter(
-  (model) => model.enabled
- );
+  const models = parseUpstreamModels((upstream as any).models).filter(
+    (model) => model.enabled
+  );
 
- if (models.length === 0) return requested;
+  if (models.length === 0) return requested;
 
- const target = requested.toLowerCase();
- const cleanTarget = target.includes("/")
-  ? target.split("/").slice(1).join("/")
-  : target;
+  const target = requested.toLowerCase();
+  const cleanTarget = target.includes("/")
+    ? target.split("/").slice(1).join("/")
+    : target;
 
- if (!cleanTarget || cleanTarget === "unknown") return models[0]!.id;
+  if (!cleanTarget || cleanTarget === "unknown") return models[0]!.id;
 
- const found = models.find((model) => {
-  const id = model.id.toLowerCase();
-  const cleanId = id.includes("/") ? id.split("/").slice(1).join("/") : id;
-  return id === target || id === cleanTarget || cleanId === cleanTarget;
+  const found = models.find((model) => {
+    const id = model.id.toLowerCase();
+    const cleanId = id.includes("/") ? id.split("/").slice(1).join("/") : id;
+    return id === target || id === cleanTarget || cleanId === cleanTarget;
+  });
+
+  return found ? found.id : models[0]!.id;
+}
+
+function openAIContentToText(content: any): string {
+ if (typeof content === "string") return content;
+ if (Array.isArray(content)) {
+  return content
+   .map((part: any) => {
+    if (typeof part === "string") return part;
+    if (typeof part?.text === "string") return part.text;
+    return "";
+   })
+   .filter((part) => part.length > 0)
+   .join("\n");
+ }
+ if (content == null) return "";
+ return typeof content === "object" ? JSON.stringify(content) : String(content);
+}
+
+function openAIImagePartToAnthropic(part: any): any | null {
+ const url = part?.image_url?.url || part?.image_url;
+ if (typeof url !== "string" || url.length === 0) return null;
+
+ const dataMatch = /^data:([^;]+);base64,(.*)$/s.exec(url);
+ if (dataMatch) {
+  return {
+   type: "image",
+   source: {
+    type: "base64",
+    media_type: dataMatch[1],
+    data: dataMatch[2],
+   },
+  };
+ }
+ return { type: "image", source: { type: "url", url } };
+}
+
+function openAIContentToAnthropicBlocks(content: any): any[] {
+ if (typeof content === "string") {
+  return content.length > 0 ? [{ type: "text", text: content }] : [];
+ }
+ if (!Array.isArray(content)) {
+  if (content == null) return [];
+  const text = openAIContentToText(content);
+  return text.length > 0 ? [{ type: "text", text }] : [];
+ }
+
+ const blocks: any[] = [];
+ for (const part of content) {
+  if (typeof part === "string") {
+   if (part.length > 0) blocks.push({ type: "text", text: part });
+   continue;
+  }
+  if (!part) continue;
+  if (part.type === "image_url") {
+   const image = openAIImagePartToAnthropic(part);
+   if (image) blocks.push(image);
+   continue;
+  }
+  if (typeof part.text === "string" && part.text.length > 0) {
+   blocks.push({ type: "text", text: part.text });
+  }
+ }
+ return blocks;
+}
+
+/**
+ * Convert an OpenAI Chat Completions request into an Anthropic Messages
+ * request. This is the inverse of `anthropicToOpenAI`.
+ */
+export function openAIToAnthropicRequest(body: any): any {
+ const source = body && typeof body === "object" ? body : {};
+ const result: any = { messages: [] };
+
+ if (typeof source.model === "string" && source.model.length > 0) {
+  result.model = source.model;
+ }
+
+ const systemParts: string[] = [];
+ const messages = Array.isArray(source.messages) ? source.messages : [];
+
+ for (const message of messages) {
+  if (!message) continue;
+
+  if (message.role === "system" || message.role === "developer") {
+   const text = openAIContentToText(message.content);
+   if (text.length > 0) systemParts.push(text);
+   continue;
+  }
+
+  if (message.role === "assistant") {
+   const blocks: any[] = [];
+   const text = openAIContentToText(message.content);
+   if (text.length > 0) blocks.push({ type: "text", text });
+
+   for (const call of Array.isArray(message.tool_calls) ? message.tool_calls : []) {
+    blocks.push({
+     type: "tool_use",
+     id: call?.id || `toolu_${crypto.randomUUID().replace(/-/g, "")}`,
+     name: call?.function?.name || "",
+     input: parseToolInput(call?.function?.arguments),
+    });
+   }
+
+   if (message.function_call) {
+    blocks.push({
+     type: "tool_use",
+     id: `toolu_${crypto.randomUUID().replace(/-/g, "")}`,
+     name: message.function_call.name || "",
+     input: parseToolInput(message.function_call.arguments),
+    });
+   }
+
+   if (blocks.length === 0) blocks.push({ type: "text", text: "" });
+   result.messages.push({ role: "assistant", content: blocks });
+   continue;
+  }
+
+  if (message.role === "tool") {
+   const block = {
+    type: "tool_result",
+    tool_use_id: message.tool_call_id || message.name || "call_default",
+    content: openAIContentToText(message.content),
+   };
+   const previous = result.messages[result.messages.length - 1];
+   if (
+    previous &&
+    previous.role === "user" &&
+    Array.isArray(previous.content) &&
+    previous.content.some((candidate: any) => candidate?.type === "tool_result")
+   ) {
+    previous.content.push(block);
+   } else {
+    result.messages.push({ role: "user", content: [block] });
+   }
+   continue;
+  }
+
+  const blocks = openAIContentToAnthropicBlocks(message.content);
+  result.messages.push({
+   role: "user",
+   content: blocks.length > 0 ? blocks : [{ type: "text", text: "" }],
+  });
+ }
+
+ if (systemParts.length > 0) result.system = systemParts.join("\n\n");
+
+ if (Array.isArray(source.tools) && source.tools.length > 0) {
+  const tools = source.tools
+   .map((tool: any) => {
+    if (!tool || tool.type !== "function" || !tool.function?.name) return null;
+    return {
+     name: tool.function.name,
+     description: tool.function.description || "",
+     input_schema:
+      tool.function.parameters || { type: "object", properties: {} },
+    };
+   })
+   .filter(Boolean);
+  if (tools.length > 0) result.tools = tools;
+ }
+
+ const toolChoice = source.tool_choice;
+ if (toolChoice !== undefined && toolChoice !== null) {
+  if (toolChoice === "auto") {
+   result.tool_choice = { type: "auto" };
+  } else if (toolChoice === "required") {
+   result.tool_choice = { type: "any" };
+    } else if (toolChoice === "none") {
+      delete result.tools;
+    } else if (
+   typeof toolChoice === "object" &&
+   toolChoice.type === "function" &&
+   toolChoice.function?.name
+  ) {
+   result.tool_choice = { type: "tool", name: toolChoice.function.name };
+  }
+
+  if (
+   source.parallel_tool_calls === false &&
+   result.tool_choice &&
+   typeof result.tool_choice === "object"
+  ) {
+   result.tool_choice.disable_parallel_tool_use = true;
+  }
+ }
+
+ const maxTokens = source.max_completion_tokens ?? source.max_tokens;
+ result.max_tokens = typeof maxTokens === "number" ? maxTokens : 4096;
+ if (typeof source.temperature === "number") {
+  result.temperature = source.temperature;
+ }
+ if (typeof source.top_p === "number") result.top_p = source.top_p;
+ if (typeof source.stop === "string") {
+  result.stop_sequences = [source.stop];
+ } else if (Array.isArray(source.stop)) {
+  result.stop_sequences = source.stop;
+ }
+ if (typeof source.stream === "boolean") result.stream = source.stream;
+ if (typeof source.user === "string" && source.user.length > 0) {
+  result.metadata = { user_id: source.user };
+ }
+
+ return result;
+}
+
+function mapAnthropicStopReason(reason: any, hasToolUse: boolean): string {
+ if (hasToolUse && reason !== "max_tokens") return "tool_calls";
+ switch (reason) {
+  case "max_tokens":
+   return "length";
+  case "tool_use":
+   return "tool_calls";
+  case "refusal":
+  case "content_filter":
+   return "content_filter";
+  case "end_turn":
+  case "stop_sequence":
+  case "pause_turn":
+  default:
+   return "stop";
+ }
+}
+
+function buildOpenAIUsage(usage: any): any {
+ const promptTokens = Number(usage?.input_tokens) || 0;
+ const completionTokens = Number(usage?.output_tokens) || 0;
+ const cachedTokens = Number(usage?.cache_read_input_tokens) || 0;
+
+ const payload: any = {
+  prompt_tokens: promptTokens,
+  completion_tokens: completionTokens,
+  total_tokens: promptTokens + completionTokens,
+ };
+ if (cachedTokens > 0) {
+  payload.prompt_tokens_details = { cached_tokens: cachedTokens };
+ }
+ return payload;
+}
+
+/**
+ * Convert a non-streaming Anthropic Messages response to OpenAI Chat
+ * Completions format.
+ */
+export function anthropicToOpenAIResponse(
+ data: any,
+ fallbackModel: string
+): any {
+ const content = Array.isArray(data?.content) ? data.content : [];
+ const textParts: string[] = [];
+ const toolCalls: any[] = [];
+
+ for (const block of content) {
+  if (!block) continue;
+  if (block.type === "text" && typeof block.text === "string") {
+   textParts.push(block.text);
+  } else if (block.type === "tool_use") {
+   toolCalls.push({
+    id: block.id || `call_${crypto.randomUUID().replace(/-/g, "")}`,
+    type: "function",
+    function: {
+     name: block.name || "",
+     arguments: JSON.stringify(block.input ?? {}),
+    },
+   });
+  }
+ }
+
+ const text = textParts.join("");
+ const message: any = { role: "assistant" };
+ message.content = text.length > 0 ? text : toolCalls.length > 0 ? null : "";
+ if (toolCalls.length > 0) message.tool_calls = toolCalls;
+
+ return {
+  id: data?.id
+   ? String(data.id).replace(/^msg_/, "chatcmpl-")
+   : `chatcmpl-${crypto.randomUUID().replace(/-/g, "")}`,
+  object: "chat.completion",
+  created: Math.floor(Date.now() / 1000),
+  model: data?.model || fallbackModel,
+  choices: [
+   {
+    index: 0,
+    message,
+    finish_reason: mapAnthropicStopReason(
+     data?.stop_reason,
+     toolCalls.length > 0
+    ),
+    logprobs: null,
+   },
+  ],
+  usage: buildOpenAIUsage(data?.usage),
+ };
+}
+
+/**
+ * Serialize a completed Anthropic message into an OpenAI Chat Completions SSE
+ * stream. Used when the client asked for a stream but the upstream answered
+ * with a regular JSON payload.
+ */
+export function anthropicMessageToOpenAISSE(message: any): string {
+ const textParts: string[] = [];
+ const toolCalls: any[] = [];
+ for (const block of Array.isArray(message?.content) ? message.content : []) {
+  if (!block) continue;
+  if (block.type === "text" && typeof block.text === "string") {
+   textParts.push(block.text);
+  } else if (block.type === "tool_use") {
+   toolCalls.push({
+    id: block.id || `call_${crypto.randomUUID().replace(/-/g, "")}`,
+    type: "function",
+    function: {
+     name: block.name || "",
+     arguments: JSON.stringify(block.input ?? {}),
+    },
+   });
+  }
+ }
+
+ const id = message?.id
+  ? String(message.id).replace(/^msg_/, "chatcmpl-")
+  : `chatcmpl-${crypto.randomUUID().replace(/-/g, "")}`;
+ const created = Math.floor(Date.now() / 1000);
+ const model = message?.model || "";
+ const chunks: string[] = [];
+ const push = (delta: any, finishReason: any, usage?: any) => {
+  const payload: any = {
+   id,
+   object: "chat.completion.chunk",
+   created,
+   model,
+   choices: [{ index: 0, delta, finish_reason: finishReason }],
+  };
+  if (usage) payload.usage = usage;
+  chunks.push(`data: ${JSON.stringify(payload)}\n\n`);
+ };
+
+ push({ role: "assistant" }, null);
+ const text = textParts.join("");
+ if (text.length > 0) push({ content: text }, null);
+ toolCalls.forEach((call, index) => {
+  push(
+   {
+    tool_calls: [
+     {
+      index,
+      id: call.id,
+      type: "function",
+      function: {
+       name: call.function.name,
+       arguments: call.function.arguments,
+      },
+     },
+    ],
+   },
+   null
+  );
  });
+ push(
+  {},
+  mapAnthropicStopReason(message?.stop_reason, toolCalls.length > 0),
+  buildOpenAIUsage(message?.usage)
+ );
+ chunks.push("data: [DONE]\n\n");
 
- return found ? found.id : models[0]!.id;
+ return chunks.join("");
+}
+
+/**
+ * Convert an Anthropic Messages SSE stream into an OpenAI Chat Completions
+ * SSE stream, including streaming tool calls.
+ */
+export function createAnthropicToOpenAIStream(
+ fallbackModel: string
+): TransformStream<Uint8Array, Uint8Array> {
+ const encoder = new TextEncoder();
+ const decoder = new TextDecoder();
+
+ let buffer = "";
+ let currentEvent = "";
+ let started = false;
+ let finalized = false;
+ let model = fallbackModel;
+ let messageId = `chatcmpl-${crypto.randomUUID().replace(/-/g, "")}`;
+ const created = Math.floor(Date.now() / 1000);
+ let stopReason: any = null;
+ let usage: any = {};
+ let nextToolIndex = 0;
+ const toolBlocks = new Map<
+  number,
+  { toolIndex: number; id: string; name: string }
+ >();
+
+ const emitPayload = (
+  controller: TransformStreamDefaultController<Uint8Array>,
+  payload: any
+ ) => {
+  controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+ };
+
+ const emitChunk = (
+  controller: TransformStreamDefaultController<Uint8Array>,
+  delta: any,
+  finishReason: any,
+  includeUsage = false
+ ) => {
+  const payload: any = {
+   id: messageId,
+   object: "chat.completion.chunk",
+   created,
+   model,
+   choices: [{ index: 0, delta, finish_reason: finishReason }],
+  };
+  if (includeUsage) payload.usage = buildOpenAIUsage(usage);
+  emitPayload(controller, payload);
+ };
+
+ const ensureStarted = (
+  controller: TransformStreamDefaultController<Uint8Array>
+ ) => {
+  if (started) return;
+  started = true;
+  emitChunk(controller, { role: "assistant" }, null);
+ };
+
+ const finalize = (
+  controller: TransformStreamDefaultController<Uint8Array>
+ ) => {
+  if (finalized) return;
+  finalized = true;
+  ensureStarted(controller);
+  const finishReason = mapAnthropicStopReason(
+   stopReason,
+   toolBlocks.size > 0
+  );
+  emitChunk(controller, {}, finishReason, true);
+  controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+ };
+
+ const processEvent = (
+  eventName: string,
+  dataStr: string,
+  controller: TransformStreamDefaultController<Uint8Array>
+ ) => {
+  if (!dataStr) return;
+
+  let parsed: any;
+  try {
+   parsed = JSON.parse(dataStr);
+  } catch (e) {
+   return;
+  }
+
+  const type = eventName || parsed?.type || "";
+
+  if (type === "error" || parsed?.type === "error") {
+   if (finalized) return;
+   finalized = true;
+   emitPayload(controller, {
+    error: {
+     message:
+      parsed?.error?.message ||
+      (typeof parsed?.error === "string" ? parsed.error : "Upstream error"),
+     type: "api_error",
+    },
+   });
+   controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+   return;
+  }
+
+  if (type === "ping") return;
+
+  if (type === "message_start") {
+   const message = parsed?.message || {};
+   if (message.id) {
+    messageId = String(message.id).replace(/^msg_/, "chatcmpl-");
+   }
+   if (message.model) model = message.model;
+   if (message.usage) usage = { ...usage, ...message.usage };
+   ensureStarted(controller);
+   return;
+  }
+
+  ensureStarted(controller);
+
+  if (type === "content_block_start") {
+   const block = parsed?.content_block || {};
+   const blockIndex = typeof parsed?.index === "number" ? parsed.index : 0;
+   if (block.type === "tool_use") {
+    const toolIndex = nextToolIndex++;
+    toolBlocks.set(blockIndex, {
+     toolIndex,
+     id: block.id || `call_${crypto.randomUUID().replace(/-/g, "")}`,
+     name: block.name || "",
+    });
+    emitChunk(
+     controller,
+     {
+      tool_calls: [
+       {
+        index: toolIndex,
+        id: block.id || `call_${crypto.randomUUID().replace(/-/g, "")}`,
+        type: "function",
+        function: { name: block.name || "", arguments: "" },
+       },
+      ],
+     },
+     null
+    );
+   }
+   return;
+  }
+
+  if (type === "content_block_delta") {
+   const delta = parsed?.delta || {};
+   if (delta.type === "text_delta" && typeof delta.text === "string" && delta.text.length > 0) {
+    emitChunk(controller, { content: delta.text }, null);
+   } else if (
+    delta.type === "input_json_delta" &&
+    typeof delta.partial_json === "string" &&
+    delta.partial_json.length > 0
+   ) {
+    const blockIndex = typeof parsed?.index === "number" ? parsed.index : 0;
+    const toolIndex = toolBlocks.get(blockIndex)?.toolIndex ?? 0;
+    emitChunk(
+     controller,
+     {
+      tool_calls: [
+       { index: toolIndex, function: { arguments: delta.partial_json } },
+      ],
+     },
+     null
+    );
+   }
+   return;
+  }
+
+  if (type === "message_delta") {
+   if (parsed?.delta?.stop_reason) stopReason = parsed.delta.stop_reason;
+   if (parsed?.usage) usage = { ...usage, ...parsed.usage };
+   return;
+  }
+
+  if (type === "message_stop") {
+   finalize(controller);
+  }
+ };
+
+ return new TransformStream<Uint8Array, Uint8Array>({
+  transform(chunk, controller) {
+   if (finalized) return;
+   buffer += decoder.decode(chunk, { stream: true });
+
+   const lines = buffer.split("\n");
+   buffer = lines.pop() || "";
+
+   for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith("event:")) {
+     currentEvent = trimmed.slice(6).trim();
+     continue;
+    }
+    if (!trimmed.startsWith("data:")) continue;
+    processEvent(currentEvent, trimmed.slice(5).trim(), controller);
+    currentEvent = "";
+   }
+  },
+  flush(controller) {
+   if (buffer.trim().length > 0) {
+    const trimmed = buffer.trim();
+    if (trimmed.startsWith("data:")) {
+     processEvent(currentEvent, trimmed.slice(5).trim(), controller);
+    }
+   }
+   finalize(controller);
+  },
+ });
 }

@@ -303,7 +303,8 @@ export function selectUpstreamCandidates(
   provider: "openai" | "anthropic",
   requestedModel?: string,
   clientKey?: { id: string; name: string; allowedProviders?: string | null; roundRobinProviders?: number } | null,
-  maxProviders = 3
+  maxProviders = 3,
+  options?: { preview?: boolean }
 ): UpstreamCandidatesResult {
   const allActive = getActiveUpstreamKeys(provider);
   if (!allActive || allActive.length === 0) {
@@ -410,11 +411,13 @@ export function selectUpstreamCandidates(
     const sorted = [...eligibleKeys].sort((a, b) => (b.weight || 1) - (a.weight || 1));
     primary = sorted[0];
   } else {
-    // Round-robin ON: rotate across the providers having this exact same model!
-    const rotationKey = `${clientKey?.id || "global"}:${provider}:${target || "any"}`;
-    const currentIndex = (providerModelRotationIndex[rotationKey] || 0) % eligibleKeys.length;
-    providerModelRotationIndex[rotationKey] = (currentIndex + 1) % eligibleKeys.length;
-    primary = eligibleKeys[currentIndex];
+ // Round-robin ON: rotate across the providers having this exact same model!
+ const rotationKey = `${clientKey?.id || "global"}:${provider}:${target || "any"}`;
+ const currentIndex = (providerModelRotationIndex[rotationKey] || 0) % eligibleKeys.length;
+ if (!options?.preview) {
+   providerModelRotationIndex[rotationKey] = (currentIndex + 1) % eligibleKeys.length;
+ }
+ primary = eligibleKeys[currentIndex];
   }
   if (!primary) primary = eligibleKeys[0];
 

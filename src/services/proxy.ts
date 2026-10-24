@@ -41,8 +41,12 @@ import {
   openAIToAnthropic,
   anthropicMessageToSSE,
   createOpenAIToAnthropicStream,
+  openAIToAnthropicRequest,
+  anthropicToOpenAIResponse,
+  anthropicMessageToOpenAISSE,
+  createAnthropicToOpenAIStream,
   estimateInputTokens,
-  resolveOpenAICompatModel,
+  resolveCompatModel,
 } from "./anthropic-compat";
 
 type CancellableTransformer<I, O> = Transformer<I, O> & {
@@ -107,7 +111,223 @@ function buildFailoverKeyCandidates(
   return candidates.slice(0, maxAttempts);
 }
 
+async function adaptAnthropicResponseToOpenAI(
+ response: Response,
+ targetModel: string,
+ wantsStream: boolean
+): Promise<Response> {
+ const responseHeaders = new Headers();
+ const cacheStatus = response.headers.get("X-Cache-Status");
+ if (cacheStatus) responseHeaders.set("X-Cache-Status", cacheStatus);
+
+ if (!response.ok) {
+  const errorText = await response.text();
+  let message = errorText;
+  let errorType = "api_error";
+
+  try {
+   const parsed = JSON.parse(errorText);
+   message = parsed?.error?.message || parsed?.message || errorText;
+   if (parsed?.error?.type === "authentication_error") {
+    errorType = "authentication_error";
+   } else if (parsed?.error?.type === "rate_limit_error") {
+    errorType = "rate_limit_error";
+   } else if (parsed?.error?.type === "invalid_request_error") {
+    errorType = "invalid_request_error";
+   }
+  } catch (e) {
+   // Keep raw error text
+  }
+
+  if (response.status === 401 || response.status === 403) {
+   errorType = "authentication_error";
+  } else if (response.status === 429) {
+   errorType = "rate_limit_error";
+  } else if (response.status >= 400 && response.status < 500) {
+   errorType = "invalid_request_error";
+  }
+
+  responseHeaders.set("Content-Type", "application/json");
+  return new Response(
+   JSON.stringify({ error: { message, type: errorType, code: "upstream_error" } }),
+   { status: response.status, headers: responseHeaders }
+  );
+ }
+
+ const contentType = response.headers.get("content-type") || "";
+
+ if (contentType.includes("text/event-stream")) {
+  if (!response.body) {
+   responseHeaders.set("Content-Type", "application/json");
+   return new Response(
+    JSON.stringify({
+     error: { message: "Empty upstream stream", type: "api_error" },
+    }),
+    { status: 502, headers: responseHeaders }
+   );
+  }
+
+  responseHeaders.set("Content-Type", "text/event-stream");
+  responseHeaders.set("Cache-Control", "no-cache");
+  responseHeaders.set("Connection", "keep-alive");
+  responseHeaders.set("X-Accel-Buffering", "no");
+
+  return new Response(
+   response.body.pipeThrough(createAnthropicToOpenAIStream(targetModel)),
+   { status: response.status, headers: responseHeaders }
+  );
+ }
+
+ const data = await response.json();
+
+ if (wantsStream) {
+  responseHeaders.set("Content-Type", "text/event-stream");
+  responseHeaders.set("Cache-Control", "no-cache");
+  responseHeaders.set("Connection", "keep-alive");
+  responseHeaders.set("X-Accel-Buffering", "no");
+  return new Response(anthropicMessageToOpenAISSE(data), {
+   status: response.status,
+   headers: responseHeaders,
+  });
+ }
+
+ responseHeaders.set("Content-Type", "application/json");
+ return new Response(
+  JSON.stringify(anthropicToOpenAIResponse(data, targetModel)),
+  { status: response.status, headers: responseHeaders }
+ );
+}
+
+// Bridge OpenAI Chat Completions to Anthropic-format upstreams when no
+// OpenAI-compatible provider is available for the requested model.
+async function proxyOpenAIChatCompletionsViaAnthropic(
+ reqHeaders: Headers,
+ body: any,
+ clientKey: ClientKey | null,
+ clientSignal?: AbortSignal
+): Promise<Response | null> {
+ const requestedModel =
+  (body && typeof body === "object" ? body.model : "") || "unknown";
+
+ const directSelection = selectUpstreamCandidates(
+  "anthropic",
+  requestedModel,
+  clientKey,
+  FAILOVER_MAX_PROVIDERS,
+  { preview: true }
+ );
+ let candidates = filterSelfReferencingUpstreams(
+  directSelection.upstreams,
+  reqHeaders
+ ).upstreams;
+ let targetModel = requestedModel;
+
+ if (candidates.length === 0) {
+ const relaxedSelection = selectUpstreamCandidates(
+  "anthropic",
+  undefined,
+  clientKey,
+  FAILOVER_MAX_PROVIDERS,
+  { preview: true }
+ );
+  candidates = filterSelfReferencingUpstreams(
+   relaxedSelection.upstreams,
+   reqHeaders
+  ).upstreams;
+
+  if (candidates.length === 0) return null;
+
+  targetModel = resolveCompatModel(candidates[0]!, requestedModel) || requestedModel;
+ }
+
+ const anthropicBody = openAIToAnthropicRequest(body);
+ anthropicBody.model = targetModel;
+
+ const wantsStream = Boolean(anthropicBody.stream);
+ const upstreamResponse = await proxyAnthropicMessagesDirect(
+  reqHeaders,
+  anthropicBody,
+  clientKey,
+  clientSignal,
+  { skipCache: true }
+ );
+
+ return adaptAnthropicResponseToOpenAI(
+  upstreamResponse,
+  targetModel,
+  wantsStream
+ );
+}
+
 export async function proxyOpenAIChatCompletions(
+ reqHeaders: Headers,
+ body: any,
+ clientKey: ClientKey | null,
+ clientSignal?: AbortSignal,
+ options?: { skipCache?: boolean; skipCrossFallback?: boolean }
+): Promise<Response> {
+ const requestedModel =
+  (body && typeof body === "object" ? body.model : "") || "unknown";
+ const selection = selectUpstreamCandidates(
+  "openai",
+  requestedModel,
+  clientKey,
+  FAILOVER_MAX_PROVIDERS,
+  { preview: true }
+ );
+ const { upstreams } = filterSelfReferencingUpstreams(
+  selection.upstreams,
+  reqHeaders
+ );
+
+ if (upstreams.length === 0) {
+  if (!options?.skipCrossFallback) {
+   const bridged = await proxyOpenAIChatCompletionsViaAnthropic(
+    reqHeaders,
+    body,
+    clientKey,
+    clientSignal
+   );
+   if (bridged) return bridged;
+  }
+  return proxyOpenAIChatCompletionsDirect(
+   reqHeaders,
+   body,
+   clientKey,
+   clientSignal,
+   { skipCache: options?.skipCache }
+  );
+ }
+
+ const nativeResponse = await proxyOpenAIChatCompletionsDirect(
+  reqHeaders,
+  body,
+  clientKey,
+  clientSignal,
+  { skipCache: options?.skipCache }
+ );
+
+ if (options?.skipCrossFallback || !isRetryableStatus(nativeResponse.status)) {
+  return nativeResponse;
+ }
+
+ const bridged = await proxyOpenAIChatCompletionsViaAnthropic(
+  reqHeaders,
+  body,
+  clientKey,
+  clientSignal
+ );
+ if (!bridged) return nativeResponse;
+
+ try {
+  await nativeResponse.body?.cancel();
+ } catch (e) {
+  // Ignore body cancellation failure
+ }
+ return bridged;
+}
+
+async function proxyOpenAIChatCompletionsDirect(
   reqHeaders: Headers,
   body: any,
   clientKey: ClientKey | null,
@@ -943,7 +1163,8 @@ async function proxyAnthropicMessagesViaOpenAI(
   "openai",
   requestedModel,
   clientKey,
-  FAILOVER_MAX_PROVIDERS
+  FAILOVER_MAX_PROVIDERS,
+  { preview: true }
  );
  let candidates = filterSelfReferencingUpstreams(
   directSelection.upstreams,
@@ -955,12 +1176,13 @@ async function proxyAnthropicMessagesViaOpenAI(
   // Claude Code sends claude-* model ids that typically do not exist on an
   // OpenAI-compatible provider. Retry without the model filter and map the
   // request to the provider's first enabled model.
-  const relaxedSelection = selectUpstreamCandidates(
-   "openai",
-   undefined,
-   clientKey,
-   FAILOVER_MAX_PROVIDERS
-  );
+ const relaxedSelection = selectUpstreamCandidates(
+  "openai",
+  undefined,
+  clientKey,
+  FAILOVER_MAX_PROVIDERS,
+  { preview: true }
+ );
   candidates = filterSelfReferencingUpstreams(
    relaxedSelection.upstreams,
    reqHeaders
@@ -968,8 +1190,8 @@ async function proxyAnthropicMessagesViaOpenAI(
 
   if (candidates.length === 0) return null;
 
-  targetModel =
-   resolveOpenAICompatModel(candidates[0]!, requestedModel) || requestedModel;
+    targetModel =
+      resolveCompatModel(candidates[0]!, requestedModel) || requestedModel;
  }
 
  const openAIBody = anthropicToOpenAI(body);
@@ -980,11 +1202,11 @@ async function proxyAnthropicMessagesViaOpenAI(
 
  const upstreamResponse = await proxyOpenAIChatCompletions(
   reqHeaders,
-  openAIBody,
-  clientKey,
-  clientSignal,
-  { skipCache: true }
- );
+    openAIBody,
+    clientKey,
+    clientSignal,
+    { skipCache: true, skipCrossFallback: true }
+  );
 
  return adaptOpenAIResponseToAnthropic(
   upstreamResponse,
@@ -1007,43 +1229,62 @@ export async function proxyAnthropicMessages(
   "anthropic",
   requestedModel,
   clientKey,
-  FAILOVER_MAX_PROVIDERS
+  FAILOVER_MAX_PROVIDERS,
+  { preview: true }
  );
  const { upstreams } = filterSelfReferencingUpstreams(
   selection.upstreams,
   reqHeaders
  );
 
- if (upstreams.length > 0) {
-  return proxyAnthropicMessagesDirect(
-   reqHeaders,
-   body,
-   clientKey,
-   clientSignal
+  if (upstreams.length === 0) {
+    const compatResponse = await proxyAnthropicMessagesViaOpenAI(
+      reqHeaders,
+      body,
+      clientKey,
+      clientSignal
+    );
+    if (compatResponse) return compatResponse;
+
+    return proxyAnthropicMessagesDirect(
+      reqHeaders,
+      body,
+      clientKey,
+      clientSignal
+    );
+  }
+
+  const nativeResponse = await proxyAnthropicMessagesDirect(
+    reqHeaders,
+    body,
+    clientKey,
+    clientSignal
   );
- }
 
- const compatResponse = await proxyAnthropicMessagesViaOpenAI(
-  reqHeaders,
-  body,
-  clientKey,
-  clientSignal
- );
- if (compatResponse) return compatResponse;
+  if (!isRetryableStatus(nativeResponse.status)) return nativeResponse;
 
- return proxyAnthropicMessagesDirect(
-  reqHeaders,
-  body,
-  clientKey,
-  clientSignal
- );
+  const compatResponse = await proxyAnthropicMessagesViaOpenAI(
+    reqHeaders,
+    body,
+    clientKey,
+    clientSignal
+  );
+  if (!compatResponse) return nativeResponse;
+
+  try {
+    await nativeResponse.body?.cancel();
+  } catch (e) {
+    // Ignore body cancellation failure
+  }
+  return compatResponse;
 }
 
 async function proxyAnthropicMessagesDirect(
   reqHeaders: Headers,
   body: any,
   clientKey: ClientKey | null,
-  clientSignal?: AbortSignal
+  clientSignal?: AbortSignal,
+  options?: { skipCache?: boolean }
 ): Promise<Response> {
   const startTime = performance.now();
   const requestedModel = (body && typeof body === "object" ? body.model : "") || "unknown";
@@ -1149,9 +1390,9 @@ if (upstreamCandidates.length === 0) {
 
   // Check Exact Response Cache for Anthropic
   let cacheKey = "";
-  if (opt.cacheEnabled) {
-    try {
-      cacheKey = await computeCacheKey("anthropic", model, {
+if (opt.cacheEnabled && !options?.skipCache) {
+  try {
+    cacheKey = await computeCacheKey("anthropic", model, {
         system: optimizedBody.system,
         messages: optimizedBody.messages,
       });
@@ -1456,7 +1697,7 @@ if (!responseResolved) {
       incrementClientKeyTokens(clientKey.id, totalTokens);
     }
 
-    if (opt.cacheEnabled && cacheKey) {
+    if (opt.cacheEnabled && cacheKey && !options?.skipCache) {
       setCachedResponse(
         cacheKey,
         "anthropic",
