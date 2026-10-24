@@ -7,6 +7,7 @@ import {
   proxyOpenAIModels,
 } from "../services/proxy";
 import { checkHttpsRequirement } from "../services/optimizer";
+import { estimateInputTokens } from "../services/anthropic-compat";
 
 const MOTIVATIONAL_QUOTES = [
   { quote: "Talk is cheap. Show me the code.", author: "Linus Torvalds" },
@@ -69,7 +70,13 @@ const AVAILABLE_ENDPOINTS = [
     method: "POST",
     path: "/v1/messages",
     auth: "x-api-key: <client_key> or Bearer <client_key>",
-    description: "Anthropic-compatible Messages API with full streaming and thinking protocol support.",
+    description: "Anthropic-compatible Messages API with full streaming and thinking protocol support. Falls back to OpenAI-compatible upstreams when no Anthropic provider is available.",
+  },
+  {
+    method: "POST",
+    path: "/v1/messages/count_tokens",
+    auth: "x-api-key: <client_key> or Bearer <client_key>",
+    description: "Estimate input tokens for an Anthropic Messages payload (used by Claude Code).",
   },
  {
  method: "GET",
@@ -315,5 +322,50 @@ export const proxyRoutes = new Elysia()
       };
     }
 
-    return proxyAnthropicMessages(request.headers, body, clientKey, request.signal);
-  });
+  return proxyAnthropicMessages(request.headers, body, clientKey, request.signal);
+})
+// Anthropic token counting (Claude Code compatibility)
+.post("/v1/messages/count_tokens", async ({ request, set }) => {
+  const authHeader = request.headers.get("Authorization");
+  const xApiKey = request.headers.get("x-api-key");
+  const key = xApiKey?.trim() || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null);
+
+  const clientKey = await validateClientKey(key || "bb-default");
+  if (!clientKey) {
+    if (!key) {
+      set.status = 401;
+      return {
+        type: "error",
+        error: {
+          type: "authentication_error",
+          message:
+            "Missing API key. Pass your Neko-Router key via 'x-api-key: <key>' or 'Authorization: Bearer <key>'.",
+        },
+      };
+    }
+    set.status = 401;
+    return {
+      type: "error",
+      error: {
+        type: "authentication_error",
+        message: "Invalid or inactive Neko-Router API key.",
+      },
+    };
+  }
+
+  let body: any;
+  try {
+    body = await request.json();
+  } catch (e) {
+    set.status = 400;
+    return {
+      type: "error",
+      error: {
+        type: "invalid_request_error",
+        message: "Malformed JSON payload in request body",
+      },
+    };
+  }
+
+  return { input_tokens: estimateInputTokens(body) };
+});
