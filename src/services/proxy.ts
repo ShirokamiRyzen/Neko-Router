@@ -240,7 +240,10 @@ async function proxyOpenAIChatCompletionsViaAnthropic(
   targetModel = resolveCompatModel(candidates[0]!, requestedModel) || requestedModel;
  }
 
- const anthropicBody = openAIToAnthropicRequest(body);
+ const anthropicBody = openAIToAnthropicRequest({
+  ...(body && typeof body === "object" ? body : {}),
+  model: targetModel,
+ });
  anthropicBody.model = targetModel;
 
  const wantsStream = Boolean(anthropicBody.stream);
@@ -1194,7 +1197,10 @@ async function proxyAnthropicMessagesViaOpenAI(
       resolveCompatModel(candidates[0]!, requestedModel) || requestedModel;
  }
 
- const openAIBody = anthropicToOpenAI(body);
+ const openAIBody = anthropicToOpenAI({
+  ...(body && typeof body === "object" ? body : {}),
+  model: targetModel,
+ });
  openAIBody.model = targetModel;
 
  const estimatedInputTokens = estimateInputTokens(body);

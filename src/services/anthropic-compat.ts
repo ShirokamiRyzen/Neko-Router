@@ -66,6 +66,63 @@ function imageBlockToOpenAI(block: any): any | null {
  return null;
 }
 
+function decodeBase64Text(data: string): string | null {
+ try {
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+   bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder("utf-8").decode(bytes);
+ } catch (e) {
+  return null;
+ }
+}
+
+function documentBlockToOpenAI(block: any): any | null {
+ const source = block?.source;
+ if (!source) return null;
+ const filename = block?.title || block?.filename || "document";
+
+ if (source.type === "text" && typeof source.data === "string") {
+  return { type: "text", text: source.data };
+ }
+
+ if (source.type === "content") {
+  const text = blockTextToPlain(source.content);
+  return text.length > 0 ? { type: "text", text } : null;
+ }
+
+ if (source.type === "base64" && typeof source.data === "string") {
+  const mediaType = source.media_type || "application/pdf";
+  if (
+   mediaType.startsWith("text/") ||
+   mediaType === "application/json" ||
+   mediaType === "application/xml"
+  ) {
+   const text = decodeBase64Text(source.data);
+   if (text !== null) return { type: "text", text };
+  }
+  return {
+   type: "file",
+   file: {
+    filename,
+    file_data: `data:${mediaType};base64,${source.data}`,
+   },
+  };
+ }
+
+ if (source.type === "url" && typeof source.url === "string") {
+  return { type: "file", file: { filename, file_url: source.url } };
+ }
+
+ if (source.type === "file" && typeof source.file_id === "string") {
+  return { type: "file", file: { filename, file_id: source.file_id } };
+ }
+
+ return null;
+}
+
 function convertTools(tools: any): any[] | undefined {
  if (!Array.isArray(tools) || tools.length === 0) return undefined;
  const converted = tools
@@ -172,6 +229,11 @@ export function anthropicToOpenAI(body: any): any {
     } else if (block.type === "image") {
      const imagePart = imageBlockToOpenAI(block);
      if (imagePart) userParts.push(imagePart);
+    } else if (block.type === "document") {
+     const documentPart = documentBlockToOpenAI(block);
+     if (documentPart) {
+      userParts.push(documentPart);
+     }
     } else if (typeof block.text === "string") {
      textParts.push(block.text);
     }
@@ -209,13 +271,49 @@ export function anthropicToOpenAI(body: any): any {
  const toolChoice = convertToolChoice(source.tool_choice);
  if (toolChoice !== undefined) converted.tool_choice = toolChoice;
 
+ if (
+  source.tool_choice &&
+  typeof source.tool_choice === "object" &&
+  source.tool_choice.disable_parallel_tool_use === true
+ ) {
+  converted.parallel_tool_calls = false;
+ }
+
  if (typeof source.max_tokens === "number") converted.max_tokens = source.max_tokens;
  if (typeof source.temperature === "number") converted.temperature = source.temperature;
  if (typeof source.top_p === "number") converted.top_p = source.top_p;
+ if (typeof source.top_k === "number") converted.top_k = source.top_k;
  if (Array.isArray(source.stop_sequences) && source.stop_sequences.length > 0) {
   converted.stop = source.stop_sequences;
  }
  if (typeof source.stream === "boolean") converted.stream = source.stream;
+ if (typeof source.service_tier === "string") {
+  converted.service_tier =
+   source.service_tier === "standard_only" ? "default" : source.service_tier;
+ }
+
+ if (
+  source.thinking &&
+  typeof source.thinking === "object" &&
+  source.thinking.type === "enabled"
+ ) {
+  const modelName = String(source.model || "").toLowerCase();
+  const reasoningCapable =
+   /o1|o3|o4|gpt-5|deepseek|reason|thinking|qwq|r1/.test(modelName);
+  if (reasoningCapable) {
+   const budget = Number(source.thinking.budget_tokens) || 0;
+   converted.reasoning_effort =
+    budget >= 8192 ? "high" : budget >= 4096 ? "medium" : "low";
+  }
+ }
+
+ if (
+  source.metadata &&
+  typeof source.metadata === "object" &&
+  typeof source.metadata.user_id === "string"
+ ) {
+  converted.user = source.metadata.user_id;
+ }
  if (converted.stream) {
   converted.stream_options = { include_usage: true };
  }
@@ -292,6 +390,23 @@ export function openAIToAnthropic(data: any, fallbackModel: string): any {
    name: call?.function?.name || "",
    input: parseToolInput(call?.function?.arguments),
   });
+ }
+
+ if (message.function_call) {
+  content.push({
+   type: "tool_use",
+   id: `toolu_${crypto.randomUUID().replace(/-/g, "")}`,
+   name: message.function_call.name || "",
+   input: parseToolInput(message.function_call.arguments),
+  });
+ }
+
+ if (
+  !content.some((block) => block.type === "text") &&
+  typeof message.refusal === "string" &&
+  message.refusal.length > 0
+ ) {
+  content.push({ type: "text", text: message.refusal });
  }
 
  const hasToolUse = content.some((block) => block.type === "tool_use");
@@ -603,15 +718,21 @@ export function createOpenAIToAnthropicStream(
 
   const delta = choice.delta || choice.message || {};
 
-  if (typeof delta.content === "string" && delta.content.length > 0) {
-   outputChars += delta.content.length;
-   startTextBlock(controller);
-   emit(controller, "content_block_delta", {
-    type: "content_block_delta",
-    index: textBlockIndex,
-    delta: { type: "text_delta", text: delta.content },
-   });
-  }
+ const textDelta =
+  typeof delta.content === "string"
+   ? delta.content
+   : typeof delta.refusal === "string"
+    ? delta.refusal
+    : "";
+ if (textDelta.length > 0) {
+  outputChars += textDelta.length;
+  startTextBlock(controller);
+  emit(controller, "content_block_delta", {
+   type: "content_block_delta",
+   index: textBlockIndex,
+   delta: { type: "text_delta", text: textDelta },
+  });
+ }
 
   if (Array.isArray(delta.tool_calls) && delta.tool_calls.length > 0) {
    handleToolCalls(delta.tool_calls, controller);
@@ -754,6 +875,58 @@ function openAIImagePartToAnthropic(part: any): any | null {
  return { type: "image", source: { type: "url", url } };
 }
 
+function openAIFilePartToAnthropic(part: any): any | null {
+ const file = part?.file || part;
+ if (!file) return null;
+ const title = file.filename || part?.filename || "document";
+ const fileData = file.file_data || file.data || file.file_url;
+
+ if (typeof fileData === "string" && fileData.length > 0) {
+  const dataMatch = /^data:([^;]+);base64,(.*)$/s.exec(fileData);
+  if (dataMatch) {
+   return {
+    type: "document",
+    source: {
+     type: "base64",
+     media_type: dataMatch[1],
+     data: dataMatch[2],
+    },
+    title,
+   };
+  }
+  if (/^https?:\/\//i.test(fileData)) {
+   return { type: "document", source: { type: "url", url: fileData }, title };
+  }
+  return {
+   type: "document",
+   source: { type: "text", media_type: "text/plain", data: fileData },
+   title,
+  };
+ }
+
+ if (typeof file.text === "string") {
+  return {
+   type: "document",
+   source: { type: "text", media_type: "text/plain", data: file.text },
+   title,
+  };
+ }
+
+ if (typeof file.file_id === "string") {
+  return {
+   type: "document",
+   source: { type: "file", file_id: file.file_id },
+   title,
+  };
+ }
+
+ if (typeof part?.text === "string") {
+  return { type: "text", text: part.text };
+ }
+
+ return null;
+}
+
 function openAIContentToAnthropicBlocks(content: any): any[] {
  if (typeof content === "string") {
   return content.length > 0 ? [{ type: "text", text: content }] : [];
@@ -771,9 +944,14 @@ function openAIContentToAnthropicBlocks(content: any): any[] {
    continue;
   }
   if (!part) continue;
-  if (part.type === "image_url") {
+  if (part.type === "image_url" || part.type === "input_image") {
    const image = openAIImagePartToAnthropic(part);
    if (image) blocks.push(image);
+   continue;
+  }
+  if (part.type === "file" || part.type === "input_file") {
+   const document = openAIFilePartToAnthropic(part);
+   if (document) blocks.push(document);
    continue;
   }
   if (typeof part.text === "string" && part.text.length > 0) {
@@ -862,7 +1040,35 @@ export function openAIToAnthropicRequest(body: any): any {
   });
  }
 
- if (systemParts.length > 0) result.system = systemParts.join("\n\n");
+ const responseFormat = source.response_format;
+ if (responseFormat && typeof responseFormat === "object") {
+  if (responseFormat.type === "json_object") {
+   systemParts.push(
+    "Respond with a valid JSON object only. Do not include markdown fences or any explanatory text."
+   );
+  } else if (responseFormat.type === "json_schema") {
+   const schema = responseFormat.json_schema;
+   const schemaName = schema?.name || "response";
+   systemParts.push(
+    `Respond with a valid JSON object matching the following schema (${schemaName}). Do not include markdown fences or any explanatory text.\n${JSON.stringify(
+     schema?.schema ?? schema
+    )}`
+   );
+  }
+ }
+
+ const enablePromptCaching = /claude/i.test(String(result.model || ""));
+
+ if (systemParts.length > 0) {
+  const systemBlock: any = {
+   type: "text",
+   text: systemParts.join("\n\n"),
+  };
+  if (enablePromptCaching) {
+   systemBlock.cache_control = { type: "ephemeral" };
+  }
+  result.system = [systemBlock];
+ }
 
  if (Array.isArray(source.tools) && source.tools.length > 0) {
   const tools = source.tools
@@ -876,7 +1082,27 @@ export function openAIToAnthropicRequest(body: any): any {
     };
    })
    .filter(Boolean);
-  if (tools.length > 0) result.tools = tools;
+  if (tools.length > 0) {
+   if (enablePromptCaching) {
+    const lastTool: any = tools[tools.length - 1];
+    if (lastTool) lastTool.cache_control = { type: "ephemeral" };
+   }
+   result.tools = tools;
+  }
+ }
+
+ if (enablePromptCaching) {
+  const lastMessage = result.messages[result.messages.length - 1];
+  if (
+   lastMessage &&
+   Array.isArray(lastMessage.content) &&
+   lastMessage.content.length > 0
+  ) {
+   const lastBlock = lastMessage.content[lastMessage.content.length - 1];
+   if (lastBlock && typeof lastBlock === "object") {
+    lastBlock.cache_control = { type: "ephemeral" };
+   }
+  }
  }
 
  const toolChoice = source.tool_choice;
@@ -894,13 +1120,14 @@ export function openAIToAnthropicRequest(body: any): any {
   ) {
    result.tool_choice = { type: "tool", name: toolChoice.function.name };
   }
+ }
 
-  if (
-   source.parallel_tool_calls === false &&
-   result.tool_choice &&
-   typeof result.tool_choice === "object"
-  ) {
-   result.tool_choice.disable_parallel_tool_use = true;
+ if (source.parallel_tool_calls === false) {
+  if (Array.isArray(result.tools) && result.tools.length > 0) {
+   if (!result.tool_choice) result.tool_choice = { type: "auto" };
+   if (result.tool_choice && typeof result.tool_choice === "object") {
+    result.tool_choice.disable_parallel_tool_use = true;
+   }
   }
  }
 
@@ -910,12 +1137,40 @@ export function openAIToAnthropicRequest(body: any): any {
   result.temperature = source.temperature;
  }
  if (typeof source.top_p === "number") result.top_p = source.top_p;
+ if (typeof source.top_k === "number") result.top_k = source.top_k;
+
+ const effort =
+  typeof source.reasoning_effort === "string"
+   ? source.reasoning_effort.toLowerCase()
+   : "";
+ const effortBudgets: Record<string, number> = {
+  minimal: 1024,
+  low: 2048,
+  medium: 4096,
+  high: 8192,
+  xhigh: 16384,
+ };
+ const desiredBudget = effortBudgets[effort];
+ if (desiredBudget && result.max_tokens > 1536) {
+  const budget = Math.min(desiredBudget, result.max_tokens - 1024);
+  if (budget >= 1024) {
+   result.thinking = { type: "enabled", budget_tokens: budget };
+   delete result.temperature;
+   delete result.top_p;
+  }
+ }
  if (typeof source.stop === "string") {
   result.stop_sequences = [source.stop];
  } else if (Array.isArray(source.stop)) {
   result.stop_sequences = source.stop;
  }
  if (typeof source.stream === "boolean") result.stream = source.stream;
+ if (typeof source.service_tier === "string") {
+  result.service_tier =
+   source.service_tier === "default" || source.service_tier === "flex"
+    ? "standard_only"
+    : "auto";
+ }
  if (typeof source.user === "string" && source.user.length > 0) {
   result.metadata = { user_id: source.user };
  }
@@ -967,12 +1222,18 @@ export function anthropicToOpenAIResponse(
 ): any {
  const content = Array.isArray(data?.content) ? data.content : [];
  const textParts: string[] = [];
+ const reasoningParts: string[] = [];
  const toolCalls: any[] = [];
 
  for (const block of content) {
   if (!block) continue;
   if (block.type === "text" && typeof block.text === "string") {
    textParts.push(block.text);
+  } else if (
+   block.type === "thinking" &&
+   typeof block.thinking === "string"
+  ) {
+   reasoningParts.push(block.thinking);
   } else if (block.type === "tool_use") {
    toolCalls.push({
     id: block.id || `call_${crypto.randomUUID().replace(/-/g, "")}`,
@@ -986,8 +1247,10 @@ export function anthropicToOpenAIResponse(
  }
 
  const text = textParts.join("");
+ const reasoning = reasoningParts.join("");
  const message: any = { role: "assistant" };
  message.content = text.length > 0 ? text : toolCalls.length > 0 ? null : "";
+ if (reasoning.length > 0) message.reasoning_content = reasoning;
  if (toolCalls.length > 0) message.tool_calls = toolCalls;
 
  return {
@@ -1019,11 +1282,17 @@ export function anthropicToOpenAIResponse(
  */
 export function anthropicMessageToOpenAISSE(message: any): string {
  const textParts: string[] = [];
+ const reasoningParts: string[] = [];
  const toolCalls: any[] = [];
  for (const block of Array.isArray(message?.content) ? message.content : []) {
   if (!block) continue;
   if (block.type === "text" && typeof block.text === "string") {
    textParts.push(block.text);
+  } else if (
+   block.type === "thinking" &&
+   typeof block.thinking === "string"
+  ) {
+   reasoningParts.push(block.thinking);
   } else if (block.type === "tool_use") {
    toolCalls.push({
     id: block.id || `call_${crypto.randomUUID().replace(/-/g, "")}`,
@@ -1055,6 +1324,8 @@ export function anthropicMessageToOpenAISSE(message: any): string {
  };
 
  push({ role: "assistant" }, null);
+ const reasoning = reasoningParts.join("");
+ if (reasoning.length > 0) push({ reasoning_content: reasoning }, null);
  const text = textParts.join("");
  if (text.length > 0) push({ content: text }, null);
  toolCalls.forEach((call, index) => {
@@ -1232,10 +1503,16 @@ export function createAnthropicToOpenAIStream(
 
   if (type === "content_block_delta") {
    const delta = parsed?.delta || {};
-   if (delta.type === "text_delta" && typeof delta.text === "string" && delta.text.length > 0) {
-    emitChunk(controller, { content: delta.text }, null);
-   } else if (
-    delta.type === "input_json_delta" &&
+  if (delta.type === "text_delta" && typeof delta.text === "string" && delta.text.length > 0) {
+   emitChunk(controller, { content: delta.text }, null);
+  } else if (
+   delta.type === "thinking_delta" &&
+   typeof delta.thinking === "string" &&
+   delta.thinking.length > 0
+  ) {
+   emitChunk(controller, { reasoning_content: delta.thinking }, null);
+  } else if (
+   delta.type === "input_json_delta" &&
     typeof delta.partial_json === "string" &&
     delta.partial_json.length > 0
    ) {
