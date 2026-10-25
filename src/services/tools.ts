@@ -7,7 +7,11 @@ const DEFAULT_TIMEOUT = 20000;
 const DEFAULT_MAX_CONTENT_LENGTH = 12000;
 const MAX_CONTENT_LENGTH_CAP = 100000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
+const MIN_RESPONSE_BYTES = 512 * 1024;
 const MAX_REDIRECTS = 5;
+
+const FETCH_CACHE_TTL_MS = 3 * 60 * 1000;
+const FETCH_CACHE_MAX_ENTRIES = 100;
 
 const LYNX_UA =
   "Lynx/2.8.9rel.1 libwww-FM/2.14 SSL-MM/1.4.1 OpenSSL/1.0.2k-fips";
@@ -277,11 +281,46 @@ class SearchRateLimitError extends Error {
   }
 }
 
+const HTML_ENTITIES: Record<string, string> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  hellip: "\u2026",
+  mdash: "\u2014",
+  ndash: "\u2013",
+  rsquo: "\u2019",
+  lsquo: "\u2018",
+  ldquo: "\u201c",
+  rdquo: "\u201d",
+};
+
+function decodeHtmlEntities(text: string): string {
+  return text.replace(/&(#x?[0-9a-f]+|[a-z][a-z0-9]+);/gi, (match, entity: string) => {
+    if (entity.startsWith("#")) {
+      const isHex = entity[1]?.toLowerCase() === "x";
+      const code = Number.parseInt(
+        isHex ? entity.slice(2) : entity.slice(1),
+        isHex ? 16 : 10
+      );
+      if (Number.isFinite(code) && code > 0 && code <= 0x10ffff) {
+        try {
+          return String.fromCodePoint(code);
+        } catch {
+          return match;
+        }
+      }
+      return match;
+    }
+    return HTML_ENTITIES[entity.toLowerCase()] ?? match;
+  });
+}
+
 function cleanHtmlText(text: string): string {
   if (!text) return "";
-  return cheerio
-    .load(`<div>${text}</div>`)("div")
-    .text()
+  return decodeHtmlEntities(text.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -506,6 +545,118 @@ const SEARCH_ENGINES: SearchEngine[] = [
   },
 ];
 
+// Launch the next engine group shortly after the previous one if it has not
+// answered yet. This keeps the common case (first engine succeeds) at one
+// request while avoiding multi-second waits on a slow/blocked engine.
+const SEARCH_ENGINE_STAGGER_MS = 600;
+const SEARCH_DEADLINE_MS = 15000;
+
+function runEnginePool(
+  query: string,
+  cacheKey: string
+): Promise<{ provider: string; results: WebSearchResult[] }> {
+  const engines = shuffle(SEARCH_ENGINES);
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let launched = 0;
+    let pending = 0;
+    let hadValidResponse = false;
+    let lastValidProvider = "none";
+    const errors: string[] = [];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    const clearTimers = () => {
+      while (timers.length > 0) {
+        const timer = timers.pop();
+        if (timer) clearTimeout(timer);
+      }
+    };
+
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimers();
+      fn();
+    };
+
+    const maybeFinish = () => {
+      if (settled || launched < engines.length || pending > 0) return;
+      finish(() => {
+        if (hadValidResponse) {
+          resolve({ provider: lastValidProvider, results: [] });
+          return;
+        }
+        reject(new Error(`All search engines failed (${errors.join("; ")})`));
+      });
+    };
+
+    const launch = (engine: SearchEngine) => {
+      if (settled) return;
+      launched += 1;
+
+      if (isEngineCoolingDown(engine)) {
+        errors.push(`${engine.name}: cooling down`);
+        maybeFinish();
+        return;
+      }
+
+      pending += 1;
+      withEngineSlot(engine, () => engine.search(query, 20))
+        .then((results) => {
+          hadValidResponse = true;
+          lastValidProvider = engine.name;
+
+          if (results.length > 0) {
+            clearEngineCooldown(engine);
+            setCachedSearch(cacheKey, engine.name, results);
+            finish(() => resolve({ provider: engine.name, results }));
+          } else {
+            errors.push(`${engine.name}: no results`);
+          }
+        })
+        .catch((error: any) => {
+          if (error instanceof SearchRateLimitError) {
+            markEngineCooldown(engine, error.retryAfterMs || engine.cooldownMs);
+          }
+          errors.push(`${engine.name}: ${error?.message || "request failed"}`);
+        })
+        .finally(() => {
+          pending -= 1;
+          maybeFinish();
+        });
+    };
+
+    timers.push(
+      setTimeout(() => {
+        finish(() => {
+          if (hadValidResponse) {
+            resolve({ provider: lastValidProvider, results: [] });
+            return;
+          }
+          reject(
+            new Error(
+              `Search timed out after ${SEARCH_DEADLINE_MS}ms (${errors.join("; ") || "no engine responded"})`
+            )
+          );
+        });
+      }, SEARCH_DEADLINE_MS)
+    );
+
+    engines.forEach((engine, index) => {
+      if (index === 0) {
+        launch(engine);
+        return;
+      }
+      timers.push(
+        setTimeout(() => launch(engine), index * SEARCH_ENGINE_STAGGER_MS)
+      );
+    });
+
+    maybeFinish();
+  });
+}
+
 export async function searchDuckDuckGo(
   query: string,
   maxResults = 5
@@ -549,47 +700,7 @@ export async function searchDuckDuckGo(
     };
   }
 
-  const searchPromise = (async () => {
-    const engines = shuffle(SEARCH_ENGINES);
-    const errors: string[] = [];
-    let hadValidResponse = false;
-    let lastValidProvider = "none";
-
-    for (const engine of engines) {
-      if (isEngineCoolingDown(engine)) {
-        errors.push(`${engine.name}: cooling down`);
-        continue;
-      }
-
-      try {
-        const results = await withEngineSlot(engine, () =>
-          engine.search(trimmedQuery, 20)
-        );
-
-        hadValidResponse = true;
-        lastValidProvider = engine.name;
-
-        if (results.length > 0) {
-          clearEngineCooldown(engine);
-          setCachedSearch(cacheKey, engine.name, results);
-          return { provider: engine.name, results };
-        }
-
-        errors.push(`${engine.name}: no results`);
-      } catch (error: any) {
-        if (error instanceof SearchRateLimitError) {
-          markEngineCooldown(engine, error.retryAfterMs || engine.cooldownMs);
-        }
-        errors.push(`${engine.name}: ${error?.message || "request failed"}`);
-      }
-    }
-
-    if (hadValidResponse) {
-      return { provider: lastValidProvider, results: [] as WebSearchResult[] };
-    }
-
-    throw new Error(`All search engines failed (${errors.join("; ")})`);
-  })();
+  const searchPromise = runEnginePool(trimmedQuery, cacheKey);
 
   inFlightSearches.set(cacheKey, searchPromise);
   try {
@@ -774,30 +885,44 @@ function extractReadableHtml(
     .remove();
 
   const lines: string[] = [];
+  const softCap = maxChars + Math.max(2000, Math.floor(maxChars * 0.5));
+  let collected = 0;
+  let limitReached = false;
+
   main.find("h1, h2, h3, h4, h5, p, li, blockquote, pre, code").each((_i, element) => {
+    if (collected >= softCap) {
+      limitReached = true;
+      return false;
+    }
+
     const tag = element.tagName.toLowerCase();
     const text = $(element).text().replace(/\s+/g, " ").trim();
     if (text.length <= 5) return;
 
     if (tag.startsWith("h")) {
       lines.push(`\n### ${text}\n`);
+      collected += text.length + 6;
     } else if (tag === "li") {
       lines.push(`- ${text}`);
+      collected += text.length + 3;
     } else {
       lines.push(text);
+      collected += text.length + 2;
     }
   });
 
   let cleanText = lines.join("\n\n");
   if (!cleanText || cleanText.length < 50) {
-    cleanText = $("body")
-      .text()
+    const bodyText = $("body").text();
+    const cappedBody =
+      bodyText.length > maxChars * 4 ? bodyText.slice(0, maxChars * 4) : bodyText;
+    cleanText = cappedBody
       .replace(/\n\s*\n+/g, "\n")
       .replace(/[ \t]+/g, " ")
       .trim();
   }
 
-  const truncated = cleanText.length > maxChars;
+  const truncated = limitReached || cleanText.length > maxChars;
   if (truncated) {
     cleanText = `${cleanText.slice(0, maxChars)}\n... (content truncated)`;
   }
@@ -809,6 +934,52 @@ function extractReadableHtml(
   };
 }
 
+interface FetchCacheEntry {
+  expiresAt: number;
+  result: WebFetchResult;
+}
+
+const fetchCache = new Map<string, FetchCacheEntry>();
+const inFlightFetches = new Map<string, Promise<WebFetchResult>>();
+
+function getFetchCacheKey(url: string, limit: number): string {
+  return `${url}\u0000${limit}`;
+}
+
+function getCachedFetch(key: string): WebFetchResult | null {
+  const entry = fetchCache.get(key);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    fetchCache.delete(key);
+    return null;
+  }
+  return entry.result;
+}
+
+function setCachedFetch(key: string, result: WebFetchResult): void {
+  if (fetchCache.size >= FETCH_CACHE_MAX_ENTRIES) {
+    const oldestKey = fetchCache.keys().next().value;
+    if (oldestKey) fetchCache.delete(oldestKey);
+  }
+  fetchCache.set(key, {
+    expiresAt: Date.now() + FETCH_CACHE_TTL_MS,
+    result,
+  });
+}
+
+function getResponseByteCap(limit: number, contentType: string): number {
+  // JSON/XML are parsed as a whole, so keep the full cap. HTML/plain text only
+  // need enough bytes to produce `limit` characters; downloading the entire
+  // multi-megabyte body just to slice it is what made large pages feel slow.
+  if (/json/i.test(contentType) || /(?:application|text)\/xml/i.test(contentType)) {
+    return MAX_RESPONSE_BYTES;
+  }
+  return Math.min(
+    MAX_RESPONSE_BYTES,
+    Math.max(MIN_RESPONSE_BYTES, limit * 16 + 64 * 1024)
+  );
+}
+
 export async function fetchWebPage(
   input: string,
   maxChars = DEFAULT_MAX_CONTENT_LENGTH
@@ -818,6 +989,28 @@ export async function fetchWebPage(
     MAX_CONTENT_LENGTH_CAP
   );
 
+  const cacheKey = getFetchCacheKey(normalizeTargetUrl(input), limit);
+  const cached = getCachedFetch(cacheKey);
+  if (cached) return { ...cached };
+
+  const existingFetch = inFlightFetches.get(cacheKey);
+  if (existingFetch) return { ...(await existingFetch) };
+
+  const fetchPromise = fetchWebPageUncached(input, limit);
+  inFlightFetches.set(cacheKey, fetchPromise);
+  try {
+    const result = await fetchPromise;
+    setCachedFetch(cacheKey, result);
+    return { ...result };
+  } finally {
+    inFlightFetches.delete(cacheKey);
+  }
+}
+
+async function fetchWebPageUncached(
+  input: string,
+  limit: number
+): Promise<WebFetchResult> {
   let targetUrl = normalizeTargetUrl(input);
   let response: Response | null = null;
 
@@ -867,7 +1060,11 @@ export async function fetchWebPage(
   }
 
   const contentType = response.headers.get("content-type") || "text/plain";
-  const textResult = await readTextLimited(response, MAX_RESPONSE_BYTES, contentType);
+  const textResult = await readTextLimited(
+    response,
+    getResponseByteCap(limit, contentType),
+    contentType
+  );
   const rawData = textResult.text;
   const byteTruncated = textResult.truncated;
 
