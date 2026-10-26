@@ -24,6 +24,46 @@ export function parseUpstreamModels(modelsJson?: string | null): ModelConfig[] {
   return [];
 }
 
+// Maps a client-facing model id back to the exact model name the upstream
+// expects. Clients may request a stripped alias ("deepseek-v4.1-flash-1017")
+// or a router-prefixed id ("hive/deepseek-v4.1-flash-1017"), while the upstream
+// itself may require its full namespace ("deepseek-ai/deepseek-v4.1-flash-1017").
+export function resolveUpstreamModelId(
+  upstream: UpstreamKey,
+  requestedModel?: string | null
+): string {
+  const requested = (requestedModel || "").trim();
+  if (!requested) return requested;
+
+  const models = parseUpstreamModels(upstream.models);
+  if (models.length === 0) return requested;
+
+  const stripFirstSegment = (value: string) =>
+    value.includes("/") ? value.split("/").slice(1).join("/") : value;
+
+  const target = requested.toLowerCase();
+  const candidates = new Set<string>([target, stripFirstSegment(target)]);
+
+  // Remove the router's configured prefix / provider name when sent explicitly.
+  const configuredPrefixes = [
+    (upstream.prefix || "").trim().toLowerCase(),
+    (upstream.provider || "").trim().toLowerCase(),
+  ];
+  for (const prefix of configuredPrefixes) {
+    if (!prefix || !target.startsWith(`${prefix}/`)) continue;
+    const remainder = target.slice(prefix.length + 1);
+    candidates.add(remainder);
+    candidates.add(stripFirstSegment(remainder));
+  }
+
+  const match = models.find((model) => {
+    const id = model.id.trim().toLowerCase();
+    return candidates.has(id) || candidates.has(stripFirstSegment(id));
+  });
+
+  return match ? match.id : requested;
+}
+
 export interface UpstreamKeyEntry {
   id: string;
   name: string;
@@ -345,27 +385,33 @@ export function selectUpstreamCandidates(
   const cleanTarget = target.includes("/") ? target.split("/").slice(1).join("/") : target;
   const prefixInTarget = target.includes("/") ? target.split("/")[0] : null;
 
+  // Prefixes the router itself exposes (provider names and configured prefixes).
+  // Any other leading segment is part of the upstream's model namespace (e.g.
+  // "deepseek-ai/deepseek-v4.1-flash-1017") and must not be treated as a
+  // provider selector, otherwise the full model name gets stripped upstream.
+  const knownPrefixes = new Set<string>();
+  for (const key of allActive) {
+    const keyPrefix = (key.prefix || "").trim().toLowerCase();
+    if (keyPrefix.length > 0) knownPrefixes.add(keyPrefix);
+    knownPrefixes.add(key.provider.toLowerCase());
+  }
+  const isRouterPrefix = prefixInTarget ? knownPrefixes.has(prefixInTarget) : false;
+
   if (cleanTarget.length > 0 && cleanTarget !== "unknown") {
     eligibleKeys = eligibleKeys.filter((k) => {
-      // Pass-through: 100% bypass model check because it directly forwards to upstream
-      if (Boolean((k as any).followUpstream)) {
-        if (prefixInTarget) {
-          const kPrefix = (k.prefix ? k.prefix.trim() : "").toLowerCase();
-          const kProvider = k.provider.toLowerCase();
-          if (kPrefix.length > 0 && kPrefix !== prefixInTarget && kProvider !== prefixInTarget) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      // If client explicitly requested a prefix (e.g. "ryzumi/auto" or "openai/gpt-4o"), filter by prefix
-      if (prefixInTarget) {
+      // Only filter by the leading segment when it is an actual router/provider
+      // prefix. Vendor namespaces are resolved against the model list below.
+      if (prefixInTarget && isRouterPrefix) {
         const kPrefix = (k.prefix ? k.prefix.trim() : "").toLowerCase();
         const kProvider = k.provider.toLowerCase();
-        if (kPrefix.length > 0 && kPrefix !== prefixInTarget && kProvider !== prefixInTarget) {
+        if (kPrefix !== prefixInTarget && kProvider !== prefixInTarget) {
           return false;
         }
+      }
+
+      // Pass-through: 100% bypass model check because it directly forwards to upstream
+      if (Boolean((k as any).followUpstream)) {
+        return true;
       }
 
       const models = parseUpstreamModels(k.models);

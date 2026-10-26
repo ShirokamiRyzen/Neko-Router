@@ -8,6 +8,7 @@ import {
   parseUpstreamKeyEntries,
   parseAllowedProviders,
   filterSelfReferencingUpstreams,
+  resolveUpstreamModelId,
 } from "./router";
 import { recordTelemetry, registerActiveRequest } from "./telemetry";
 import { incrementClientKeyTokens, checkClientRateLimit, validateClientKey } from "./auth";
@@ -421,17 +422,12 @@ if (upstreamCandidates.length === 0) {
   const opt = getOptimizationSettings();
   const optimizedBody = optimizeRequestBody(body, "openai");
 
-  // Normalize model name for upstream: if provider or custom prefix was sent (e.g. "openai/gpt-4o" or "ryzumi/auto"), strip it unless custom gateway
-  if (optimizedBody && typeof optimizedBody.model === "string" && optimizedBody.model.includes("/")) {
-    const isCustomGateway = upstream.baseUrl && (upstream.baseUrl.includes("openrouter") || upstream.baseUrl.includes("together") || upstream.baseUrl.includes("groq"));
-    if (!isCustomGateway) {
-      const parts = optimizedBody.model.split("/");
-      const prefix = parts[0].toLowerCase();
-      const upPrefix = (upstream.prefix || "").toLowerCase();
-      if (prefix === "openai" || prefix === upstream.provider.toLowerCase() || (upPrefix && prefix === upPrefix)) {
-        optimizedBody.model = parts.slice(1).join("/");
-      }
-    }
+  // Forward the full upstream model name instead of a stripped alias. The model
+  // list exposed to clients omits vendor namespaces (e.g. "deepseek-v4-flash"),
+  // but many upstreams only accept the complete id
+  // ("deepseek-ai/deepseek-v4.1-flash-1017").
+  if (optimizedBody && typeof optimizedBody.model === "string") {
+    optimizedBody.model = resolveUpstreamModelId(upstream, optimizedBody.model);
   }
 
   const model = optimizedBody?.model || "unknown";
@@ -587,18 +583,26 @@ const performOpenAIFetch = async (
       currentUpstreamKey.startsWith("ya29.") ||
       upstream.name.toLowerCase().includes("antigravity");
 
-    let requestPayload = optimizedBody;
-    let effectiveAntigravityKey = currentUpstreamKey;
-    let antigravityEntry: any = null;
-    let effectiveCodexKey = currentUpstreamKey;
-    let codexEntry: any = null;
+  // Resolve the full model name for the provider currently being attempted so
+  // failover candidates also receive the exact id their upstream expects.
+  const upstreamModel = resolveUpstreamModelId(upstream, requestedModel);
+  const candidateBody =
+    optimizedBody && typeof optimizedBody === "object"
+      ? { ...optimizedBody, model: upstreamModel }
+      : optimizedBody;
 
-    if (isCopilot) {
-      const isStream = Boolean(optimizedBody?.stream);
-      const internalToken = await getCopilotInternalToken(currentUpstreamKey);
-      upstreamHeaders = getCopilotHeaders(internalToken, isStream);
-      requestPayload = transformCopilotRequestBody(optimizedBody, model);
-    } else if (isAntigravity) {
+  let requestPayload = candidateBody;
+  let effectiveAntigravityKey = currentUpstreamKey;
+  let antigravityEntry: any = null;
+  let effectiveCodexKey = currentUpstreamKey;
+  let codexEntry: any = null;
+
+  if (isCopilot) {
+    const isStream = Boolean(optimizedBody?.stream);
+    const internalToken = await getCopilotInternalToken(currentUpstreamKey);
+    upstreamHeaders = getCopilotHeaders(internalToken, isStream);
+    requestPayload = transformCopilotRequestBody(candidateBody, upstreamModel || model);
+  } else if (isAntigravity) {
       const entries = parseUpstreamKeyEntries(upstream.apiKeys, upstream.apiKey);
       antigravityEntry = entries.find((e) => e.key === currentUpstreamKey) || entries.find((e) => e.isActive);
       if (antigravityEntry) {
@@ -631,7 +635,7 @@ const performOpenAIFetch = async (
       if (codexEntry?.chatgptAccountId) {
         (upstreamHeaders as any)["chatgpt-account-id"] = codexEntry.chatgptAccountId;
       }
-      requestPayload = transformChatToCodexResponses(optimizedBody, model);
+      requestPayload = transformChatToCodexResponses(candidateBody, upstreamModel || model);
     } else {
       const isFollowUpstream = Boolean((upstream as any).followUpstream);
       let authHeaderVal = `Bearer ${currentUpstreamKey}`;
@@ -1370,15 +1374,9 @@ if (upstreamCandidates.length === 0) {
   const opt = getOptimizationSettings();
   const optimizedBody = optimizeRequestBody(body, "anthropic");
 
-  // Normalize model name for upstream: if provider prefix was sent (e.g. "anthropic/claude-3-5-sonnet"), strip it unless custom gateway
-  if (optimizedBody && typeof optimizedBody.model === "string" && optimizedBody.model.includes("/")) {
-    const isCustomGateway = upstream.baseUrl && (upstream.baseUrl.includes("openrouter") || upstream.baseUrl.includes("together") || upstream.baseUrl.includes("groq"));
-    if (!isCustomGateway) {
-      const parts = optimizedBody.model.split("/");
-      if (parts[0].toLowerCase() === "anthropic" || parts[0].toLowerCase() === upstream.provider.toLowerCase()) {
-        optimizedBody.model = parts.slice(1).join("/");
-      }
-    }
+  // Forward the full upstream model name instead of a stripped alias.
+  if (optimizedBody && typeof optimizedBody.model === "string") {
+    optimizedBody.model = resolveUpstreamModelId(upstream, optimizedBody.model);
   }
 
   const model = optimizedBody?.model || "unknown";
