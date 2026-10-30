@@ -331,6 +331,26 @@ export async function proxyOpenAIChatCompletions(
  return bridged;
 }
 
+// Many OpenAI-compatible upstreams only accept the legacy "system" role and
+// reject the newer "developer" role (400 unknown variant `developer`).
+// Clients such as Android Studio's agent send "developer" system prompts.
+function normalizeDeveloperRole(body: any): any {
+  if (!body || typeof body !== "object" || !Array.isArray(body.messages)) {
+    return body;
+  }
+
+  let changed = false;
+  const messages = body.messages.map((msg: any) => {
+    if (msg && typeof msg === "object" && msg.role === "developer") {
+      changed = true;
+      return { ...msg, role: "system" };
+    }
+    return msg;
+  });
+
+  return changed ? { ...body, messages } : body;
+}
+
 async function proxyOpenAIChatCompletionsDirect(
   reqHeaders: Headers,
   body: any,
@@ -420,7 +440,9 @@ if (upstreamCandidates.length === 0) {
 
   // Load optimization settings
   const opt = getOptimizationSettings();
-  const optimizedBody = optimizeRequestBody(body, "openai");
+  const optimizedBody = normalizeDeveloperRole(
+    optimizeRequestBody(body, "openai")
+  );
 
   // Forward the full upstream model name instead of a stripped alias. The model
   // list exposed to clients omits vendor namespaces (e.g. "deepseek-v4-flash"),
