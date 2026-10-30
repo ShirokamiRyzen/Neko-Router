@@ -1854,6 +1854,8 @@ function getModelCapabilities(modelId: string) {
   };
 }
 
+export const DEFAULT_CONTEXT_WINDOW = 1_000_000;
+
 function enrichModel(prefix: string, m: any, defaultCreated?: number) {
   const rawId = String(m.id || m.name || "").trim();
   // Strip any existing provider prefix to extract clean model id
@@ -1876,8 +1878,10 @@ const type = capabilities.embeddings ? "embeddings" : "chat";
     name: m.name || cleanId,
     description: m.description || `${cleanId} routed via Neko-Router${prefix ? ` (${prefix})` : ""}`,
     provider: prefix || m.provider || "NekoRouter",
-type,
-capabilities,
+    type,
+    context_window: DEFAULT_CONTEXT_WINDOW,
+    context_length: DEFAULT_CONTEXT_WINDOW,
+    capabilities,
     permission: [
       {
         id: `modelperm-${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`,
@@ -1905,9 +1909,12 @@ key !== "owned_by" &&
 key !== "id" &&
 key !== "object" &&
 key !== "created" &&
-key !== "context_window" &&
-key !== "contextWindow" &&
-key !== "max_tokens" &&
+        key !== "context_window" &&
+        key !== "contextWindow" &&
+        key !== "context_length" &&
+        key !== "contextLength" &&
+        key !== "max_context_tokens" &&
+        key !== "max_tokens" &&
 key !== "maxTokens" &&
 key !== "max_output_tokens" &&
 modelObj[key] === undefined
@@ -1978,10 +1985,12 @@ export async function proxyOpenAIModels(
       if (upstreamRes.ok) {
         const data = (await upstreamRes.json()) as any;
         if (Array.isArray(data?.data)) {
-          data.data = data.data.map((m: any) => ({
-            ...m,
-            owned_by: "NekoRouter",
-          }));
+        data.data = data.data.map((m: any) => ({
+          ...m,
+          owned_by: "NekoRouter",
+          context_window: m?.context_window ?? DEFAULT_CONTEXT_WINDOW,
+          context_length: m?.context_length ?? DEFAULT_CONTEXT_WINDOW,
+        }));
         }
         return new Response(JSON.stringify(data), {
           status: 200,
