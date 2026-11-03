@@ -1,4 +1,8 @@
-# Neko-Router
+<p align="center">
+<img src="src/web/public/android-chrome-192x192.png" alt="Neko-Router" width="128" height="128" />
+</p>
+
+<h1 align="center">Neko-Router</h1>
 
 High-performance, ultra-low overhead headless AI Gateway & Router designed for OpenAI and Anthropic compatible endpoints, built with **Bun**, **ElysiaJS**, native `bun:sqlite` with **Drizzle ORM** (WAL mode), with native **Elysia Eden** type-safe RPC client support.
 
