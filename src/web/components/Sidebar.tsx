@@ -1,7 +1,6 @@
 import React from "react";
 import {
-  Cat,
-  LogOut,
+LogOut,
   BookOpen,
   KeyRound,
   Layers,
@@ -89,9 +88,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="h-16 px-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center shrink-0">
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-gradient-to-b from-zinc-800 to-zinc-950 border border-zinc-700/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_2px_4px_rgba(0,0,0,0.5)] text-white">
-                <Cat className="w-5 h-5 text-emerald-400" />
-              </div>
+<img
+src="/android-chrome-192x192.png"
+alt="Neko-Router"
+className="w-9 h-9 rounded-md border border-zinc-700/80 shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+/>
               <div>
                 <span className="font-bold text-sm tracking-tight text-zinc-900 dark:text-zinc-100">
                   Neko<span className="text-zinc-400 dark:text-zinc-500 font-normal">Router</span>

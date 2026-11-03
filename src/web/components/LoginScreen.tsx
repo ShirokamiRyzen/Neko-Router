@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Cat, Lock, ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
+import { Lock, ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
 import { apiRequest, type AuthStatus } from "../lib/api";
 
 declare global {
@@ -178,9 +178,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4">
       <div className="w-full max-w-sm skeuo-card p-8">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-b from-zinc-800 to-zinc-900 border border-zinc-700/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] text-zinc-100 mb-3">
-            <Cat className="w-7 h-7 text-emerald-400" />
-          </div>
+<img
+src="/android-chrome-192x192.png"
+alt="Neko-Router"
+className="inline-block w-12 h-12 rounded-lg border border-zinc-700/60 shadow-[0_2px_8px_rgba(0,0,0,0.4)] mb-3"
+/>
           <h1 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             Neko-Router Gateway
           </h1>

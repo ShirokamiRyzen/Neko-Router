@@ -6,9 +6,8 @@ import {
   Copy,
   RefreshCw,
   Clock,
-  Sparkles,
-  Cat,
-  Plus,
+Sparkles,
+Plus,
   Minus,
   Maximize2,
   Globe,
@@ -804,9 +803,11 @@ export const DashboardTab: React.FC = () => {
                       : "border-zinc-800 shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
                     } flex items-center space-x-2.5 hover:scale-105`}
                 >
-                  <div className="w-6 h-6 rounded bg-orange-500 flex items-center justify-center text-white font-black text-xs shadow-inner">
-                    <Cat className="w-3.5 h-3.5 fill-current" />
-                  </div>
+<img
+src="/android-chrome-192x192.png"
+alt="Neko-Router"
+className="w-6 h-6 rounded shadow-inner"
+/>
                   <div className="flex items-center space-x-1.5">
                     <span className="font-semibold text-xs text-white tracking-wide">
                       NekoRouter

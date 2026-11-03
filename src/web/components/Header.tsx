@@ -1,7 +1,6 @@
 import React from "react";
 import {
-  Cat,
-  Sun,
+Sun,
   Moon,
   LogOut,
   BookOpen,
@@ -42,9 +41,11 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center justify-between h-16">
           {/* Brand */}
           <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-950 shadow-sm">
-              <Cat className="w-6 h-6" />
-            </div>
+<img
+src="/android-chrome-192x192.png"
+alt="Neko-Router"
+className="w-10 h-10 rounded-xl shadow-sm"
+/>
             <div>
               <div className="flex items-center space-x-2">
                 <span className="font-bold text-lg tracking-tight text-zinc-900 dark:text-zinc-100">
