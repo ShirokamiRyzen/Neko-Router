@@ -803,11 +803,13 @@ export const DashboardTab: React.FC = () => {
                       : "border-zinc-800 shadow-[0_4px_16px_rgba(0,0,0,0.5)]"
                     } flex items-center space-x-2.5 hover:scale-105`}
                 >
+<div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0 overflow-hidden bg-zinc-800/90 border border-zinc-700/70 shadow-xs">
 <img
-src="/favicon.ico"
+src="/android-chrome-192x192.png"
 alt="Neko-Router"
-className="w-5 h-5 object-contain rounded-xs"
+className="w-full h-full object-contain"
 />
+</div>
                   <div className="flex items-center space-x-1.5">
                     <span className="font-semibold text-xs text-white tracking-wide">
                       NekoRouter
