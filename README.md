@@ -47,7 +47,7 @@ Neko-Router/
 │   │   ├── telemetry.ts        # Aggregated stats & request logs
 │ │ ├── admin.ts # SQLite export/import, metrics, timeout & optimizer settings
 │ │ ├── tools.ts # /v1/tools/search & /v1/tools/fetch
-│ │ └── proxy.ts # /v1/chat/completions, /v1/models, /v1/messages
+│ │ └── proxy.ts # /v1/chat/completions, /v1/models, /v1/models/status, /v1/messages
 │   ├── services/
 │   │   ├── auth.ts             # 6-digit PIN bcrypt verification & client key validation
 │   │   ├── router.ts           # Upstream selection & load balancing

@@ -5,6 +5,7 @@ import {
   proxyOpenAIChatCompletions,
   proxyAnthropicMessages,
   proxyOpenAIModels,
+  getModelStatusResponse,
 } from "../services/proxy";
 import { checkHttpsRequirement } from "../services/optimizer";
 import { estimateInputTokens } from "../services/anthropic-compat";
@@ -83,6 +84,12 @@ const AVAILABLE_ENDPOINTS = [
  path: "/v1/models",
  auth: "Public / Optional Client Key",
  description: "List all active AI models across connected upstream providers in OpenAI format.",
+ },
+ {
+ method: "GET",
+ path: "/v1/models/status",
+ auth: "Public / Optional Client Key",
+ description: "24-hour model health, latency (ms), and TPS (tokens per second) metrics. Filters to key-accessible models when API key is provided, or all active models publicly.",
  },
  {
  method: "POST",
@@ -251,6 +258,172 @@ export const proxyRoutes = new Elysia()
 
     // Tanpa key: tampilkan semua model aktif dari seluruh provider
     return proxyOpenAIModels(null, request.headers);
+  })
+
+  // OpenAI Models Status, Latency, & TPS (24h window)
+  .get(
+    "/v1/models/status",
+    async ({ request, query, set }: any) => {
+      const authHeader = request.headers.get("Authorization");
+      const xApiKey = request.headers.get("x-api-key");
+      const key = authHeader?.startsWith("Bearer ")
+        ? authHeader.slice(7).trim()
+        : xApiKey?.trim();
+
+      const requestedModel = (query?.model || "").trim();
+
+      if (key) {
+        const clientKey = await validateClientKey(key);
+        if (!clientKey) {
+          set.status = 401;
+          return {
+            error: {
+              message: "Invalid API key provided",
+              type: "invalid_request_error",
+              param: null,
+              code: "invalid_api_key",
+            },
+          };
+        }
+        return getModelStatusResponse(clientKey, request.headers, requestedModel);
+      }
+
+      // Tanpa key: akses publik untuk seluruh model aktif
+      return getModelStatusResponse(null, request.headers, requestedModel);
+    },
+    {
+      detail: {
+        tags: ["Proxy"],
+        summary: "24-hour model health, latency, & TPS stats",
+        description:
+          "Returns 24-hour health status ('operational', 'degraded', 'offline', 'idle'), average latency (ms), and tokens per second (TPS) for active models. Supports optional client API key for key-scoped models, or public access.",
+      },
+    }
+  )
+  .get("/v1/models/info", async ({ request, query, set }: any) => {
+    const authHeader = request.headers.get("Authorization");
+    const xApiKey = request.headers.get("x-api-key");
+    const key = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : xApiKey?.trim();
+    const requestedModel = (query?.model || "").trim();
+
+    if (key) {
+      const clientKey = await validateClientKey(key);
+      if (!clientKey) {
+        set.status = 401;
+        return {
+          error: {
+            message: "Invalid API key provided",
+            type: "invalid_request_error",
+            param: null,
+            code: "invalid_api_key",
+          },
+        };
+      }
+      return getModelStatusResponse(clientKey, request.headers, requestedModel);
+    }
+    return getModelStatusResponse(null, request.headers, requestedModel);
+  })
+  .get("/models/status", async ({ request, query, set }: any) => {
+    const authHeader = request.headers.get("Authorization");
+    const xApiKey = request.headers.get("x-api-key");
+    const key = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : xApiKey?.trim();
+    const requestedModel = (query?.model || "").trim();
+
+    if (key) {
+      const clientKey = await validateClientKey(key);
+      if (!clientKey) {
+        set.status = 401;
+        return {
+          error: {
+            message: "Invalid API key provided",
+            type: "invalid_request_error",
+            param: null,
+            code: "invalid_api_key",
+          },
+        };
+      }
+      return getModelStatusResponse(clientKey, request.headers, requestedModel);
+    }
+    return getModelStatusResponse(null, request.headers, requestedModel);
+  })
+  .get("/models/info", async ({ request, query, set }: any) => {
+    const authHeader = request.headers.get("Authorization");
+    const xApiKey = request.headers.get("x-api-key");
+    const key = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : xApiKey?.trim();
+    const requestedModel = (query?.model || "").trim();
+
+    if (key) {
+      const clientKey = await validateClientKey(key);
+      if (!clientKey) {
+        set.status = 401;
+        return {
+          error: {
+            message: "Invalid API key provided",
+            type: "invalid_request_error",
+            param: null,
+            code: "invalid_api_key",
+          },
+        };
+      }
+      return getModelStatusResponse(clientKey, request.headers, requestedModel);
+    }
+    return getModelStatusResponse(null, request.headers, requestedModel);
+  })
+  .get("/v1/models/:model/status", async ({ request, params, set }: any) => {
+    const authHeader = request.headers.get("Authorization");
+    const xApiKey = request.headers.get("x-api-key");
+    const key = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : xApiKey?.trim();
+    const requestedModel = (params?.model || "").trim();
+
+    if (key) {
+      const clientKey = await validateClientKey(key);
+      if (!clientKey) {
+        set.status = 401;
+        return {
+          error: {
+            message: "Invalid API key provided",
+            type: "invalid_request_error",
+            param: null,
+            code: "invalid_api_key",
+          },
+        };
+      }
+      return getModelStatusResponse(clientKey, request.headers, requestedModel);
+    }
+    return getModelStatusResponse(null, request.headers, requestedModel);
+  })
+  .get("/models/:model/status", async ({ request, params, set }: any) => {
+    const authHeader = request.headers.get("Authorization");
+    const xApiKey = request.headers.get("x-api-key");
+    const key = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : xApiKey?.trim();
+    const requestedModel = (params?.model || "").trim();
+
+    if (key) {
+      const clientKey = await validateClientKey(key);
+      if (!clientKey) {
+        set.status = 401;
+        return {
+          error: {
+            message: "Invalid API key provided",
+            type: "invalid_request_error",
+            param: null,
+            code: "invalid_api_key",
+          },
+        };
+      }
+      return getModelStatusResponse(clientKey, request.headers, requestedModel);
+    }
+    return getModelStatusResponse(null, request.headers, requestedModel);
   })
   .get("/models", async ({ request, set }) => {
     const authHeader = request.headers.get("Authorization");

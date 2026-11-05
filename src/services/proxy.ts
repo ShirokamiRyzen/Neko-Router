@@ -10,7 +10,7 @@ import {
   filterSelfReferencingUpstreams,
   resolveUpstreamModelId,
 } from "./router";
-import { recordTelemetry, registerActiveRequest } from "./telemetry";
+import { recordTelemetry, registerActiveRequest, getModelMetrics24h } from "./telemetry";
 import { incrementClientKeyTokens, checkClientRateLimit, validateClientKey } from "./auth";
 import { db } from "../db";
 import { upstreamKeys, type ClientKey, type UpstreamKey } from "../db/schema";
@@ -1948,10 +1948,10 @@ modelObj[key] === undefined
   return modelObj;
 }
 
-export async function proxyOpenAIModels(
+export async function getAvailableModelsList(
   clientKey: ClientKey | null,
   headers?: Headers
-): Promise<Response> {
+): Promise<any[]> {
   const opt = getOptimizationSettings();
   const authHeader = headers?.get("Authorization");
   const xApiKey = headers?.get("x-api-key");
@@ -2007,17 +2007,13 @@ export async function proxyOpenAIModels(
       if (upstreamRes.ok) {
         const data = (await upstreamRes.json()) as any;
         if (Array.isArray(data?.data)) {
-        data.data = data.data.map((m: any) => ({
-          ...m,
-          owned_by: "NekoRouter",
-          context_window: m?.context_window ?? DEFAULT_CONTEXT_WINDOW,
-          context_length: m?.context_length ?? DEFAULT_CONTEXT_WINDOW,
-        }));
+          return data.data.map((m: any) => ({
+            ...m,
+            owned_by: "NekoRouter",
+            context_window: m?.context_window ?? DEFAULT_CONTEXT_WINDOW,
+            context_length: m?.context_length ?? DEFAULT_CONTEXT_WINDOW,
+          }));
         }
-        return new Response(JSON.stringify(data), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
       } else {
         console.warn("Pass-through /models upstream responded with status", upstreamRes.status);
       }
@@ -2029,12 +2025,10 @@ export async function proxyOpenAIModels(
     try {
       const { fetchBandelBangetLiveModels } = await import("./bandelbanget");
       const liveModels = await fetchBandelBangetLiveModels();
-      const data = liveModels.map((m) => enrichModel("", { ...m, owned_by: "NekoRouter" }));
-      return new Response(JSON.stringify({ object: "list", data }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (e) {}
+      return liveModels.map((m) => enrichModel("", { ...m, owned_by: "NekoRouter" }));
+    } catch (e) {
+      return [];
+    }
   }
 
   const activeOpenAI = getActiveUpstreamKeys("openai");
@@ -2042,10 +2036,7 @@ export async function proxyOpenAIModels(
   const allActive = [...activeOpenAI, ...activeAnthropic].filter((u) => u.isActive);
 
   if (allActive.length === 0) {
-    return new Response(JSON.stringify({ object: "list", data: [] }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return [];
   }
 
   const enabledModelMap = new Map<string, any>();
@@ -2054,10 +2045,7 @@ export async function proxyOpenAIModels(
   if (clientKey) {
     const allowed = parseAllowedProviders(clientKey.allowedProviders);
     if (allowed.length === 0) {
-      return new Response(JSON.stringify({ object: "list", data: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return [];
     }
 
     const hasSpecificUpstreamIds = allowed.some((a) => a.startsWith("up_"));
@@ -2095,11 +2083,7 @@ export async function proxyOpenAIModels(
       }
     }
 
-    const data = Array.from(enabledModelMap.values());
-    return new Response(JSON.stringify({ object: "list", data }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return Array.from(enabledModelMap.values());
   }
 
   // KASUS 2: Fetch tanpa Key (Publik) -> Tampilkan seluruh model aktif yang ada di semua provider
@@ -2130,9 +2114,120 @@ export async function proxyOpenAIModels(
     } catch (e) {}
   }
 
-  const data = Array.from(enabledModelMap.values());
+  return Array.from(enabledModelMap.values());
+}
+
+export async function proxyOpenAIModels(
+  clientKey: ClientKey | null,
+  headers?: Headers
+): Promise<Response> {
+  const data = await getAvailableModelsList(clientKey, headers);
   return new Response(JSON.stringify({ object: "list", data }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+export async function getModelStatusResponse(
+  clientKey: ClientKey | null,
+  headers?: Headers,
+  filterModel?: string
+): Promise<Response> {
+  const models = await getAvailableModelsList(clientKey, headers);
+  const metricsMap = getModelMetrics24h(24 * 60 * 60 * 1000);
+
+  let targetModels = models;
+  if (filterModel && filterModel.trim().length > 0) {
+    const cleanFilter = filterModel.trim().toLowerCase();
+    targetModels = models.filter((m) => {
+      const id = String(m.id || "").toLowerCase();
+      const name = String(m.name || "").toLowerCase();
+      const root = String(m.root || "").toLowerCase();
+      return id === cleanFilter || name === cleanFilter || root === cleanFilter;
+    });
+
+    if (targetModels.length === 0) {
+      return new Response(
+        JSON.stringify({
+          error: {
+            message: `Model '${filterModel}' does not exist or is not accessible with the provided credentials.`,
+            type: "invalid_request_error",
+            param: "model",
+            code: "model_not_found",
+          },
+        }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+  }
+
+  const data = targetModels.map((m) => {
+    const rawId = String(m.id || "");
+    const cleanId = rawId.includes("/") ? rawId.split("/").slice(1).join("/") : rawId;
+    const rootId = String(m.root || cleanId);
+
+    const metric =
+      metricsMap.get(rawId) ||
+      metricsMap.get(cleanId) ||
+      metricsMap.get(rootId) ||
+      Array.from(metricsMap.entries()).find(([k]) => {
+        const kClean = k.includes("/") ? k.split("/").slice(1).join("/") : k;
+        return kClean.toLowerCase() === cleanId.toLowerCase();
+      })?.[1];
+
+    const totalRequests = metric?.totalRequests || 0;
+    const successRequests = metric?.successRequests || 0;
+    const errorRequests = metric?.errorRequests || 0;
+    const successRate = metric?.successRate ?? (totalRequests > 0 ? 0 : 100.0);
+    const avgLatencyMs = metric?.avgLatencyMs || 0;
+    const avgTps = metric?.avgTps || 0;
+    const status = metric?.status || "idle";
+
+    return {
+      id: m.id,
+      model: m.id,
+      name: m.name || cleanId,
+      provider: m.provider || m.owned_by || "openai",
+      status, // "operational" | "degraded" | "offline" | "idle"
+      latency_ms: avgLatencyMs,
+      tps: avgTps,
+      is_available: true,
+      context_window: m.context_window || m.context_length || DEFAULT_CONTEXT_WINDOW,
+      summary_24h: {
+        total_requests: totalRequests,
+        success_requests: successRequests,
+        error_requests: errorRequests,
+        success_rate: successRate,
+        avg_latency_ms: avgLatencyMs,
+        min_latency_ms: metric?.minLatencyMs || 0,
+        max_latency_ms: metric?.maxLatencyMs || 0,
+        avg_tps: avgTps,
+        min_tps: metric?.minTps || 0,
+        max_tps: metric?.maxTps || 0,
+        prompt_tokens: metric?.promptTokens || 0,
+        completion_tokens: metric?.completionTokens || 0,
+        cached_tokens: metric?.cachedTokens || 0,
+        total_tokens: metric?.totalTokens || 0,
+        last_request_at: metric?.lastRequestAt || null,
+      },
+    };
+  });
+
+  return new Response(
+    JSON.stringify({
+      object: "list",
+      window: "24h",
+      window_seconds: 86400,
+      timestamp: new Date().toISOString(),
+      total_models: data.length,
+      data,
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }

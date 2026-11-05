@@ -156,6 +156,7 @@ export function initTablesSync(): void {
   try {
     sqlite.run(`
  CREATE INDEX IF NOT EXISTS idx_telemetry_created_at ON telemetry_logs (created_at DESC);
+ CREATE INDEX IF NOT EXISTS idx_telemetry_model_created ON telemetry_logs (model, created_at DESC);
  CREATE INDEX IF NOT EXISTS idx_telemetry_client_key ON telemetry_logs (client_key_id);
  CREATE INDEX IF NOT EXISTS idx_telemetry_provider ON telemetry_logs (provider);
  CREATE INDEX IF NOT EXISTS idx_tool_logs_created_at ON tool_logs (created_at DESC);

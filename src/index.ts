@@ -11,12 +11,23 @@ import { adminRoutes } from "./routes/admin";
 import { proxyRoutes } from "./routes/proxy";
 import { apiProvidersRoutes } from "./routes/api-providers";
 import { toolsRoutes } from "./routes/tools";
+import { pruneTelemetryLogs } from "./services/telemetry";
 import { existsSync, watch } from "fs";
 import { join } from "path";
 import { webHandler, htmlTemplate, bundleFrontend } from "./web/handler";
 
 // Initialize database schema and default PIN
 await initDatabase();
+
+// Auto-prune telemetry records older than 24 hours on startup and every hour
+try {
+  pruneTelemetryLogs(24);
+  setInterval(() => {
+    pruneTelemetryLogs(24);
+  }, 60 * 60 * 1000);
+} catch (e) {
+  console.error("[Telemetry] Failed to schedule telemetry pruning:", e);
+}
 
 // Pre-bundle frontend in memory on startup (background)
 bundleFrontend().catch((err) => console.error("[Frontend] Bundle preheat error:", err));
@@ -96,4 +107,5 @@ app.listen({ port, hostname: host }, () => {
   console.log(`📖 Interactive OpenAPI Docs at http://${host}:${port}/swagger`);
 });
 
+export { app };
 export type App = typeof app;

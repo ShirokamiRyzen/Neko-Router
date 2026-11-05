@@ -1,4 +1,4 @@
-import { db } from "../db";
+import { db, sqlite } from "../db";
 import {
   telemetryLogs,
   toolLogs,
@@ -448,4 +448,117 @@ export function getRecentLogs(limit = 50, offset = 0) {
     .limit(limit)
     .offset(offset)
     .all();
+}
+
+export interface ModelStatusStats {
+  model: string;
+  totalRequests: number;
+  successRequests: number;
+  errorRequests: number;
+  successRate: number;
+  avgLatencyMs: number;
+  minLatencyMs: number;
+  maxLatencyMs: number;
+  avgTps: number;
+  maxTps: number;
+  minTps: number;
+  promptTokens: number;
+  completionTokens: number;
+  cachedTokens: number;
+  totalTokens: number;
+  lastRequestAt: number | null;
+  status: "operational" | "degraded" | "offline" | "idle";
+}
+
+export function getModelMetrics24h(sinceMs: number = 24 * 60 * 60 * 1000): Map<string, ModelStatusStats> {
+  const since = Date.now() - sinceMs;
+  const rows = sqlite
+    .query(`
+      SELECT 
+        model,
+        COUNT(*) as total_requests,
+        SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) as success_requests,
+        SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END) as error_requests,
+        AVG(CASE WHEN status_code >= 200 AND status_code < 300 THEN duration_ms ELSE duration_ms END) as avg_duration_ms,
+        MIN(CASE WHEN status_code >= 200 AND status_code < 300 AND duration_ms > 0 THEN duration_ms ELSE NULL END) as min_duration_ms,
+        MAX(CASE WHEN status_code >= 200 AND status_code < 300 THEN duration_ms ELSE NULL END) as max_duration_ms,
+        SUM(prompt_tokens) as total_prompt_tokens,
+        SUM(completion_tokens) as total_completion_tokens,
+        SUM(cached_tokens) as total_cached_tokens,
+        SUM(total_tokens) as total_tokens,
+        AVG(CASE WHEN status_code >= 200 AND status_code < 300 AND duration_ms > 0 AND completion_tokens > 0 THEN (completion_tokens * 1000.0 / duration_ms) ELSE NULL END) as avg_tps,
+        MAX(CASE WHEN status_code >= 200 AND status_code < 300 AND duration_ms > 0 AND completion_tokens > 0 THEN (completion_tokens * 1000.0 / duration_ms) ELSE NULL END) as max_tps,
+        MIN(CASE WHEN status_code >= 200 AND status_code < 300 AND duration_ms > 0 AND completion_tokens > 0 THEN (completion_tokens * 1000.0 / duration_ms) ELSE NULL END) as min_tps,
+        MAX(created_at) as last_request_at
+      FROM telemetry_logs
+      WHERE created_at >= ?
+      GROUP BY model
+    `)
+    .all(since) as any[];
+
+  const map = new Map<string, ModelStatusStats>();
+
+  for (const r of rows) {
+    const totalRequests = Number(r.total_requests || 0);
+    const successRequests = Number(r.success_requests || 0);
+    const errorRequests = Number(r.error_requests || 0);
+    const successRate = totalRequests > 0 ? Number(((successRequests / totalRequests) * 100).toFixed(2)) : 100.0;
+    const avgLatencyMs = Math.round(Number(r.avg_duration_ms || 0));
+    const minLatencyMs = Math.round(Number(r.min_duration_ms || 0));
+    const maxLatencyMs = Math.round(Number(r.max_duration_ms || 0));
+
+    let avgTps = Number((Number(r.avg_tps) || 0).toFixed(2));
+    if (avgTps === 0 && Number(r.total_completion_tokens || 0) > 0 && avgLatencyMs > 0 && totalRequests > 0) {
+      avgTps = Number(((Number(r.total_completion_tokens) / ((avgLatencyMs * totalRequests) / 1000))).toFixed(2));
+    }
+
+    let status: "operational" | "degraded" | "offline" | "idle" = "idle";
+    if (totalRequests > 0) {
+      if (successRate >= 95) {
+        status = "operational";
+      } else if (successRate >= 50) {
+        status = "degraded";
+      } else {
+        status = "offline";
+      }
+    }
+
+    const stat: ModelStatusStats = {
+      model: String(r.model),
+      totalRequests,
+      successRequests,
+      errorRequests,
+      successRate,
+      avgLatencyMs,
+      minLatencyMs,
+      maxLatencyMs,
+      avgTps,
+      maxTps: Number((Number(r.max_tps) || 0).toFixed(2)),
+      minTps: Number((Number(r.min_tps) || 0).toFixed(2)),
+      promptTokens: Number(r.total_prompt_tokens || 0),
+      completionTokens: Number(r.total_completion_tokens || 0),
+      cachedTokens: Number(r.total_cached_tokens || 0),
+      totalTokens: Number(r.total_tokens || 0),
+      lastRequestAt: r.last_request_at ? Number(r.last_request_at) : null,
+      status,
+    };
+
+    map.set(stat.model, stat);
+  }
+
+  return map;
+}
+
+export function pruneTelemetryLogs(retentionHours = 24): number {
+  try {
+    const cutoff = Date.now() - retentionHours * 60 * 60 * 1000;
+    const info = sqlite.run("DELETE FROM telemetry_logs WHERE created_at < ?", [cutoff]);
+    if (info.changes > 0) {
+      console.log(`[Telemetry] Auto-pruned ${info.changes} old telemetry records (retention: ${retentionHours}h).`);
+    }
+    return info.changes;
+  } catch (e) {
+    console.error("Failed to prune old telemetry logs:", e);
+    return 0;
+  }
 }

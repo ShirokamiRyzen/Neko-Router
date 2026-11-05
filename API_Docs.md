@@ -11,9 +11,10 @@ Comprehensive API integration documentation for **Neko-Router**, a high-performa
 3. [AI Proxy Endpoints](#3-ai-proxy-endpoints)
    - [OpenAI Chat Completions (`POST /v1/chat/completions`)](#a-openai-chat-completions-post-v1chatcompletions)
    - [OpenAI Models List (`GET /v1/models`)](#b-openai-models-list-get-v1models)
-   - [Anthropic Messages (`POST /v1/messages`)](#c-anthropic-messages-post-v1messages)
- - [Web Search (`POST /v1/tools/search`)](#d-web-search-post-v1toolssearch)
- - [Web Fetch (`POST /v1/tools/fetch`)](#e-web-fetch-post-v1toolsfetch)
+   - [Model Health, Latency & TPS Status (`GET /v1/models/status`)](#c-model-health-latency--tps-status-get-v1modelsstatus)
+   - [Anthropic Messages (`POST /v1/messages`)](#d-anthropic-messages-post-v1messages)
+ - [Web Search (`POST /v1/tools/search`)](#e-web-search-post-v1toolssearch)
+ - [Web Fetch (`POST /v1/tools/fetch`)](#f-web-fetch-post-v1toolsfetch)
 4. [SDK Integration Guides](#4-sdk-integration-guides)
    - [OpenAI Python SDK](#a-openai-python-sdk)
    - [OpenAI Node.js / TypeScript SDK](#b-openai-nodejs--typescript-sdk)
@@ -124,7 +125,159 @@ Retrieves the available models from active OpenAI upstream keys, or returns a st
 
 ---
 
-### C. Anthropic Messages (`POST /v1/messages`)
+
+### C. Model Health, Latency & TPS Status (`GET /v1/models/status`)
+
+Returns 24-hour health status, average response latency, and token generation speed (TPS - Tokens Per Second) for active models.
+
+#### Key Characteristics:
+- **24-Hour Rolling Window & Auto-Retention**: Data collected and averaged strictly spans the last 24 hours (`window: "24h"`, 86,400 seconds). Records older than 24 hours are automatically pruned by background retention management.
+- **Public vs. Key-Scoped Model Filtering**:
+  - **Public (No Key)**: Displays all active models across connected upstream providers.
+  - **Authenticated (`Bearer <key>` or `x-api-key: <key>`)**: Filters and shows **only** models assigned to / permitted by that specific API key.
+- **Model Filter**: Query parameter `?model=<model_id>` or direct path `/v1/models/:model/status` to inspect a single model.
+- **Route Aliases**: `/models/status`, `/v1/models/info`, `/models/info`, `/v1/models/:model/status`, `/models/:model/status`.
+
+- **URL:** `/v1/models/status`
+- **Method:** `GET`
+- **Headers:**
+  - `Authorization: Bearer <client-api-key>` *(optional)*
+  - `x-api-key: <client-api-key>` *(optional)*
+- **Query Parameters:**
+  - `model` *(optional)*: Filter by model identifier (e.g. `?model=gpt-4o`).
+
+#### Model Status States:
+- `"operational"`: Model is healthy with `>= 95%` success rate over 24h.
+- `"degraded"`: Model has elevated failure rate (`50% - 94%` success rate).
+- `"offline"`: Model is experiencing critical outages (`< 50%` success rate).
+- `"idle"`: Model is configured and ready to accept traffic, but has received 0 requests in the last 24h.
+
+#### Response Schema
+
+| Field | Type | Description |
+|---|---|---|
+| `object` | string | Constant `"list"` |
+| `window` | string | Retention & averaging window (`"24h"`) |
+| `window_seconds` | number | Window duration in seconds (`86400`) |
+| `timestamp` | string | ISO timestamp of response |
+| `total_models` | number | Total count of models returned |
+| `data[]` | array | List of model status objects |
+| `data[].id` | string | Model identifier (e.g. `"gpt-4o"`) |
+| `data[].model` | string | Model identifier |
+| `data[].name` | string | Model display name |
+| `data[].provider` | string | Provider or upstream owner |
+| `data[].status` | string | Model status: `"operational"`, `"degraded"`, `"offline"`, or `"idle"` |
+| `data[].latency_ms` | number | 24-hour average latency in milliseconds |
+| `data[].tps` | number | 24-hour average completion tokens per second |
+| `data[].is_available` | boolean | `true` if active and routable |
+| `data[].context_window` | number | Context window capacity (tokens) |
+| `data[].summary_24h` | object | Detailed 24-hour metrics breakdown |
+| `data[].summary_24h.total_requests` | number | Total requests in 24h |
+| `data[].summary_24h.success_requests` | number | Successful HTTP 2xx requests |
+| `data[].summary_24h.error_requests` | number | Failed HTTP 4xx/5xx requests |
+| `data[].summary_24h.success_rate` | number | Success percentage (e.g. `99.50`) |
+| `data[].summary_24h.avg_latency_ms` | number | Average latency (ms) |
+| `data[].summary_24h.min_latency_ms` | number | Minimum recorded latency (ms) |
+| `data[].summary_24h.max_latency_ms` | number | Maximum recorded latency (ms) |
+| `data[].summary_24h.avg_tps` | number | Average completion TPS |
+| `data[].summary_24h.min_tps` | number | Minimum recorded TPS |
+| `data[].summary_24h.max_tps` | number | Maximum recorded TPS |
+| `data[].summary_24h.prompt_tokens` | number | Total prompt tokens in 24h |
+| `data[].summary_24h.completion_tokens` | number | Total completion tokens in 24h |
+| `data[].summary_24h.cached_tokens` | number | Total cached prompt tokens in 24h |
+| `data[].summary_24h.total_tokens` | number | Total tokens in 24h |
+| `data[].summary_24h.last_request_at` | number | null | Timestamp (ms) of last request |
+
+#### Example Response
+```json
+{
+  "object": "list",
+  "window": "24h",
+  "window_seconds": 86400,
+  "timestamp": "2026-11-05T12:00:00.000Z",
+  "total_models": 2,
+  "data": [
+    {
+      "id": "gpt-4o",
+      "model": "gpt-4o",
+      "name": "GPT-4o",
+      "provider": "openai",
+      "status": "operational",
+      "latency_ms": 482,
+      "tps": 56.84,
+      "is_available": true,
+      "context_window": 128000,
+      "summary_24h": {
+        "total_requests": 1420,
+        "success_requests": 1412,
+        "error_requests": 8,
+        "success_rate": 99.44,
+        "avg_latency_ms": 482,
+        "min_latency_ms": 110,
+        "max_latency_ms": 1450,
+        "avg_tps": 56.84,
+        "min_tps": 22.40,
+        "max_tps": 94.10,
+        "prompt_tokens": 420500,
+        "completion_tokens": 182300,
+        "cached_tokens": 85000,
+        "total_tokens": 602800,
+        "last_request_at": 1740000000000
+      }
+    },
+    {
+      "id": "claude-3-5-sonnet-20241022",
+      "model": "claude-3-5-sonnet-20241022",
+      "name": "Claude 3.5 Sonnet",
+      "provider": "anthropic",
+      "status": "operational",
+      "latency_ms": 612,
+      "tps": 68.25,
+      "is_available": true,
+      "context_window": 200000,
+      "summary_24h": {
+        "total_requests": 850,
+        "success_requests": 846,
+        "error_requests": 4,
+        "success_rate": 99.53,
+        "avg_latency_ms": 612,
+        "min_latency_ms": 180,
+        "max_latency_ms": 1820,
+        "avg_tps": 68.25,
+        "min_tps": 30.10,
+        "max_tps": 112.50,
+        "prompt_tokens": 310000,
+        "completion_tokens": 145000,
+        "cached_tokens": 42000,
+        "total_tokens": 455000,
+        "last_request_at": 1740000000000
+      }
+    }
+  ]
+}
+```
+
+#### cURL Examples:
+
+**1. Public Access (All Active Models):**
+```bash
+curl -s http://localhost:3000/v1/models/status | jq .
+```
+
+**2. Key-Scoped Access (Only Permitted Models for Key):**
+```bash
+curl -s http://localhost:3000/v1/models/status \
+  -H "Authorization: Bearer sk-neko-your-key-here" | jq .
+```
+
+**3. Single Model Status Lookup:**
+```bash
+curl -s "http://localhost:3000/v1/models/status?model=gpt-4o" | jq .
+```
+
+---
+
+### D. Anthropic Messages (`POST /v1/messages`)
 
 Supports the native Anthropic Claude Messages protocol for both non-streaming and streaming requests.
 
@@ -154,7 +307,7 @@ Supports the native Anthropic Claude Messages protocol for both non-streaming an
 
 ---
 
-### D. Web Search (`POST /v1/tools/search`)
+### E. Web Search (`POST /v1/tools/search`)
 
 Searches the web using a randomized pool of engines (DuckDuckGo Lite/HTML, DuckDuckGo Scrape, and Yahoo) with automatic fallback and per-engine cooldowns. Requires a valid client API key.
 
@@ -188,7 +341,7 @@ Searches the web using a randomized pool of engines (DuckDuckGo Lite/HTML, DuckD
 
 ---
 
-### E. Web Fetch (`POST /v1/tools/fetch`)
+### F. Web Fetch (`POST /v1/tools/fetch`)
 
 Fetches a URL and extracts readable content from HTML, JSON, XML, or plain text. Follows up to 5 redirects and blocks private/internal hosts by default (set `TOOLS_ALLOW_PRIVATE_HOSTS=1` to override). Requires a valid client API key.
 
