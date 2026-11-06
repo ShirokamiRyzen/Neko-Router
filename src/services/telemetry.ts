@@ -491,7 +491,7 @@ export function getModelMetrics24h(sinceMs: number = 24 * 60 * 60 * 1000): Map<s
         MIN(CASE WHEN status_code >= 200 AND status_code < 300 AND duration_ms > 0 AND completion_tokens > 0 THEN (completion_tokens * 1000.0 / duration_ms) ELSE NULL END) as min_tps,
         MAX(created_at) as last_request_at
       FROM telemetry_logs
-      WHERE created_at >= ?
+      WHERE created_at >= ? AND status_code <> 400
       GROUP BY model
     `)
     .all(since) as any[];
@@ -507,9 +507,9 @@ export function getModelMetrics24h(sinceMs: number = 24 * 60 * 60 * 1000): Map<s
     const minLatencyMs = Math.round(Number(r.min_duration_ms || 0));
     const maxLatencyMs = Math.round(Number(r.max_duration_ms || 0));
 
-    let avgTps = Number((Number(r.avg_tps) || 0).toFixed(2));
+    let avgTps = Number((Number(r.avg_tps) || 0).toFixed(1));
     if (avgTps === 0 && Number(r.total_completion_tokens || 0) > 0 && avgLatencyMs > 0 && totalRequests > 0) {
-      avgTps = Number(((Number(r.total_completion_tokens) / ((avgLatencyMs * totalRequests) / 1000))).toFixed(2));
+      avgTps = Number(((Number(r.total_completion_tokens) / ((avgLatencyMs * totalRequests) / 1000))).toFixed(1));
     }
 
     let status: "operational" | "degraded" | "offline" | "idle" = "idle";
@@ -533,8 +533,8 @@ export function getModelMetrics24h(sinceMs: number = 24 * 60 * 60 * 1000): Map<s
       minLatencyMs,
       maxLatencyMs,
       avgTps,
-      maxTps: Number((Number(r.max_tps) || 0).toFixed(2)),
-      minTps: Number((Number(r.min_tps) || 0).toFixed(2)),
+    maxTps: Number((Number(r.max_tps) || 0).toFixed(1)),
+    minTps: Number((Number(r.min_tps) || 0).toFixed(1)),
       promptTokens: Number(r.total_prompt_tokens || 0),
       completionTokens: Number(r.total_completion_tokens || 0),
       cachedTokens: Number(r.total_cached_tokens || 0),
@@ -547,6 +547,19 @@ export function getModelMetrics24h(sinceMs: number = 24 * 60 * 60 * 1000): Map<s
   }
 
   return map;
+}
+
+export function deleteErrorTelemetryLogs(): number {
+  try {
+    const info = sqlite.run("DELETE FROM telemetry_logs WHERE status_code >= 400");
+    if (info.changes > 0) {
+      console.log(`[Telemetry] Cleared ${info.changes} failed/error telemetry records.`);
+    }
+    return info.changes;
+  } catch (e) {
+    console.error("Failed to clear error telemetry logs:", e);
+    return 0;
+  }
 }
 
 export function pruneTelemetryLogs(retentionHours = 24): number {

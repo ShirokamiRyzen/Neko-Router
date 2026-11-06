@@ -9,6 +9,7 @@ import {
   updateOptimizationSettings,
   clearResponseCache,
 } from "../services/optimizer";
+import { deleteErrorTelemetryLogs } from "../services/telemetry";
 
 export const adminRoutes = new Elysia({ prefix: "/api/admin" })
   .use(authMiddleware)
@@ -41,6 +42,10 @@ export const adminRoutes = new Elysia({ prefix: "/api/admin" })
   )
   .post("/cache/clear", () => {
     return clearResponseCache();
+  })
+  .post("/telemetry/clear-errors", () => {
+    const deleted = deleteErrorTelemetryLogs();
+    return { success: true, deleted };
   })
   .get("/system", () => {
     const memory = process.memoryUsage();

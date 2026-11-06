@@ -90,6 +90,10 @@ export const DatabaseSettingsTab: React.FC = () => {
   const [importStatus, setImportStatus] = useState<{ success?: boolean; message?: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Model health reset state
+  const [clearingErrorLogs, setClearingErrorLogs] = useState(false);
+  const [errorClearStatus, setErrorClearStatus] = useState<{ success?: boolean; message?: string } | null>(null);
+
   const loadOptimizations = async () => {
     try {
       const data = await apiRequest<OptimizationSettings>("/api/admin/settings/optimizations");
@@ -125,6 +129,36 @@ export const DatabaseSettingsTab: React.FC = () => {
     } catch (e: any) {
       setCacheClearStatus(`Error clearing cache: ${e.message}`);
       setTimeout(() => setCacheClearStatus(null), 3000);
+    }
+  };
+
+  const handleClearErrorLogs = async () => {
+    if (
+      !confirm(
+        "Delete all failed/error telemetry records? Model success rates will be recalculated from successful requests only (back toward 100%). This cannot be undone."
+      )
+    ) {
+      return;
+    }
+
+    setClearingErrorLogs(true);
+    setErrorClearStatus(null);
+    try {
+      const res = await apiRequest<{ success: boolean; deleted: number }>(
+        "/api/admin/telemetry/clear-errors",
+        { method: "POST" }
+      );
+      setErrorClearStatus({
+        success: true,
+        message: `Cleared ${res.deleted} failed/error record${res.deleted === 1 ? "" : "s"}. Model status recalculated.`,
+      });
+    } catch (e: any) {
+      setErrorClearStatus({
+        success: false,
+        message: e.message || "Failed to clear error records",
+      });
+    } finally {
+      setClearingErrorLogs(false);
     }
   };
 
@@ -684,6 +718,43 @@ export const DatabaseSettingsTab: React.FC = () => {
                 </p>
               </button>
             </div>
+          </div>
+
+          {/* Model health reset */}
+          <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800 space-y-2">
+            <button
+              type="button"
+              onClick={handleClearErrorLogs}
+              disabled={clearingErrorLogs}
+              className="w-full skeuo-card-subtle p-4 rounded-md text-left transition-all group border border-red-500/20 disabled:opacity-50"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-red-600 dark:text-red-400">
+                  {clearingErrorLogs ? "Clearing error records..." : "Reset Model Health Status"}
+                </span>
+                <Trash2 className="w-4 h-4 text-red-500 group-hover:scale-110 transition-transform" />
+              </div>
+              <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                Deletes all failed/error telemetry records so model success rates recalculate back to 100%. HTTP 400 (bad request) responses are no longer counted in model health metrics.
+              </p>
+            </button>
+
+            {errorClearStatus && (
+              <div
+                className={`p-3 rounded-md text-xs flex items-center space-x-2 ${
+                  errorClearStatus.success
+                    ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                    : "bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400"
+                }`}
+              >
+                {errorClearStatus.success ? (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                )}
+                <span>{errorClearStatus.message}</span>
+              </div>
+            )}
           </div>
         </div>
 
