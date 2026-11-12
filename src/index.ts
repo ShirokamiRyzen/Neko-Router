@@ -11,7 +11,11 @@ import { adminRoutes } from "./routes/admin";
 import { proxyRoutes } from "./routes/proxy";
 import { apiProvidersRoutes } from "./routes/api-providers";
 import { toolsRoutes } from "./routes/tools";
-import { pruneTelemetryLogs } from "./services/telemetry";
+import {
+ pruneTelemetryLogs,
+ getTelemetryRetentionHours,
+ backfillUsageStats,
+} from "./services/telemetry";
 import { existsSync, watch } from "fs";
 import { join } from "path";
 import { webHandler, htmlTemplate, bundleFrontend } from "./web/handler";
@@ -19,14 +23,25 @@ import { webHandler, htmlTemplate, bundleFrontend } from "./web/handler";
 // Initialize database schema and default PIN
 await initDatabase();
 
-// Auto-prune telemetry records older than 24 hours on startup and every hour
-try {
-  pruneTelemetryLogs(24);
-  setInterval(() => {
-    pruneTelemetryLogs(24);
-  }, 60 * 60 * 1000);
-} catch (e) {
-  console.error("[Telemetry] Failed to schedule telemetry pruning:", e);
+// Capture lifetime usage aggregates from existing telemetry BEFORE retention
+// prunes the raw logs. Dashboard "All Time" reads these aggregates, so token
+// totals persist even though telemetry logs are auto-pruned.
+backfillUsageStats();
+
+// Telemetry log auto-pruning (default 24h). Set TELEMETRY_RETENTION_HOURS=0
+// to keep raw logs forever.
+const telemetryRetentionHours = getTelemetryRetentionHours();
+if (telemetryRetentionHours > 0) {
+ try {
+ pruneTelemetryLogs(telemetryRetentionHours);
+ setInterval(() => {
+ pruneTelemetryLogs(telemetryRetentionHours);
+ }, 60 * 60 * 1000);
+ } catch (e) {
+ console.error("[Telemetry] Failed to schedule telemetry pruning:", e);
+ }
+} else {
+ console.log("[Telemetry] Auto-pruning disabled — keeping full request history.");
 }
 
 // Pre-bundle frontend in memory on startup (background)

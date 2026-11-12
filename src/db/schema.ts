@@ -68,6 +68,28 @@ export const telemetryLogs = sqliteTable("telemetry_logs", {
   createdAt: integer("created_at").notNull(),
 });
 
+export const usageStats = sqliteTable("usage_stats", {
+ id: text("id").primaryKey(), // `${clientKeyId}|${provider}|${model}`
+ clientKeyId: text("client_key_id"),
+ clientKeyName: text("client_key_name"),
+ provider: text("provider").notNull(),
+ model: text("model").notNull(),
+ requests: integer("requests").notNull().default(0),
+ successRequests: integer("success_requests").notNull().default(0),
+ promptTokens: integer("prompt_tokens").notNull().default(0),
+ completionTokens: integer("completion_tokens").notNull().default(0),
+ cachedTokens: integer("cached_tokens").notNull().default(0),
+ totalTokens: integer("total_tokens").notNull().default(0),
+ totalDurationMs: integer("total_duration_ms").notNull().default(0),
+ firstAt: integer("first_at").notNull(),
+ lastAt: integer("last_at").notNull(),
+});
+
+export const usageMeta = sqliteTable("usage_meta", {
+ key: text("key").primaryKey(),
+ value: text("value").notNull(),
+});
+
 export const toolLogs = sqliteTable("tool_logs", {
   id: text("id").primaryKey(),
   clientKeyId: text("client_key_id"),
@@ -103,5 +125,6 @@ export type ClientKey = typeof clientKeys.$inferSelect;
 export type InsertClientKey = typeof clientKeys.$inferInsert;
 export type UpstreamKey = typeof upstreamKeys.$inferSelect;
 export type TelemetryLog = typeof telemetryLogs.$inferSelect;
+export type UsageStat = typeof usageStats.$inferSelect;
 export type ToolLog = typeof toolLogs.$inferSelect;
 export type ResponseCache = typeof responseCache.$inferSelect;

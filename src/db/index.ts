@@ -85,7 +85,29 @@ export function initTablesSync(): void {
       created_at INTEGER NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS tool_logs (
+    CREATE TABLE IF NOT EXISTS usage_stats (
+ id TEXT PRIMARY KEY,
+ client_key_id TEXT,
+ client_key_name TEXT,
+ provider TEXT NOT NULL,
+ model TEXT NOT NULL,
+ requests INTEGER NOT NULL DEFAULT 0,
+ success_requests INTEGER NOT NULL DEFAULT 0,
+ prompt_tokens INTEGER NOT NULL DEFAULT 0,
+ completion_tokens INTEGER NOT NULL DEFAULT 0,
+ cached_tokens INTEGER NOT NULL DEFAULT 0,
+ total_tokens INTEGER NOT NULL DEFAULT 0,
+ total_duration_ms INTEGER NOT NULL DEFAULT 0,
+ first_at INTEGER NOT NULL,
+ last_at INTEGER NOT NULL
+ );
+
+ CREATE TABLE IF NOT EXISTS usage_meta (
+ key TEXT PRIMARY KEY,
+ value TEXT NOT NULL
+ );
+
+ CREATE TABLE IF NOT EXISTS tool_logs (
  id TEXT PRIMARY KEY,
  client_key_id TEXT,
  client_key_name TEXT,
@@ -159,6 +181,8 @@ export function initTablesSync(): void {
  CREATE INDEX IF NOT EXISTS idx_telemetry_model_created ON telemetry_logs (model, created_at DESC);
  CREATE INDEX IF NOT EXISTS idx_telemetry_client_key ON telemetry_logs (client_key_id);
  CREATE INDEX IF NOT EXISTS idx_telemetry_provider ON telemetry_logs (provider);
+ CREATE INDEX IF NOT EXISTS idx_usage_stats_client_key ON usage_stats (client_key_id);
+ CREATE INDEX IF NOT EXISTS idx_usage_stats_model ON usage_stats (model);
  CREATE INDEX IF NOT EXISTS idx_tool_logs_created_at ON tool_logs (created_at DESC);
  CREATE INDEX IF NOT EXISTS idx_tool_logs_type ON tool_logs (tool_type);
  CREATE INDEX IF NOT EXISTS idx_tool_logs_client_key ON tool_logs (client_key_id);

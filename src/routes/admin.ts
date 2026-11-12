@@ -9,7 +9,11 @@ import {
   updateOptimizationSettings,
   clearResponseCache,
 } from "../services/optimizer";
-import { deleteErrorTelemetryLogs } from "../services/telemetry";
+import {
+ deleteErrorTelemetryLogs,
+ backfillUsageStats,
+ markUsageStatsBackfilled,
+} from "../services/telemetry";
 
 export const adminRoutes = new Elysia({ prefix: "/api/admin" })
   .use(authMiddleware)
@@ -174,9 +178,10 @@ export const adminRoutes = new Elysia({ prefix: "/api/admin" })
         // Attach imported DB and atomically synchronize tables
         // Avoids file locking (EBUSY) issues on Windows
         const normalizedTempPath = tempPath.replace(/\\/g, "/");
-        sqlite.run("ATTACH DATABASE ? AS imported_db", [normalizedTempPath]);
-        try {
-          const syncTx = sqlite.transaction(() => {
+ sqlite.run("ATTACH DATABASE ? AS imported_db", [normalizedTempPath]);
+ let importedHasUsageStats = false;
+ try {
+ const syncTx = sqlite.transaction(() => {
             sqlite.run("PRAGMA foreign_keys = OFF;");
 
             const importedTables = (
@@ -185,9 +190,10 @@ export const adminRoutes = new Elysia({ prefix: "/api/admin" })
                   "SELECT name FROM imported_db.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
                 )
                 .all() as { name: string }[]
-            ).map((r) => r.name);
+ ).map((r) => r.name);
+ importedHasUsageStats = importedTables.includes("usage_stats");
 
-            const mainTables = (
+ const mainTables = (
               sqlite
                 .query(
                   "SELECT name FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
@@ -236,9 +242,17 @@ export const adminRoutes = new Elysia({ prefix: "/api/admin" })
           unlinkSync(tempPath);
         }
 
-        // Checkpoint WAL to flush imported data cleanly and verify schema
-        initTablesSync();
-        checkpointWal();
+ // Rebuild lifetime aggregates when the imported DB predates usage_stats;
+ // otherwise keep the aggregate that was imported alongside telemetry.
+ if (importedHasUsageStats) {
+ markUsageStatsBackfilled();
+ } else {
+ backfillUsageStats(true);
+ }
+
+ // Checkpoint WAL to flush imported data cleanly and verify schema
+ initTablesSync();
+ checkpointWal();
 
         return {
           success: true,

@@ -1,9 +1,10 @@
 import { db, sqlite } from "../db";
 import {
-  telemetryLogs,
-  toolLogs,
-  type TelemetryLog,
-  type ToolLog,
+ telemetryLogs,
+ usageStats,
+ toolLogs,
+ type TelemetryLog,
+ type ToolLog,
 } from "../db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 
@@ -24,32 +25,80 @@ export interface LogTelemetryParams {
   errorMessage?: string | null;
 }
 
+function usageStatId(
+ clientKeyId: string | null | undefined,
+ provider: string,
+ model: string
+): string {
+ return `${clientKeyId ?? "__none__"}|${provider}|${model}`;
+}
+
 export function recordTelemetry(params: LogTelemetryParams): void {
-  try {
-    const id = "log_" + crypto.randomUUID().replace(/-/g, "");
-    db.insert(telemetryLogs)
-      .values({
-        id,
-        clientKeyId: params.clientKeyId ?? null,
-        clientKeyName: params.clientKeyName ?? null,
-        upstreamKeyId: params.upstreamKeyId ?? null,
-        provider: params.provider,
-        endpoint: params.endpoint,
-        model: params.model,
-        promptTokens: params.promptTokens || 0,
-        completionTokens: params.completionTokens || 0,
-        cachedTokens: params.cachedTokens || 0,
-        totalTokens:
-          params.totalTokens ||
-          (params.promptTokens || 0) + (params.completionTokens || 0),
-        statusCode: params.statusCode,
-        durationMs: params.durationMs || 0,
-        isStreaming: params.isStreaming ? 1 : 0,
-        errorMessage: params.errorMessage ?? null,
-        createdAt: Date.now(),
-      })
-      .run();
-} catch (e) {
+ try {
+ const id = "log_" + crypto.randomUUID().replace(/-/g, "");
+ const now = Date.now();
+ const promptTokens = params.promptTokens || 0;
+ const completionTokens = params.completionTokens || 0;
+ const cachedTokens = params.cachedTokens || 0;
+ const totalTokens = params.totalTokens || promptTokens + completionTokens;
+ const durationMs = params.durationMs || 0;
+ const isSuccess = params.statusCode >= 200 && params.statusCode < 300 ? 1 : 0;
+
+ db.insert(telemetryLogs)
+ .values({
+ id,
+ clientKeyId: params.clientKeyId ?? null,
+ clientKeyName: params.clientKeyName ?? null,
+ upstreamKeyId: params.upstreamKeyId ?? null,
+ provider: params.provider,
+ endpoint: params.endpoint,
+ model: params.model,
+ promptTokens,
+ completionTokens,
+ cachedTokens,
+ totalTokens,
+ statusCode: params.statusCode,
+ durationMs,
+ isStreaming: params.isStreaming ? 1 : 0,
+ errorMessage: params.errorMessage ?? null,
+ createdAt: now,
+ })
+ .run();
+
+ // Lifetime aggregate, independent of telemetry log retention.
+ db.insert(usageStats)
+ .values({
+ id: usageStatId(params.clientKeyId, params.provider, params.model),
+ clientKeyId: params.clientKeyId ?? null,
+ clientKeyName: params.clientKeyName ?? null,
+ provider: params.provider,
+ model: params.model,
+ requests: 1,
+ successRequests: isSuccess,
+ promptTokens,
+ completionTokens,
+ cachedTokens,
+ totalTokens,
+ totalDurationMs: durationMs,
+ firstAt: now,
+ lastAt: now,
+ })
+ .onConflictDoUpdate({
+ target: usageStats.id,
+ set: {
+ clientKeyName: params.clientKeyName ?? null,
+ requests: sql`${usageStats.requests} + 1`,
+ successRequests: sql`${usageStats.successRequests} + ${isSuccess}`,
+ promptTokens: sql`${usageStats.promptTokens} + ${promptTokens}`,
+ completionTokens: sql`${usageStats.completionTokens} + ${completionTokens}`,
+ cachedTokens: sql`${usageStats.cachedTokens} + ${cachedTokens}`,
+ totalTokens: sql`${usageStats.totalTokens} + ${totalTokens}`,
+ totalDurationMs: sql`${usageStats.totalDurationMs} + ${durationMs}`,
+ lastAt: now,
+ },
+ })
+ .run();
+ } catch (e) {
  console.error("Failed to record telemetry log:", e);
  }
 }
@@ -356,45 +405,107 @@ export function getTelemetryStats(
     since = Date.now() - 24 * 60 * 60 * 1000;
   }
 
-  const totalWhere = isAll ? sql`1=1` : sql`${telemetryLogs.createdAt} >= ${since}`;
-  const successWhere = isAll
-    ? sql`${telemetryLogs.statusCode} >= 200 AND ${telemetryLogs.statusCode} < 300`
-    : sql`${telemetryLogs.createdAt} >= ${since} AND ${telemetryLogs.statusCode} >= 200 AND ${telemetryLogs.statusCode} < 300`;
+// "All Time" reads from the persistent usage_stats aggregate so totals
+// survive telemetry log pruning. Time-range filters still use raw logs.
+let totalReq:
+ | {
+ count: number;
+ promptTokens: number;
+ completionTokens: number;
+ cachedTokens: number;
+ totalTokens: number;
+ avgDuration: number;
+ }
+ | undefined;
+let successCount = 0;
+let rawModelStats: {
+ model: string;
+ provider: string;
+ requests: number;
+ promptTokens: number;
+ completionTokens: number;
+ cachedTokens: number;
+ tokens: number;
+}[] = [];
 
-  const totalReq = db
-    .select({
-      count: sql<number>`count(*)`,
-      promptTokens: sql<number>`coalesce(sum(${telemetryLogs.promptTokens}), 0)`,
-      completionTokens: sql<number>`coalesce(sum(${telemetryLogs.completionTokens}), 0)`,
-      cachedTokens: sql<number>`coalesce(sum(${telemetryLogs.cachedTokens}), 0)`,
-      totalTokens: sql<number>`coalesce(sum(${telemetryLogs.totalTokens}), 0)`,
-      avgDuration: sql<number>`coalesce(avg(${telemetryLogs.durationMs}), 0)`,
-    })
-    .from(telemetryLogs)
-    .where(totalWhere)
-    .get();
+if (isAll) {
+ const totals = db
+ .select({
+ count: sql<number>`coalesce(sum(${usageStats.requests}), 0)`,
+ successRequests: sql<number>`coalesce(sum(${usageStats.successRequests}), 0)`,
+ promptTokens: sql<number>`coalesce(sum(${usageStats.promptTokens}), 0)`,
+ completionTokens: sql<number>`coalesce(sum(${usageStats.completionTokens}), 0)`,
+ cachedTokens: sql<number>`coalesce(sum(${usageStats.cachedTokens}), 0)`,
+ totalTokens: sql<number>`coalesce(sum(${usageStats.totalTokens}), 0)`,
+ totalDurationMs: sql<number>`coalesce(sum(${usageStats.totalDurationMs}), 0)`,
+ })
+ .from(usageStats)
+ .get();
 
-  const successCount = db
-    .select({ count: sql<number>`count(*)` })
-    .from(telemetryLogs)
-    .where(successWhere)
-    .get()?.count || 0;
+ const count = Number(totals?.count || 0);
+ const totalDurationMs = Number(totals?.totalDurationMs || 0);
+ totalReq = {
+ count,
+ promptTokens: Number(totals?.promptTokens || 0),
+ completionTokens: Number(totals?.completionTokens || 0),
+ cachedTokens: Number(totals?.cachedTokens || 0),
+ totalTokens: Number(totals?.totalTokens || 0),
+ avgDuration: count > 0 ? totalDurationMs / count : 0,
+ };
+ successCount = Number(totals?.successRequests || 0);
 
-  // Breakdown by model with prompt, completion, and cached tokens
-  const rawModelStats = db
-    .select({
-      model: telemetryLogs.model,
-      provider: telemetryLogs.provider,
-      requests: sql<number>`count(*)`,
-      promptTokens: sql<number>`coalesce(sum(${telemetryLogs.promptTokens}), 0)`,
-      completionTokens: sql<number>`coalesce(sum(${telemetryLogs.completionTokens}), 0)`,
-      cachedTokens: sql<number>`coalesce(sum(${telemetryLogs.cachedTokens}), 0)`,
-      tokens: sql<number>`coalesce(sum(${telemetryLogs.totalTokens}), 0)`,
-    })
-    .from(telemetryLogs)
-    .where(totalWhere)
-    .groupBy(telemetryLogs.model, telemetryLogs.provider)
-    .all();
+ rawModelStats = db
+ .select({
+ model: usageStats.model,
+ provider: usageStats.provider,
+ requests: sql<number>`coalesce(sum(${usageStats.requests}), 0)`,
+ promptTokens: sql<number>`coalesce(sum(${usageStats.promptTokens}), 0)`,
+ completionTokens: sql<number>`coalesce(sum(${usageStats.completionTokens}), 0)`,
+ cachedTokens: sql<number>`coalesce(sum(${usageStats.cachedTokens}), 0)`,
+ tokens: sql<number>`coalesce(sum(${usageStats.totalTokens}), 0)`,
+ })
+ .from(usageStats)
+ .groupBy(usageStats.model, usageStats.provider)
+ .all();
+} else {
+ const totalWhere = sql`${telemetryLogs.createdAt} >= ${since}`;
+ const successWhere = sql`${telemetryLogs.createdAt} >= ${since} AND ${telemetryLogs.statusCode} >= 200 AND ${telemetryLogs.statusCode} < 300`;
+
+ totalReq = db
+ .select({
+ count: sql<number>`count(*)`,
+ promptTokens: sql<number>`coalesce(sum(${telemetryLogs.promptTokens}), 0)`,
+ completionTokens: sql<number>`coalesce(sum(${telemetryLogs.completionTokens}), 0)`,
+ cachedTokens: sql<number>`coalesce(sum(${telemetryLogs.cachedTokens}), 0)`,
+ totalTokens: sql<number>`coalesce(sum(${telemetryLogs.totalTokens}), 0)`,
+ avgDuration: sql<number>`coalesce(avg(${telemetryLogs.durationMs}), 0)`,
+ })
+ .from(telemetryLogs)
+ .where(totalWhere)
+ .get();
+
+ successCount =
+ db
+ .select({ count: sql<number>`count(*)` })
+ .from(telemetryLogs)
+ .where(successWhere)
+ .get()?.count || 0;
+
+ rawModelStats = db
+ .select({
+ model: telemetryLogs.model,
+ provider: telemetryLogs.provider,
+ requests: sql<number>`count(*)`,
+ promptTokens: sql<number>`coalesce(sum(${telemetryLogs.promptTokens}), 0)`,
+ completionTokens: sql<number>`coalesce(sum(${telemetryLogs.completionTokens}), 0)`,
+ cachedTokens: sql<number>`coalesce(sum(${telemetryLogs.cachedTokens}), 0)`,
+ tokens: sql<number>`coalesce(sum(${telemetryLogs.totalTokens}), 0)`,
+ })
+ .from(telemetryLogs)
+ .where(totalWhere)
+ .groupBy(telemetryLogs.model, telemetryLogs.provider)
+ .all();
+}
 
   let totalCost = 0;
   const modelStats = rawModelStats.map((ms) => {
@@ -562,16 +673,136 @@ export function deleteErrorTelemetryLogs(): number {
   }
 }
 
-export function pruneTelemetryLogs(retentionHours = 24): number {
-  try {
-    const cutoff = Date.now() - retentionHours * 60 * 60 * 1000;
-    const info = sqlite.run("DELETE FROM telemetry_logs WHERE created_at < ?", [cutoff]);
-    if (info.changes > 0) {
-      console.log(`[Telemetry] Auto-pruned ${info.changes} old telemetry records (retention: ${retentionHours}h).`);
-    }
-    return info.changes;
-  } catch (e) {
-    console.error("Failed to prune old telemetry logs:", e);
-    return 0;
-  }
+const USAGE_BACKFILL_KEY = "usage_stats_backfill_v1";
+
+export function markUsageStatsBackfilled(): void {
+ try {
+ sqlite.run(
+ "INSERT INTO usage_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+ [USAGE_BACKFILL_KEY, String(Date.now())]
+ );
+ } catch (e) {
+ console.error("Failed to mark usage stats backfill:", e);
+ }
+}
+
+/**
+ * Seed the persistent usage_stats aggregate from telemetry_logs.
+ * Runs once (guarded by usage_meta), so old/imported history is captured
+ * before telemetry retention prunes the raw rows.
+ */
+export function backfillUsageStats(force = false): number {
+ try {
+ if (!force) {
+ const done = sqlite
+ .query("SELECT value FROM usage_meta WHERE key = ?")
+ .get(USAGE_BACKFILL_KEY);
+ if (done) return 0;
+ }
+
+ const rows = sqlite
+ .query(`
+ SELECT
+ client_key_id AS clientKeyId,
+ max(client_key_name) AS clientKeyName,
+ provider,
+ model,
+ count(*) AS requests,
+ sum(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) AS successRequests,
+ coalesce(sum(prompt_tokens), 0) AS promptTokens,
+ coalesce(sum(completion_tokens), 0) AS completionTokens,
+ coalesce(sum(cached_tokens), 0) AS cachedTokens,
+ coalesce(sum(total_tokens), 0) AS totalTokens,
+ coalesce(sum(duration_ms), 0) AS totalDurationMs,
+ min(created_at) AS firstAt,
+ max(created_at) AS lastAt
+ FROM telemetry_logs
+ GROUP BY client_key_id, provider, model
+ `)
+ .all() as {
+ clientKeyId: string | null;
+ clientKeyName: string | null;
+ provider: string;
+ model: string;
+ requests: number;
+ successRequests: number;
+ promptTokens: number;
+ completionTokens: number;
+ cachedTokens: number;
+ totalTokens: number;
+ totalDurationMs: number;
+ firstAt: number;
+ lastAt: number;
+ }[];
+
+ const insert = sqlite.prepare(`
+ INSERT INTO usage_stats (
+ id, client_key_id, client_key_name, provider, model,
+ requests, success_requests, prompt_tokens, completion_tokens,
+ cached_tokens, total_tokens, total_duration_ms, first_at, last_at
+ ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ `);
+
+ const tx = sqlite.transaction(() => {
+ sqlite.run("DELETE FROM usage_stats");
+ for (const r of rows) {
+ insert.run(
+ usageStatId(r.clientKeyId, r.provider, r.model),
+ r.clientKeyId ?? null,
+ r.clientKeyName ?? null,
+ r.provider,
+ r.model,
+ Number(r.requests) || 0,
+ Number(r.successRequests) || 0,
+ Number(r.promptTokens) || 0,
+ Number(r.completionTokens) || 0,
+ Number(r.cachedTokens) || 0,
+ Number(r.totalTokens) || 0,
+ Number(r.totalDurationMs) || 0,
+ Number(r.firstAt) || 0,
+ Number(r.lastAt) || 0
+ );
+ }
+ markUsageStatsBackfilled();
+ });
+ tx();
+
+ if (rows.length > 0) {
+ console.log(
+ `[Telemetry] Backfilled lifetime usage stats for ${rows.length} model/key combinations.`
+ );
+ }
+ return rows.length;
+ } catch (e) {
+ console.error("Failed to backfill usage stats:", e);
+ return 0;
+ }
+}
+
+/**
+ * Resolve telemetry retention from the TELEMETRY_RETENTION_HOURS env var.
+ * Default 24h; 0 explicitly disables pruning (keep full log history).
+ */
+export function getTelemetryRetentionHours(): number {
+ const raw = process.env.TELEMETRY_RETENTION_HOURS;
+ if (raw === undefined || raw.trim() === "") return 24;
+ const hours = Number(raw);
+ if (!Number.isFinite(hours)) return 24;
+ return hours > 0 ? hours : 0;
+}
+
+export function pruneTelemetryLogs(retentionHours = getTelemetryRetentionHours()): number {
+ // Retention disabled: never delete historical telemetry logs.
+ if (!retentionHours || retentionHours <= 0) return 0;
+ try {
+ const cutoff = Date.now() - retentionHours * 60 * 60 * 1000;
+ const info = sqlite.run("DELETE FROM telemetry_logs WHERE created_at < ?", [cutoff]);
+ if (info.changes > 0) {
+ console.log(`[Telemetry] Auto-pruned ${info.changes} old telemetry records (retention: ${retentionHours}h).`);
+ }
+ return info.changes;
+ } catch (e) {
+ console.error("Failed to prune old telemetry logs:", e);
+ return 0;
+ }
 }

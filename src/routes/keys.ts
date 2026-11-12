@@ -1,6 +1,6 @@
 import { Elysia, t } from "elysia";
 import { db } from "../db";
-import { clientKeys, apiKeys, telemetryLogs, upstreamKeys } from "../db/schema";
+import { clientKeys, apiKeys, usageStats, upstreamKeys } from "../db/schema";
 import { authMiddleware } from "../middleware/auth";
 import { eq, desc, sql } from "drizzle-orm";
 
@@ -57,8 +57,8 @@ export const keysRoutes = new Elysia({ prefix: "/api/keys" })
         isFollowUpstream: clientKeys.isFollowUpstream,
         createdAt: clientKeys.createdAt,
         lastUsedAt: clientKeys.lastUsedAt,
-        totalRequests: sql<number>`(SELECT count(*) FROM ${telemetryLogs} WHERE ${telemetryLogs.clientKeyId} = ${clientKeys.id})`,
-        totalTokens: sql<number>`(SELECT coalesce(sum(${telemetryLogs.totalTokens}), 0) FROM ${telemetryLogs} WHERE ${telemetryLogs.clientKeyId} = ${clientKeys.id})`,
+ totalRequests: sql<number>`(SELECT coalesce(sum(${usageStats.requests}), 0) FROM ${usageStats} WHERE ${usageStats.clientKeyId} = ${clientKeys.id})`,
+ totalTokens: sql<number>`(SELECT coalesce(sum(${usageStats.totalTokens}), 0) FROM ${usageStats} WHERE ${usageStats.clientKeyId} = ${clientKeys.id})`,
       })
       .from(clientKeys)
       .leftJoin(apiKeys, eq(clientKeys.apiKeyId, apiKeys.id))
