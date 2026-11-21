@@ -152,6 +152,127 @@ function StatCard({
   );
 }
 
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      className={`inline-flex items-center space-x-1 px-1.5 py-0.5 rounded border text-[10px] font-semibold capitalize ${
+        STATUS_STYLES[status] || STATUS_STYLES.idle
+      }`}
+    >
+      <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[status] || STATUS_DOT.idle}`} />
+      <span>{status}</span>
+    </span>
+  );
+}
+
+function ModelsEmptyState({
+  hasNoProviders,
+  hasModels,
+}: {
+  hasNoProviders: boolean;
+  hasModels: boolean;
+}) {
+  return (
+    <>
+      <Boxes className="w-8 h-8 mx-auto mb-2 opacity-40" />
+      <p className="font-medium text-zinc-600 dark:text-zinc-300">
+        {hasNoProviders ? "No providers enabled for this key" : "No models found"}
+      </p>
+      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">
+        {hasNoProviders
+          ? "This client key has no upstream providers enabled, so it cannot access any model. Open Client Access Keys → provider permissions to enable at least one provider."
+          : hasModels
+          ? "No enabled models were found on the active upstream providers. Enable models in Upstream Providers first."
+          : "Try clearing the search query or switching the provider filter."}
+      </p>
+    </>
+  );
+}
+
+function ModelDetails({ model }: { model: RouterModelItem }) {
+  const stats = model.summary_24h;
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
+      <div className="space-y-1.5">
+        <div className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500">
+          Model Information
+        </div>
+        <p className="text-zinc-600 dark:text-zinc-300">
+          {model.description || "No description available."}
+        </p>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1">
+          <span className="text-zinc-400 dark:text-zinc-500">Router ID</span>
+          <code className="font-mono text-zinc-700 dark:text-zinc-200 break-all">{model.id}</code>
+          <span className="text-zinc-400 dark:text-zinc-500">Root ID</span>
+          <code className="font-mono text-zinc-700 dark:text-zinc-200 break-all">{model.root}</code>
+          <span className="text-zinc-400 dark:text-zinc-500">Provider</span>
+          <span>{model.provider}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Type</span>
+          <span>{model.type}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Context window</span>
+          <span>{formatContext(model.context_window)} tokens</span>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500">
+          Last 24 Hours
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          <span className="text-zinc-400 dark:text-zinc-500">Requests</span>
+          <span className="font-mono">{formatCompact(stats.total_requests)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Errors</span>
+          <span className="font-mono">{formatCompact(stats.error_requests)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Latency</span>
+          <span className="font-mono">
+            {stats.avg_latency_ms} ms avg / {stats.min_latency_ms}–{stats.max_latency_ms} ms
+          </span>
+          <span className="text-zinc-400 dark:text-zinc-500">TPS</span>
+          <span className="font-mono">
+            {stats.avg_tps.toFixed(1)} avg / {stats.min_tps.toFixed(1)}–{stats.max_tps.toFixed(1)}
+          </span>
+          <span className="text-zinc-400 dark:text-zinc-500">Prompt tokens</span>
+          <span className="font-mono">{formatCompact(stats.prompt_tokens)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Completion tokens</span>
+          <span className="font-mono">{formatCompact(stats.completion_tokens)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Cached tokens</span>
+          <span className="font-mono">{formatCompact(stats.cached_tokens)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Total tokens</span>
+          <span className="font-mono">{formatCompact(stats.total_tokens)}</span>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <div className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500">
+          All-Time Usage
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+          <span className="text-zinc-400 dark:text-zinc-500">Requests</span>
+          <span className="font-mono">{formatCompact(model.all_time.total_requests)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Success rate</span>
+          <span className="font-mono">
+            {model.all_time.total_requests > 0 ? `${model.all_time.success_rate.toFixed(1)}%` : "—"}
+          </span>
+          <span className="text-zinc-400 dark:text-zinc-500">Avg latency</span>
+          <span className="font-mono">
+            {model.all_time.avg_latency_ms > 0 ? `${model.all_time.avg_latency_ms} ms` : "—"}
+          </span>
+          <span className="text-zinc-400 dark:text-zinc-500">Prompt tokens</span>
+          <span className="font-mono">{formatCompact(model.all_time.prompt_tokens)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Completion tokens</span>
+          <span className="font-mono">{formatCompact(model.all_time.completion_tokens)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Cached tokens</span>
+          <span className="font-mono">{formatCompact(model.all_time.cached_tokens)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Total tokens</span>
+          <span className="font-mono">{formatCompact(model.all_time.total_tokens)}</span>
+          <span className="text-zinc-400 dark:text-zinc-500">Last request</span>
+          <span>{formatTimeAgo(model.all_time.last_request_at)}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export const ModelsTab: React.FC = () => {
   const [keys, setKeys] = useState<ClientKeyItem[]>([]);
   const [selectedKeyId, setSelectedKeyId] = useState<string>(() => {
@@ -275,11 +396,11 @@ export const ModelsTab: React.FC = () => {
             your AI client. Filter by client key to see only the models that key can actually use.
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 shrink-0">
           <button
             onClick={copyAll}
             disabled={filteredModels.length === 0}
-            className="skeuo-btn inline-flex items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="skeuo-btn inline-flex items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
             title="Copy all visible model IDs"
           >
             {copiedId === "__all__" ? (
@@ -304,12 +425,16 @@ export const ModelsTab: React.FC = () => {
       <div className="skeuo-card p-4 space-y-3">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
           <div className="lg:col-span-5">
-            <label className="block text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 mb-1.5">
+            <label
+              htmlFor="model-key-filter"
+              className="block text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 mb-1.5"
+            >
               Filter by Client Key
             </label>
             <div className="relative">
               <KeyRound className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <select
+                id="model-key-filter"
                 value={selectedKeyId}
                 onChange={(e) => persistKeyFilter(e.target.value)}
                 className="w-full pl-8 pr-3 py-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer"
@@ -327,13 +452,18 @@ export const ModelsTab: React.FC = () => {
           </div>
 
           <div className="lg:col-span-4">
-            <label className="block text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 mb-1.5">
+            <label
+              htmlFor="model-search"
+              className="block text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 mb-1.5"
+            >
               Search Model
             </label>
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
+                id="model-search"
                 type="text"
+                name="model-search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search id, name, provider..."
@@ -343,10 +473,14 @@ export const ModelsTab: React.FC = () => {
           </div>
 
           <div className="lg:col-span-3">
-            <label className="block text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 mb-1.5">
+            <label
+              htmlFor="model-provider-filter"
+              className="block text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500 mb-1.5"
+            >
               Provider
             </label>
             <select
+              id="model-provider-filter"
               value={providerFilter}
               onChange={(e) => setProviderFilter(e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-md border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer"
@@ -476,7 +610,129 @@ export const ModelsTab: React.FC = () => {
         </div>
       ) : (
         <div className="skeuo-card overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile: stacked cards (tables are unusable on narrow screens) */}
+          <div className="lg:hidden divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
+            {filteredModels.length === 0 ? (
+              <div className="px-5 py-12 text-center">
+                <ModelsEmptyState
+                  hasNoProviders={hasNoProviders}
+                  hasModels={Boolean(data && data.models.length > 0)}
+                />
+              </div>
+            ) : (
+              filteredModels.map((model) => {
+                const isCopied = copiedId === model.id;
+                const isExpanded = expandedId === model.id;
+                const stats = model.summary_24h;
+                return (
+                  <div key={model.id} className="p-3.5 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <code className="block font-mono text-[11px] font-semibold text-zinc-900 dark:text-zinc-100 break-all whitespace-normal">
+                          {model.id}
+                        </code>
+                        <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 break-words">
+                          {model.name}
+                          {model.root && model.root !== model.id ? ` · root: ${model.root}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          aria-label={`Copy ${model.id}`}
+                          onClick={() => copyText(model.id, model.id)}
+                          className={`p-1.5 rounded border transition-colors cursor-pointer ${
+                            isCopied
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
+                              : "border-zinc-200 dark:border-zinc-700 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                          }`}
+                        >
+                          {isCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={isExpanded ? "Hide model details" : "Show model details"}
+                          aria-expanded={isExpanded}
+                          onClick={() => setExpandedId(isExpanded ? null : model.id)}
+                          className="p-1.5 rounded skeuo-btn cursor-pointer"
+                        >
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-[10px] font-medium text-zinc-600 dark:text-zinc-300">
+                        {model.provider}
+                      </span>
+                      <StatusBadge status={model.status} />
+                      <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{model.type}</span>
+                      <CapabilityBadges model={model} />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-center rounded-md bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200/70 dark:border-zinc-800/70 px-2 py-2">
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                          Requests
+                        </div>
+                        <div className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                          {formatCompact(stats.total_requests)}
+                        </div>
+                      </div>
+                      <div className="border-x border-zinc-200/70 dark:border-zinc-800/70">
+                        <div className="text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                          Latency
+                        </div>
+                        <div className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                          {stats.avg_latency_ms > 0 ? `${stats.avg_latency_ms} ms` : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[9px] uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                          Tokens
+                        </div>
+                        <div className="font-mono text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+                          {formatCompact(stats.total_tokens)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[10px] text-zinc-500 dark:text-zinc-400">
+                      <span>
+                        Success{" "}
+                        <span className="font-mono text-zinc-700 dark:text-zinc-200">
+                          {stats.total_requests > 0 ? `${stats.success_rate.toFixed(1)}%` : "—"}
+                        </span>
+                      </span>
+                      <span>
+                        TPS{" "}
+                        <span className="font-mono text-zinc-700 dark:text-zinc-200">
+                          {stats.avg_tps > 0 ? stats.avg_tps.toFixed(1) : "—"}
+                        </span>
+                      </span>
+                      <span className="inline-flex items-center space-x-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{formatTimeAgo(stats.last_request_at)}</span>
+                      </span>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="pt-3 border-t border-zinc-200/70 dark:border-zinc-800/70">
+                        <ModelDetails model={model} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop: full statistics table */}
+          <div className="hidden lg:block overflow-x-auto">
             <table className="w-full text-left text-xs min-w-[980px]">
               <thead className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 font-medium">
                 <tr>
@@ -498,19 +754,10 @@ export const ModelsTab: React.FC = () => {
                 {filteredModels.length === 0 ? (
                   <tr>
                     <td colSpan={12} className="px-5 py-14 text-center">
-                      <Boxes className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                      <p className="font-medium text-zinc-600 dark:text-zinc-300">
-                        {hasNoProviders
-                          ? "No providers enabled for this key"
-                          : "No models found"}
-                      </p>
-                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 max-w-md mx-auto">
-                        {hasNoProviders
-                          ? "This client key has no upstream providers enabled, so it cannot access any model. Open Client Access Keys → provider permissions to enable at least one provider."
-                          : data && data.models.length === 0
-                          ? "No enabled models were found on the active upstream providers. Enable models in Upstream Providers first."
-                          : "Try clearing the search query or switching the provider filter."}
-                      </p>
+                      <ModelsEmptyState
+                        hasNoProviders={hasNoProviders}
+                        hasModels={Boolean(data && data.models.length > 0)}
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -634,101 +881,13 @@ export const ModelsTab: React.FC = () => {
                           </td>
                         </tr>
 
-                        {isExpanded && (
-                          <tr className="bg-zinc-50/70 dark:bg-zinc-900/40">
-                            <td colSpan={12} className="px-5 py-4">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-[11px]">
-                                <div className="space-y-1.5">
-                                  <div className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500">
-                                    Model Information
-                                  </div>
-                                  <p className="text-zinc-600 dark:text-zinc-300">
-                                    {model.description || "No description available."}
-                                  </p>
-                                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-1">
-                                    <span className="text-zinc-400 dark:text-zinc-500">Router ID</span>
-                                    <code className="font-mono text-zinc-700 dark:text-zinc-200 break-all">
-                                      {model.id}
-                                    </code>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Root ID</span>
-                                    <code className="font-mono text-zinc-700 dark:text-zinc-200 break-all">
-                                      {model.root}
-                                    </code>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Provider</span>
-                                    <span>{model.provider}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Type</span>
-                                    <span>{model.type}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Context window</span>
-                                    <span>{formatContext(model.context_window)} tokens</span>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                  <div className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500">
-                                    Last 24 Hours
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                    <span className="text-zinc-400 dark:text-zinc-500">Requests</span>
-                                    <span className="font-mono">{formatCompact(stats.total_requests)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Errors</span>
-                                    <span className="font-mono">{formatCompact(stats.error_requests)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Latency</span>
-                                    <span className="font-mono">
-                                      {stats.avg_latency_ms} ms avg / {stats.min_latency_ms}–{stats.max_latency_ms} ms
-                                    </span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">TPS</span>
-                                    <span className="font-mono">
-                                      {stats.avg_tps.toFixed(1)} avg / {stats.min_tps.toFixed(1)}–
-                                      {stats.max_tps.toFixed(1)}
-                                    </span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Prompt tokens</span>
-                                    <span className="font-mono">{formatCompact(stats.prompt_tokens)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Completion tokens</span>
-                                    <span className="font-mono">{formatCompact(stats.completion_tokens)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Cached tokens</span>
-                                    <span className="font-mono">{formatCompact(stats.cached_tokens)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Total tokens</span>
-                                    <span className="font-mono">{formatCompact(stats.total_tokens)}</span>
-                                  </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                  <div className="text-[10px] font-bold tracking-wider uppercase text-zinc-400 dark:text-zinc-500">
-                                    All-Time Usage
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                    <span className="text-zinc-400 dark:text-zinc-500">Requests</span>
-                                    <span className="font-mono">{formatCompact(model.all_time.total_requests)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Success rate</span>
-                                    <span className="font-mono">
-                                      {model.all_time.total_requests > 0
-                                        ? `${model.all_time.success_rate.toFixed(1)}%`
-                                        : "—"}
-                                    </span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Avg latency</span>
-                                    <span className="font-mono">
-                                      {model.all_time.avg_latency_ms > 0
-                                        ? `${model.all_time.avg_latency_ms} ms`
-                                        : "—"}
-                                    </span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Prompt tokens</span>
-                                    <span className="font-mono">{formatCompact(model.all_time.prompt_tokens)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Completion tokens</span>
-                                    <span className="font-mono">
-                                      {formatCompact(model.all_time.completion_tokens)}
-                                    </span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Cached tokens</span>
-                                    <span className="font-mono">{formatCompact(model.all_time.cached_tokens)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Total tokens</span>
-                                    <span className="font-mono">{formatCompact(model.all_time.total_tokens)}</span>
-                                    <span className="text-zinc-400 dark:text-zinc-500">Last request</span>
-                                    <span>{formatTimeAgo(model.all_time.last_request_at)}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
+ {isExpanded && (
+ <tr className="bg-zinc-50/70 dark:bg-zinc-900/40">
+ <td colSpan={12} className="px-5 py-4">
+ <ModelDetails model={model} />
+ </td>
+ </tr>
+ )}
                       </React.Fragment>
                     );
                   })
