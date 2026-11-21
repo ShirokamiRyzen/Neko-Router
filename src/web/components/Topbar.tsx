@@ -21,6 +21,10 @@ const titles: Record<string, { title: string; subtitle: string }> = {
     title: "Upstream Router Keys",
     subtitle: "Configure and balance OpenAI & Anthropic providers",
   },
+  "model-list": {
+    title: "Model Catalog",
+    subtitle: "Copy router-ready model IDs with per-key access and live statistics",
+  },
   telemetry: {
     title: "Request Telemetry & Logs",
     subtitle: "Live token metrics and upstream latency inspection",

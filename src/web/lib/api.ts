@@ -151,6 +151,86 @@ export interface BandelBangetStatusResponse {
   };
 }
 
+export interface RouterModelSummary24h {
+  total_requests: number;
+  success_requests: number;
+  error_requests: number;
+  success_rate: number;
+  avg_latency_ms: number;
+  min_latency_ms: number;
+  max_latency_ms: number;
+  avg_tps: number;
+  min_tps: number;
+  max_tps: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  cached_tokens: number;
+  total_tokens: number;
+  last_request_at: number | null;
+}
+
+export interface RouterModelAllTime {
+  total_requests: number;
+  success_requests: number;
+  success_rate: number;
+  avg_latency_ms: number;
+  prompt_tokens: number;
+  completion_tokens: number;
+  cached_tokens: number;
+  total_tokens: number;
+  last_request_at: number | null;
+}
+
+export interface RouterModelItem {
+  id: string;
+  name: string;
+  provider: string;
+  owned_by: string;
+  description: string;
+  type: string;
+  root: string;
+  context_window: number;
+  capabilities: Record<string, boolean | undefined>;
+  status: "operational" | "degraded" | "offline" | "idle";
+  latency_ms: number;
+  tps: number;
+  summary_24h: RouterModelSummary24h;
+  all_time: RouterModelAllTime;
+}
+
+export interface RouterModelKeySummary {
+  id: string;
+  name: string;
+  displayKey: string;
+  isActive: boolean;
+  isFollowUpstream: boolean;
+  roundRobinProviders: boolean;
+  allowedProviders: string[];
+  tokenLimit: number | null;
+  usedTokens: number;
+  rateLimit: number | null;
+}
+
+export interface RouterModelsResponse {
+  success: boolean;
+  timestamp: number;
+  window: string;
+  key: RouterModelKeySummary | null;
+  stats: {
+    total_models: number;
+    operational_models: number;
+    idle_models: number;
+    degraded_models: number;
+    offline_models: number;
+    requests_24h: number;
+    success_rate_24h: number;
+    total_tokens_24h: number;
+    avg_latency_ms: number;
+    avg_tps: number;
+  };
+  models: RouterModelItem[];
+}
+
 export interface TelemetryStats {
   totalRequests: number;
   successRequests: number;

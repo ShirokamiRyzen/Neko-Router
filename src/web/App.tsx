@@ -6,6 +6,7 @@ import { LoginScreen } from "./components/LoginScreen";
 import { DashboardTab } from "./components/DashboardTab";
 import { ClientKeysTab } from "./components/ClientKeysTab";
 import { UpstreamKeysTab } from "./components/UpstreamKeysTab";
+import { ModelsTab } from "./components/ModelsTab";
 import { TelemetryTab } from "./components/TelemetryTab";
 import { DatabaseSettingsTab } from "./components/DatabaseSettingsTab";
 import { useTheme } from "./hooks/useTheme";
@@ -16,6 +17,7 @@ export const TAB_ROUTES: Record<string, string> = {
   dashboard: "/",
   "client-keys": "/keys",
   "upstream-keys": "/providers",
+  "model-list": "/model-list",
   telemetry: "/telemetry",
   database: "/settings",
 };
@@ -33,6 +35,8 @@ export const ROUTE_TO_TAB: Record<string, string> = {
   "/api-providers": "upstream-keys",
   "/api-provider": "upstream-keys",
   "/bandelbanget": "upstream-keys",
+  "/model-list": "model-list",
+  "/model-catalog": "model-list",
   "/telemetry": "telemetry",
   "/logs": "telemetry",
   "/settings": "database",
@@ -51,7 +55,7 @@ export function getTabFromLocation(): string {
   if (hash && ROUTE_TO_TAB[`/${hash}`]) {
     return ROUTE_TO_TAB[`/${hash}`];
   }
-  if (hash && ["dashboard", "client-keys", "upstream-keys", "telemetry", "database"].includes(hash)) {
+  if (hash && ["dashboard", "client-keys", "upstream-keys", "model-list", "telemetry", "database"].includes(hash)) {
     return hash;
   }
 
@@ -60,12 +64,12 @@ export function getTabFromLocation(): string {
   if (tabParam && ROUTE_TO_TAB[`/${tabParam}`]) {
     return ROUTE_TO_TAB[`/${tabParam}`];
   }
-  if (tabParam && ["dashboard", "client-keys", "upstream-keys", "api-providers", "telemetry", "database"].includes(tabParam)) {
+  if (tabParam && ["dashboard", "client-keys", "upstream-keys", "api-providers", "model-list", "telemetry", "database"].includes(tabParam)) {
     return tabParam;
   }
 
   const saved = localStorage.getItem("neko_active_tab");
-  if (saved && ["dashboard", "client-keys", "upstream-keys", "api-providers", "telemetry", "database"].includes(saved)) {
+  if (saved && ["dashboard", "client-keys", "upstream-keys", "api-providers", "model-list", "telemetry", "database"].includes(saved)) {
     return saved;
   }
 
@@ -197,6 +201,7 @@ export const App: React.FC = () => {
           {activeTab === "dashboard" && <DashboardTab />}
           {activeTab === "client-keys" && <ClientKeysTab />}
           {activeTab === "upstream-keys" && <UpstreamKeysTab />}
+          {activeTab === "model-list" && <ModelsTab />}
           {activeTab === "telemetry" && <TelemetryTab />}
           {activeTab === "database" && <DatabaseSettingsTab />}
         </main>

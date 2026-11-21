@@ -581,8 +581,15 @@ export interface ModelStatusStats {
   status: "operational" | "degraded" | "offline" | "idle";
 }
 
-export function getModelMetrics24h(sinceMs: number = 24 * 60 * 60 * 1000): Map<string, ModelStatusStats> {
+export function getModelMetrics24h(
+  sinceMs: number = 24 * 60 * 60 * 1000,
+  clientKeyId?: string | null
+): Map<string, ModelStatusStats> {
   const since = Date.now() - sinceMs;
+  // Optional scoping: when a client key is supplied, only that key's traffic
+  // contributes to the model statistics (used by the Model Catalog page).
+  const keyFilter = clientKeyId ? " AND client_key_id = ?" : "";
+  const params: any[] = clientKeyId ? [since, clientKeyId] : [since];
   const rows = sqlite
     .query(`
       SELECT 
@@ -602,10 +609,10 @@ export function getModelMetrics24h(sinceMs: number = 24 * 60 * 60 * 1000): Map<s
         MIN(CASE WHEN status_code >= 200 AND status_code < 300 AND duration_ms > 0 AND completion_tokens > 0 THEN (completion_tokens * 1000.0 / duration_ms) ELSE NULL END) as min_tps,
         MAX(created_at) as last_request_at
       FROM telemetry_logs
-      WHERE created_at >= ? AND status_code <> 400
+      WHERE created_at >= ? AND status_code <> 400${keyFilter}
       GROUP BY model
     `)
-    .all(since) as any[];
+    .all(...params) as any[];
 
   const map = new Map<string, ModelStatusStats>();
 
